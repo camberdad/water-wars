@@ -22,11 +22,11 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 
   | Tier | Value | Share of catches | Examples |
   |---|---|---|---|
-  | Common | $750 – $4,000 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
-  | Uncommon | $4,000 – $25,000 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
-  | Rare | $25,000 – $120,000 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
-  | Epic | $120,000 – $600,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
-  | Legendary | $600,000 – $800,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
+  | Common | $225 – $1,200 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
+  | Uncommon | $1,200 – $7,500 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
+  | Rare | $7,500 – $36,000 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
+  | Epic | $36,000 – $180,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
+  | Legendary | $180,000 – $240,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
 
   Bigger fish of a species are worth more. Deep water and the danger waters bring epic and legendary fish up
   more often. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the

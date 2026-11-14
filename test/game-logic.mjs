@@ -232,20 +232,20 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	}
 
 	ok( inBand, 'every species sits in its tier\'s value band' );
-	ok( fishValue( 'silverside', 0.02 ) === 750 && fishValue( 'marlin', 200 ) === 800000, 'values run from $750 to $800,000' );
+	ok( fishValue( 'silverside', 0.02 ) === 225 && fishValue( 'marlin', 200 ) === 240000, 'values run from $225 to $240,000' );
 	ok( TIER_IDS.every( ( t ) => FISH_IDS.some( ( id ) => FISH[ id ].tier === t ) ), 'every tier has fish' );
 	let over60 = 0, rare = 0;
 	const N = 20000, h = habitatAt( spots.pier );
 	for ( let i = 0; i < N; i ++ ) {
 
 		const id = pickSpecies( h, 12, rng );
-		if ( fishValue( id, rollWeight( id, rng ) ) > 600000 ) over60 ++;
+		if ( fishValue( id, rollWeight( id, rng ) ) > 180000 ) over60 ++;
 		if ( [ 'rare', 'epic', 'legendary' ].includes( FISH[ id ].tier ) ) rare ++;
 
 	}
 
 	ok( rare / N > 0.25 && rare / N < 0.45, `rare-or-better fish are common (${ ( rare / N * 100 ).toFixed( 1 ) }%)` );
-	ok( over60 / N > 0.005 && over60 / N < 0.04, `fish over $600,000 turn up now and then (${ ( over60 / N * 100 ).toFixed( 2 ) }%)` );
+	ok( over60 / N > 0.005 && over60 / N < 0.04, `fish over $180,000 turn up now and then (${ ( over60 / N * 100 ).toFixed( 2 ) }%)` );
 	const d = tierChances( habitatAt( spots.deep ), { danger: true } ), c = tierChances( habitatAt( spots.pier ) );
 	ok( d.legendary > c.legendary && d.legendary < 0.06, 'deep and danger water tilt the odds, within reason' );
 
