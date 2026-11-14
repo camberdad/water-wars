@@ -109,6 +109,8 @@ export class CombatFX {
 		p.vel = ( p.vel || new Vector3() ).copy( opts.vel );
 		p.age = 0;
 		p.life = opts.life || 1.2;
+		p.range = opts.range || 0; // full damage up to here (m), falling off beyond
+		p.speed0 = opts.vel.length();
 		p.mesh.visible = true;
 		p.mesh.scale.setScalar( kind === 'shell' ? 0.16 : 1 );
 		this._orient( p );

@@ -25,11 +25,16 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **The other boats:**
   - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
   - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
-  - *Pirates* (black, with a skull flag) hunt you when you come close. Sinking them is legal and pays a bounty.
+  - *Pirates* (black, with a skull flag) live in the **Danger Waters**, the red zones on the map ringed by red
+    buoys. They attack on sight in there, and only fight back elsewhere if you shoot first. Sinking them is
+    legal and pays a bounty. Fish caught in danger waters sell for 60% more.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
   hunts you. Lie low for a while to let it cool off, or pay your fines at the harbour.
 - **Getting sunk** loses your catch and a quarter of your money, and you're towed back to the pier.
+- **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($25,000, tough, big hold), a
+  *Sport-fishing yacht* ($60,000, fastest), and a *Deep-sea fishing ship* ($150,000, a fortress with a huge
+  hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's.
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` with the boat by the pier):
   - **Boat:** hull armour, engine, fish hold, fuel tank, damage control (self-repair)
   - **Weapons:** deck gun (rifle → carbine → MG → twin MG → rotary autocannon), gun cooling, bow cannon
@@ -61,6 +66,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | `src/game/combat/WeaponModels.js` | Procedural deck guns, cannons, the pirate flag and the coast-guard light bar |
 | `src/game/combat/CombatHUD.js` | Hull, gun heat, shells, wanted stars, crosshair, boat labels, minimap dots, the "Sunk!" screen |
 | `src/game/combat/CombatSFX.js` | Synthesised gunfire and explosions |
+| `src/game/BoatCatalog.js`, `Boats.js` | The boats you can buy (stats, model fitting) and their loader |
+| `src/game/DangerZones.js` | The danger waters, their buoys and rewards |
+| `tools/boats/convert.mjs` | Converts the boat models (OBJ/FBX) into `public/models/boats/` (`node tools/boats/convert.mjs`) |
 | `src/game/Gear.js`, `GameState.js`, `GameHUD.js` | Upgrade tracks by category, hull / shells / wanted / pirate record in the save, the tabbed shop |
 
 The rest (rendering engine, ocean, sky, world, audio, fishing) is Tidewater's. See below and `CREDITS.md`.

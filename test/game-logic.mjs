@@ -4,6 +4,8 @@ import { habitatAt, pickSpecies, rollWeight, biteDelay } from '../src/game/Bites
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES } from '../src/game/Gear.js';
+import { BOATS } from '../src/game/BoatCatalog.js';
+import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -191,6 +193,25 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
 	ok( st2.load() && st2.wanted === 3 && st2.shells === 10 && st2.pirate.piratesSunk === 2 && st2.upgrades.armor === 1, 'combat state round-trips through the save' );
 	ok( Object.values( UPGRADES ).every( ( t ) => [ 'boat', 'weapons', 'fishing' ].includes( t.cat ) && t.levels[ 0 ].cost === 0 ), 'every upgrade track has a shop tab and a free first level' );
+
+}
+// ---- Water Wars: bought boats and the danger waters
+{
+
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	st.money = 1000;
+	ok( st.buyBoat( 'trawler' ) === null && st.boat === 'lobster' && st.money === 1000, 'boats cost real money' );
+	st.money = BOATS.trawler.price + 5;
+	ok( st.buyBoat( 'trawler' ) && st.boat === 'trawler' && st.money === 5 && st.boats.includes( 'trawler' ), 'buying a boat puts it in use' );
+	ok( st.stats.hullHP === Math.round( 100 * BOATS.trawler.hullMul ) && st.stats.holdKg === 30 + BOATS.trawler.holdKg, 'boat stats multiply the upgrades' );
+	ok( st.buyBoat( 'trawler' ) === null, 'cannot buy a boat twice' );
+	ok( st.useBoat( 'lobster' ) && st.boat === 'lobster' && st.useBoat( 'ship' ) === false, 'switch between owned boats only' );
+	st.useBoat( 'trawler' );
+	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
+	ok( st2.load() && st2.boat === 'trawler' && st2.boats.length === 2, 'owned boats survive a save' );
+	ok( Object.values( BOATS ).every( ( b ) => b.price === 0 || b.price >= 20000 ), 'new boats are big purchases' );
+	ok( DANGER_ZONES.every( ( z ) => dangerZoneAt( z.x, z.z ) === z ) && dangerZoneAt( 55, 0 ) === null && dangerZoneAt( 64.5, 36.5 ) === null, 'danger zones: the harbour is safe' );
 
 }
 console.log( `value check ${ value }` );

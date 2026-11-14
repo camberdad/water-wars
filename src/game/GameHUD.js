@@ -1,6 +1,7 @@
 import { FISH, fishLengthCm } from './FishTable.js';
 import { UPGRADES, CATEGORIES, nextLevel, FUEL_PRICE, SHELL_PRICE, REPAIR_PRICE } from './Gear.js';
 import { FishPortrait } from './FishPortrait.js';
+import { BOATS, BOAT_ORDER } from './BoatCatalog.js';
 
 // DOM for the fishing game, in the look of the rest of the HUD (ui/ui.css tokens, .tw-glass):
 //   top right     purse and cooler / hold load
@@ -80,6 +81,9 @@ const CSS = /* css */`
 .gm-tab.is-on { background: var(--tw-aqua); color: #0b1418; border-color: transparent; }
 .gm-lvl { font-style: normal; font: 500 var(--tw-fs-xs) var(--tw-mono); color: var(--tw-ink-3); }
 .gm-cash { color: var(--tw-sun); font-family: var(--tw-mono); }
+.gm-boat-row .gm-boat-stats { color: var(--tw-aqua); }
+.gm-boat-row .gm-boat-stats b { color: var(--tw-sun); font-weight: 600; }
+.gm-boat-row.is-current { background: rgba(var(--tw-aqua-rgb), 0.08); }
 .gm-panel.is-shop { width: calc(540 * var(--tw-u)); max-width: 94vw; }
 .gm-log { margin-top: var(--tw-3); color: var(--tw-ink-3); font-size: var(--tw-fs-sm); line-height: 1.5; }
 .gm-row .gm-cm { font-family: var(--tw-mono); color: var(--tw-ink-3); }
@@ -477,7 +481,7 @@ GameHUD.prototype.renderShop = function () {
 	const v = this.vendor;
 	const combat = this.game.combat;
 	const dock = v.kind === 'dock';
-	const tabs = [ { id: 'services', name: 'Services' }, ...CATEGORIES, ...( dock ? [ { id: 'sell', name: 'Sell catch' } ] : [] ) ];
+	const tabs = [ { id: 'services', name: 'Services' }, { id: 'boats', name: 'Boats' }, ...CATEGORIES, ...( dock ? [ { id: 'sell', name: 'Sell catch' } ] : [] ) ];
 	if ( ! tabs.some( ( t ) => t.id === this.shopTab ) ) this.shopTab = 'services';
 	const tab = this.shopTab;
 	const tabBar = `<div class="gm-tabs">${ tabs.map( ( t ) => `<button class="gm-tab${ t.id === tab ? ' is-on' : '' }" data-tab="${ t.id }">${ t.name }</button>` ).join( '' ) }</div>`;
@@ -505,6 +509,24 @@ GameHUD.prototype.renderShop = function () {
 
 		const P = s.pirate;
 		foot = `<span class="gm-sub">${ P.piratesSunk } pirates sunk · ${ P.sunk } honest boats crippled · $${ P.plunder.toLocaleString() } plundered · $${ P.bounties.toLocaleString() } bounties</span>`;
+
+	} else if ( tab === 'boats' ) {
+
+		const armour = UPGRADES.armor.levels[ s.upgrades.armor | 0 ].hullHP;
+		const holdBase = UPGRADES.hold.levels[ s.upgrades.hold | 0 ].holdKg;
+		rows = BOAT_ORDER.map( ( id ) => {
+
+			const b = BOATS[ id ];
+			const owned = s.boats.includes( id ), inUse = s.boat === id;
+			const btn = inUse ? '<span class="gm-have">In use</span>'
+				: owned ? `<button class="gm-btn is-ghost" data-useboat="${ id }">Use</button>`
+					: `<button class="gm-btn" data-buyboat="${ id }" ${ b.price > s.money ? 'disabled' : '' }>$${ b.price.toLocaleString() }</button>`;
+			const stats = `Hull ${ Math.round( armour * b.hullMul ) } · speed ${ Math.round( b.speedMul * 100 ) }% · hold ${ holdBase + b.holdKg } kg · tank ×${ b.fuelMul }`;
+			const need = ! owned && b.price > s.money ? ` · <b>$${ ( b.price - s.money ).toLocaleString() } to go</b>` : '';
+			return `<div class="gm-shop-row gm-boat-row${ inUse ? ' is-current' : '' }"><span>${ b.name }<small>${ b.blurb }</small><small class="gm-boat-stats">${ stats }${ need }</small></span>${ btn }</div>`;
+
+		} ).join( '' );
+		foot = '<span class="gm-sub">Boat stats multiply your upgrades. A boat you switch to comes repaired and fuelled.</span>';
 
 	} else if ( tab === 'sell' ) {
 
@@ -543,6 +565,17 @@ GameHUD.prototype.renderShop = function () {
 
 	};
 	for ( const b of this.stand.querySelectorAll( '[data-buy]' ) ) b.onclick = () => this.game.buy( b.dataset.buy );
+	for ( const b of this.stand.querySelectorAll( '[data-buyboat]' ) ) b.onclick = () => {
+
+		const boat = s.buyBoat( b.dataset.buyboat );
+		if ( boat ) this.game.toast( `She's yours: the ${ boat.name }!`, 3500 );
+
+	};
+	for ( const b of this.stand.querySelectorAll( '[data-useboat]' ) ) b.onclick = () => {
+
+		if ( s.useBoat( b.dataset.useboat ) ) this.game.toast( `Switched to the ${ BOATS[ s.boat ].name }`, 2400 );
+
+	};
 	for ( const b of this.stand.querySelectorAll( '[data-sell]' ) ) b.onclick = () => this.game.sell( [ Number( b.dataset.sell ) ] );
 	const q = ( sel ) => this.stand.querySelector( sel );
 	if ( q( '[data-all]' ) ) q( '[data-all]' ).onclick = () => this.game.sellAll();

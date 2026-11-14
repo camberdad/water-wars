@@ -1,6 +1,7 @@
 import { WORLD } from '../world/WorldLayout.js';
 import { STAND } from './FishStand.js';
 import { CHANDLERY } from './Chandlery.js';
+import { DANGER_ZONES } from './DangerZones.js';
 
 // Minimap, lower right: the island baked once from the terrain data into a 2D canvas (depth-tinted
 // sea, reef and seagrass, sand, grass and forest by height, rock, paths, village pads, the pier,
@@ -311,6 +312,44 @@ export class Minimap {
 		const [ hx1, hz1 ] = P( W.x + W.headWidth / 2, W.zEnd );
 		ctx.fillRect( hx0, hz0, hx1 - hx0, hz1 - hz0 );
 		ctx.strokeRect( hx0, hz0, hx1 - hx0, hz1 - hz0 );
+
+		// Water Wars: the danger waters, hatched red with a dashed rim and their names
+		for ( const d of DANGER_ZONES ) {
+
+			const [ cx, cy ] = P( d.x, d.z );
+			const r = d.r * PPM;
+			ctx.save();
+			ctx.beginPath();
+			ctx.arc( cx, cy, r, 0, Math.PI * 2 );
+			ctx.fillStyle = 'rgba(214, 38, 26, 0.32)';
+			ctx.fill();
+			ctx.clip();
+			ctx.strokeStyle = 'rgba(255, 70, 50, 0.35)';
+			ctx.lineWidth = 1;
+			for ( let k = - 2 * r; k < 2 * r; k += 5 ) {
+
+				ctx.beginPath();
+				ctx.moveTo( cx + k - r, cy - r );
+				ctx.lineTo( cx + k + r, cy + r );
+				ctx.stroke();
+
+			}
+
+			ctx.restore();
+			ctx.beginPath();
+			ctx.arc( cx, cy, r, 0, Math.PI * 2 );
+			ctx.setLineDash( [ 4, 3 ] );
+			ctx.strokeStyle = 'rgba(255, 90, 70, 0.95)';
+			ctx.lineWidth = 1.6;
+			ctx.stroke();
+			ctx.setLineDash( [] );
+			ctx.font = '600 9px Inter, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.fillStyle = '#ffd0c8';
+			ctx.fillText( d.name.toUpperCase(), cx, cy + 3 );
+
+		}
+
 		B.done = true;
 		B.img = null;
 

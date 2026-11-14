@@ -1,5 +1,6 @@
 import { FISH, fishValue, fishLengthCm } from './FishTable.js';
 import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE, SHELL_PRICE, REPAIR_PRICE } from './Gear.js';
+import { BOATS, applyBoat } from './BoatCatalog.js';
 
 const SAVE_KEY = 'waterwars.save.v1';
 const PIRATE_STATS = () => ( { sunk: 0, looted: 0, plunder: 0, bounties: 0, piratesSunk: 0, deaths: 0 } );
@@ -23,6 +24,8 @@ export class GameState {
 		this.shells = 5; // cannon shells in the locker
 		this.wanted = 0; // 0..5 stars for piracy against honest boats (the coast guard hunts you from 2)
 		this.pirate = PIRATE_STATS();
+		this.boat = 'lobster'; // the boat in use (BoatCatalog)
+		this.boats = [ 'lobster' ]; // boats owned
 		this._nextId = 1;
 		this.listeners = new Set();
 
@@ -30,7 +33,32 @@ export class GameState {
 
 	get stats() {
 
-		return gearStats( this.upgrades );
+		return applyBoat( gearStats( this.upgrades ), this.boat );
+
+	}
+
+	// buy a boat (it becomes the one in use); null when unknown, owned or unaffordable
+	buyBoat( id ) {
+
+		const b = BOATS[ id ];
+		if ( ! b || this.boats.includes( id ) || b.price > this.money ) return null;
+		this.money -= b.price;
+		this.boats.push( id );
+		this.useBoat( id );
+		return b;
+
+	}
+
+	// switch to an owned boat: it comes repaired, fuelled and with the hold carried over (what fits)
+	useBoat( id ) {
+
+		if ( ! this.boats.includes( id ) || ! BOATS[ id ] ) return false;
+		this.boat = id;
+		this.hull = null;
+		this.fuel = null;
+		this.save();
+		this.emit();
+		return true;
 
 	}
 
@@ -138,7 +166,7 @@ export class GameState {
 		this.upgrades[ key ] = next.index;
 		if ( key === 'fuel' ) this.fuel = null; // a new tank comes full
 		// new plates come undamaged: the extra points are added to what is left
-		if ( key === 'armor' && this.hull !== null ) this.hull += next.hullHP - UPGRADES.armor.levels[ next.index - 1 ].hullHP;
+		if ( key === 'armor' && this.hull !== null ) this.hull += ( next.hullHP - UPGRADES.armor.levels[ next.index - 1 ].hullHP ) * ( BOATS[ this.boat ] || BOATS.lobster ).hullMul;
 		this.save();
 		this.emit();
 		return next;
@@ -259,7 +287,7 @@ export class GameState {
 
 	toJSON() {
 
-		return { v: 1, money: this.money, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate };
+		return { v: 1, money: this.money, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats };
 
 	}
 
@@ -278,6 +306,8 @@ export class GameState {
 		this.shells = Number.isFinite( d.shells ) ? d.shells : 5;
 		this.wanted = Number.isFinite( d.wanted ) ? d.wanted : 0;
 		this.pirate = { ...PIRATE_STATS(), ...( d.pirate && typeof d.pirate === 'object' ? d.pirate : {} ) };
+		this.boats = Array.isArray( d.boats ) ? [ 'lobster', ...d.boats.filter( ( b ) => BOATS[ b ] && b !== 'lobster' ) ] : [ 'lobster' ];
+		this.boat = this.boats.includes( d.boat ) ? d.boat : 'lobster';
 		this._nextId = Math.max( d.nextId | 0, ...this.inventory.map( ( f ) => f.id + 1 ), 1 );
 		return true;
 
@@ -321,6 +351,8 @@ export class GameState {
 		this.shells = 5;
 		this.wanted = 0;
 		this.pirate = PIRATE_STATS();
+		this.boat = 'lobster';
+		this.boats = [ 'lobster' ];
 		this.save();
 		this.emit();
 

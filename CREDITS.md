@@ -90,3 +90,10 @@ These are published techniques. No code from the papers is included.
 
 The cloud noise, lighting and sampling scheme (`src/sky/Clouds.js`) is adapted from DRG Software Solutions'
 own *Sky Pro WebGPU*. It is published here under this repository's MIT license by its copyright holder.
+
+## Water Wars boat models: `public/models/boats/`
+
+The trawler (`trawler`), the sport-fishing yacht (`sportfisher`) and the deep-sea fishing ship (`ship`) were
+supplied by the Water Wars project owner as free downloads, and converted by `tools/boats/convert.mjs`
+(geometry and material colours only; textures are not used). Their original authors and licences are not
+recorded here yet: add them before redistributing if the source licences require attribution.

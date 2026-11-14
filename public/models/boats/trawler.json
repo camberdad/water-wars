@@ -1,0 +1,36 @@
+{
+	"vertexCount": 37142,
+	"indexCount": 123405,
+	"bbox": {
+		"min": [
+			-69.12189483642578,
+			-19.164901733398438,
+			-32.19089126586914
+		],
+		"max": [
+			87.08421325683594,
+			94.2601318359375,
+			21.91827392578125
+		]
+	},
+	"materials": [
+		"white",
+		"metal",
+		"ship_color",
+		"cardbord",
+		"red",
+		"bright_blue",
+		"yellow",
+		"windows",
+		"lambert1",
+		"dirt",
+		"tire",
+		"black",
+		"light_red",
+		"gold",
+		"NewMaterial",
+		"pots",
+		"blinn7",
+		"pinkk"
+	]
+}

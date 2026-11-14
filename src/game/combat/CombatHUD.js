@@ -26,6 +26,12 @@ const CSS = /* css */`
 .ww-status.is-pulse .ww-stars { animation: ww-pulse 0.5s 3; }
 @keyframes ww-pulse { 50% { transform: scale(1.25); } }
 .ww-gun-name { color: var(--tw-ink-3); font-size: var(--tw-fs-xs); }
+.ww-zone { display: none; margin: 2px calc(-1 * var(--tw-2)) 0; padding: 4px var(--tw-2); border-radius: 8px; background: rgba(200, 30, 20, 0.28);
+	color: #ffb0a6; font: 700 var(--tw-fs-xs) var(--tw-font); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; animation: ww-zone 2s ease-in-out infinite; }
+.ww-zone.is-on { display: block; }
+@keyframes ww-zone { 50% { background: rgba(200, 30, 20, 0.45); } }
+.ww-range.is-far { color: #ffb45a; }
+.ww-range.is-out { color: #ff6a5a; }
 
 .ww-cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity 200ms; }
 .ww-cross.is-on { opacity: 1; }
@@ -100,7 +106,9 @@ export class CombatHUD {
 			<div class="ww-row"><span>Hull</span><span class="ww-bar ww-hull"><span></span></span><b class="ww-hull-n">100</b></div>
 			<div class="ww-row"><span>Gun</span><span class="ww-bar ww-heat"><span></span></span><b class="ww-gun-n">READY</b></div>
 			<div class="ww-row ww-cannon-row"><span>Cannon</span><span class="ww-gun-name ww-can-name"></span><b class="ww-shells">0</b></div>
-			<div class="ww-row"><span>Wanted</span><span class="ww-stars"></span><b class="ww-bounty"></b></div>` );
+			<div class="ww-row"><span>Wanted</span><span class="ww-stars"></span><b class="ww-bounty"></b></div>
+			<div class="ww-zone"></div>` );
+		this.zoneEl = this.status.querySelector( '.ww-zone' );
 		this.hullBar = this.status.querySelector( '.ww-hull' );
 		this.hullFill = this.hullBar.firstElementChild;
 		this.hullN = this.status.querySelector( '.ww-hull-n' );
@@ -186,6 +194,14 @@ export class CombatHUD {
 		const c = this.combat, s = c.state, st = s.stats, app = c.app;
 		const aboard = c.aboard;
 		this.status.style.opacity = aboard || s.wanted > 0 ? '1' : '0.0';
+		const zoneText = c.zone ? `⚠ Danger waters · ${ c.zone.name }` : '';
+		if ( this._zoneText !== zoneText ) {
+
+			this._zoneText = zoneText;
+			this.zoneEl.textContent = zoneText;
+			this.zoneEl.classList.toggle( 'is-on', !! zoneText );
+
+		}
 
 		// hull
 		const hp = s.hullHP, max = st.hullHP;
@@ -218,7 +234,11 @@ export class CombatHUD {
 			this.ring.setAttribute( 'stroke-dashoffset', `${ this.ringC * ( 1 - c.heat ) }` );
 			this.cross.classList.toggle( 'is-over', c.overheated );
 			this.cross.classList.toggle( 'is-target', !! c.aimTarget );
-			this.range.textContent = c.aimTarget ? `${ c.aimTarget.name } · ${ Math.round( c.aimDist ) } m` : '';
+			const R = st.gunRange, d = c.aimDist;
+			const far = d > R, out = d > R * 1.4;
+			this.range.textContent = c.aimTarget ? `${ c.aimTarget.name } · ${ Math.round( d ) } m${ out ? ' · out of range' : far ? ' · long range' : '' }` : '';
+			this.range.classList.toggle( 'is-far', far && ! out );
+			this.range.classList.toggle( 'is-out', out );
 
 		}
 

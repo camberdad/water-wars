@@ -13,6 +13,7 @@ import { GameHUD } from './GameHUD.js';
 import { Minimap } from './Minimap.js';
 import { Guide } from './Guide.js';
 import { Combat } from './combat/Combat.js';
+import { dangerZoneAt, DANGER_FISH_BONUS } from './DangerZones.js';
 
 // how long the catch card stays up unless dismissed (ms)
 const CATCH_CARD_MS = 9000;
@@ -524,6 +525,15 @@ export class Game {
 
 			const entry = this.state.addFish( f.species, f.kg, this.hour );
 			const info = this.state.lastCatch;
+			// fish from the danger waters fetch more (Water Wars)
+			if ( dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ) ) {
+
+				info.value = Math.round( info.value * DANGER_FISH_BONUS );
+				if ( entry ) entry.value = info.value;
+				this.state.save();
+				this.state.emit();
+
+			}
 			if ( au && au.fishSplash ) au.fishSplash( this.rod.bobber, 0.8 );
 			if ( au && au.fishFlop ) au.fishFlop();
 			// the catch card (with a HUD) while the fish hangs on the line; a toast otherwise

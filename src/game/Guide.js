@@ -93,7 +93,7 @@ const CARDS = [
 			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash, fish and shells' ) }
 			${ row( k( 'U' ), '<b>Harbour services</b> by the pier: repairs, shells, upgrades, sell your catch' ) }
 		</div>
-		<p style="margin:var(--tw-2) 0 0;color:var(--tw-ink-3);font-size:var(--tw-fs-sm)">Attacking fishing boats and traders makes you <b>wanted</b>. From two stars the <b>coast guard</b> hunts you. Lie low, or pay your fines at the harbour. Sinking pirates is legal and pays a bounty.</p>`,
+		<p style="margin:var(--tw-2) 0 0;color:var(--tw-ink-3);font-size:var(--tw-fs-sm)"><b style="color:#ff7a6a">Danger Waters</b> (red on the map, ringed by red buoys) are pirate country: they attack on sight there, but fish fetch more and pirates carry more plunder. Elsewhere pirates leave you alone unless you shoot first. Save up for a whole new boat in the <b>Boats</b> tab. Attacking fishing boats and traders makes you <b>wanted</b>. From two stars the <b>coast guard</b> hunts you. Lie low, or pay your fines at the harbour. Sinking pirates is legal and pays a bounty.</p>`,
 	},
 	{
 		eyebrow: 'Getting around',

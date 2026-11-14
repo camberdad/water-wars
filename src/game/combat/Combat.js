@@ -7,6 +7,9 @@ import { CombatSFX } from './CombatSFX.js';
 import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPCBoats.js';
 import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
+import { BOATS } from '../BoatCatalog.js';
+import { createBoatMesh, surfaceY } from '../Boats.js';
+import { DANGER_ZONES, dangerZoneAt, randomInZone, buildDangerBuoys } from '../DangerZones.js';
 
 // Water Wars' combat layer on top of the fishing game:
 //   at the helm   left mouse fires the deck gun (it overheats), right mouse the bow cannon (shells)
@@ -21,7 +24,8 @@ const _w = new Vector3();
 const _a = new Vector3();
 const _q = new Quaternion();
 const FWD = new Vector3( 0, 0, - 1 );
-const BULLET_SPEED = 260;
+const BULLET_SPEED = 300;
+const BULLET_REACH = 1.4; // bullets fly on past the gun's range (losing punch) before they drop out
 const SHELL_SPEED = 85;
 const POPULATION = { fisher: 3, trader: 1, pirate: 2 };
 const DOCK_RADIUS = 45;
@@ -65,6 +69,14 @@ export class Combat {
 		this.dockVendor = { name: 'Harbour office', kind: 'dock', greeting: 'Repairs, shells, upgrades, and Joe takes your catch off the boat.' };
 		const L = app.boat.lines;
 		this.foredeckY = L.sheerY( L.tAtSheerZ( 3.0 ) ) + 0.05;
+		// the boat in use: the lobster boat or a bought model (look, gun mounts, hit box)
+		this.mounts = { gun: new Vector3( 0, roofTopY( 0 ) - 0.02, - 0.4 ), cannon: new Vector3( 0, this.foredeckY, 3.0 ) };
+		this.hitHalf = BOAT_HALF.clone();
+		this.skinMesh = null;
+		this._skinId = 'lobster';
+		// the danger waters: red buoys around them, and where the player is
+		this.buoys = buildDangerBuoys( app.scene, app.terrainData );
+		this.zone = null;
 		this.applyGear();
 
 	}
@@ -79,7 +91,7 @@ export class Combat {
 			if ( this.gun ) this.gun.dispose();
 			this._gunTier = u.gun | 0;
 			this.gun = buildGunTurret( this._gunTier );
-			this.gun.root.position.set( 0, roofTopY( 0 ) - 0.02, - 0.4 );
+			this.gun.root.position.copy( this.mounts.gun );
 			boat.add( this.gun.root );
 
 		}
@@ -92,12 +104,63 @@ export class Combat {
 			if ( this._cannonTier > 0 ) {
 
 				this.cannon = buildCannon( this._cannonTier );
-				this.cannon.root.position.set( 0, this.foredeckY, 3.0 );
+				this.cannon.root.position.copy( this.mounts.cannon );
 				boat.add( this.cannon.root );
 
 			}
 
 		}
+
+		if ( this.state.boat !== this._skinId ) this.setSkin( this.state.boat );
+
+	}
+
+	// show the boat in use: hide the lobster boat's meshes and hang the bought model on its group
+	// (the physics stays the lobster boat's); move the guns to the model's mounts
+	async setSkin( id ) {
+
+		this._skinId = id;
+		const def = BOATS[ id ] || BOATS.lobster;
+		let mesh = null;
+		try {
+
+			mesh = def.model ? await createBoatMesh( id ) : null;
+
+		} catch ( e ) {
+
+			console.warn( 'boat model failed to load', e );
+			this.game.toast( `Could not load the ${ def.name } model; showing the old boat`, 3000 );
+
+		}
+
+		if ( this._skinId !== id ) return; // switched again meanwhile
+		const app = this.app, boat = app.boat;
+		if ( this.skinMesh ) boat.group.remove( this.skinMesh );
+		this.skinMesh = mesh;
+		if ( mesh ) boat.group.add( mesh );
+		for ( const m of Object.values( boat.meshes ) ) m.visible = ! mesh;
+		this.mounts.gun.set( 0, roofTopY( 0 ) - 0.02, - 0.4 );
+		this.mounts.cannon.set( 0, this.foredeckY, 3.0 );
+		this.hitHalf.copy( BOAT_HALF );
+		if ( mesh ) {
+
+			// sit the guns on the model's roof / foredeck under their mount points
+			if ( def.gun ) this.mounts.gun.fromArray( def.gun );
+			if ( def.cannon ) this.mounts.cannon.fromArray( def.cannon );
+			for ( const m of [ this.mounts.gun, this.mounts.cannon ] ) {
+
+				const y = surfaceY( mesh.geometry, m.x, m.z );
+				if ( y !== null ) m.y = y - 0.02;
+
+			}
+			if ( def.hitHalf ) this.hitHalf.fromArray( def.hitHalf );
+
+		}
+
+		if ( this.gun ) this.gun.root.position.copy( this.mounts.gun );
+		if ( this.cannon ) this.cannon.root.position.copy( this.mounts.cannon );
+		app.player.forceThird = !! mesh;
+		app.player.deckLift = mesh ? ( def.deckLift ?? 0.9 ) : 0;
 
 	}
 
@@ -146,7 +209,7 @@ export class Combat {
 		const A = _v.copy( a ).sub( bc.position ).applyQuaternion( _q );
 		const B = _w.copy( b ).sub( bc.position ).applyQuaternion( _q );
 		A.y -= BOAT_CENTER_Y; B.y -= BOAT_CENTER_Y;
-		return segmentBox( A, B, BOAT_HALF );
+		return segmentBox( A, B, this.hitHalf );
 
 	}
 
@@ -169,6 +232,8 @@ export class Combat {
 		ctx.playerDead = this.dead;
 		ctx.wanted = s.wanted;
 		ctx.time = this.time;
+		ctx.playerZoneLoose = aboard ? dangerZoneAt( ctx.playerPos.x, ctx.playerPos.z, 25 ) : null;
+		this.updateZone( ctx.playerPos, aboard );
 		this.manageSpawns( dt, ctx.playerPos );
 		this.fleet.update( dt, ctx );
 		if ( aboard ) this.collideBoats( dt );
@@ -239,6 +304,18 @@ export class Combat {
 
 	}
 
+	// entering / leaving the danger waters
+	updateZone( pos, aboard ) {
+
+		const z = dangerZoneAt( pos.x, pos.z );
+		if ( z === this.zone ) return;
+		const was = this.zone;
+		this.zone = z;
+		if ( z ) this.game.toast( `⚠ Entering ${ z.name }: danger waters. Pirates attack on sight; fish here fetch more.`, 4000 );
+		else if ( was && aboard ) this.game.toast( `Leaving ${ was.name } · safe waters`, 2400 );
+
+	}
+
 	manageSpawns( dt, near ) {
 
 		const counts = { fisher: 0, trader: 0, pirate: 0, coastguard: 0 };
@@ -266,7 +343,15 @@ export class Combat {
 
 			}
 
-			const at = type === 'coastguard'
+			let at;
+			if ( type === 'pirate' ) {
+
+				// in a danger zone, out of sight of the player if possible
+				const zones = DANGER_ZONES.slice().sort( () => Math.random() - 0.5 );
+				const far = zones.find( ( z ) => Math.hypot( z.x - near.x, z.z - near.z ) > z.r + 150 ) || zones[ 0 ];
+				at = randomInZone( far, this.app.terrainData );
+
+			} else at = type === 'coastguard'
 				? this.fleet.randomWater( 8, 400, near, 260, 420 )
 				: this.fleet.randomWater( 8, 400, near, 330, 650 );
 			// pirates get tougher as you do
@@ -289,8 +374,9 @@ export class Combat {
 			if ( ! b.active || b.state === 'sinking' ) continue;
 			const dx = bc.position.x - b.pos.x, dz = bc.position.z - b.pos.z;
 			const d = Math.hypot( dx, dz );
-			if ( d > 7.2 || d < 1e-3 ) continue;
-			const nx = dx / d, nz = dz / d, over = 7.2 - d;
+			const R = this.hitHalf.z + 3.05;
+			if ( d > R || d < 1e-3 ) continue;
+			const nx = dx / d, nz = dz / d, over = R - d;
 			bc.position.x += nx * over * 0.5; bc.position.z += nz * over * 0.5;
 			b.pos.x -= nx * over * 0.5; b.pos.z -= nz * over * 0.5;
 			const rel = ( bc.velocity.x - b.vel.x ) * nx + ( bc.velocity.z - b.vel.z ) * nz;
@@ -321,7 +407,7 @@ export class Combat {
 		const cam = this.app.camera;
 		const o = cam.position;
 		const dir = _a.copy( FWD ).applyQuaternion( cam.quaternion );
-		const reach = st.gunRange + 40;
+		const reach = st.gunRange * BULLET_REACH + 40;
 		const end = _v.copy( o ).addScaledVector( dir, reach );
 		let best = Infinity, tgt = null;
 		for ( const b of this.fleet.boats ) {
@@ -358,7 +444,7 @@ export class Combat {
 		dir.z += ( Math.random() - 0.5 ) * 2 * sp;
 		dir.normalize();
 		const vel = dir.clone().multiplyScalar( BULLET_SPEED ).add( app.boatCtl.velocity );
-		this.fx.fire( { from: muzzle, vel, dmg: st.gunDmg, owner: 'player', life: st.gunRange / BULLET_SPEED } );
+		this.fx.fire( { from: muzzle, vel, dmg: st.gunDmg, owner: 'player', range: st.gunRange, life: st.gunRange * BULLET_REACH / BULLET_SPEED } );
 		this.fx.muzzle( muzzle, dir );
 		this.sfx.shot( muzzle, st.gunRate > 6 ? 'mg' : 'rifle', 0.8 );
 		this.gunT = 1 / st.gunRate;
@@ -461,7 +547,10 @@ export class Combat {
 			this.sfx.shot( point, shell ? 'explosion' : 'hit', shell ? 1 : 0.6 );
 			if ( target.alive ) {
 
-				const killed = target.damage( p.dmg, p.owner === 'player', this._ctx );
+				// past the gun's range a bullet has lost some punch (down to half at the end of its flight)
+				const flown = p.age * ( p.speed0 || 0 );
+				const k = p.range && flown > p.range ? Math.max( 0.5, 1 - 0.5 * ( flown - p.range ) / ( p.range * ( BULLET_REACH - 1 ) ) ) : 1;
+				const killed = target.damage( p.dmg * k, p.owner === 'player', this._ctx );
 				if ( this.hud && p.owner === 'player' ) this.hud.hitMarker( killed );
 
 			}

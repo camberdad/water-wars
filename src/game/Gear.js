@@ -70,11 +70,11 @@ export const UPGRADES = {
 	// ---------------------------------------------------------------- weapons
 	// the deck gun on the wheelhouse roof (left mouse at the helm); it never runs dry but it overheats
 	gun: { cat: 'weapons', name: 'Deck gun', levels: [
-		{ cost: 0, label: 'Rusty rifle', gunName: 'Rusty rifle', gunShort: 'RIFLE', gunDmg: 6, gunRate: 2.2, gunRange: 120, gunSpread: 0.012, gunHeat: 0.09, gunBarrels: 1 },
-		{ cost: 250, label: 'Lever-action carbine', gunName: 'Lever-action carbine', gunShort: 'CARBINE', gunDmg: 9, gunRate: 3.2, gunRange: 140, gunSpread: 0.009, gunHeat: 0.075, gunBarrels: 1 },
-		{ cost: 900, label: 'Deck machine gun', gunName: 'Deck machine gun', gunShort: 'MG', gunDmg: 6, gunRate: 9, gunRange: 160, gunSpread: 0.014, gunHeat: 0.03, gunBarrels: 1 },
-		{ cost: 2400, label: 'Twin machine guns', gunName: 'Twin machine guns', gunShort: 'TWIN MG', gunDmg: 7, gunRate: 15, gunRange: 180, gunSpread: 0.014, gunHeat: 0.022, gunBarrels: 2 },
-		{ cost: 6000, label: 'Rotary autocannon', gunName: 'Rotary autocannon', gunShort: 'ROTARY', gunDmg: 9, gunRate: 24, gunRange: 220, gunSpread: 0.011, gunHeat: 0.016, gunBarrels: 2 },
+		{ cost: 0, label: 'Rusty rifle', gunName: 'Rusty rifle', gunShort: 'RIFLE', gunDmg: 6, gunRate: 2.2, gunRange: 180, gunSpread: 0.012, gunHeat: 0.09, gunBarrels: 1 },
+		{ cost: 250, label: 'Lever-action carbine', gunName: 'Lever-action carbine', gunShort: 'CARBINE', gunDmg: 9, gunRate: 3.2, gunRange: 220, gunSpread: 0.009, gunHeat: 0.075, gunBarrels: 1 },
+		{ cost: 900, label: 'Deck machine gun', gunName: 'Deck machine gun', gunShort: 'MG', gunDmg: 6, gunRate: 9, gunRange: 240, gunSpread: 0.014, gunHeat: 0.03, gunBarrels: 1 },
+		{ cost: 2400, label: 'Twin machine guns', gunName: 'Twin machine guns', gunShort: 'TWIN MG', gunDmg: 7, gunRate: 15, gunRange: 260, gunSpread: 0.014, gunHeat: 0.022, gunBarrels: 2 },
+		{ cost: 6000, label: 'Rotary autocannon', gunName: 'Rotary autocannon', gunShort: 'ROTARY', gunDmg: 9, gunRate: 24, gunRange: 300, gunSpread: 0.011, gunHeat: 0.016, gunBarrels: 2 },
 	] },
 	cooling: { cat: 'weapons', name: 'Gun cooling', levels: [
 		{ cost: 0, label: 'Air cooled', coolRate: 0.35 },

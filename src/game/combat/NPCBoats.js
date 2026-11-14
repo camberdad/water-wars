@@ -6,6 +6,7 @@ import { SPRAY } from '../../fx/Spray.js';
 import { FISH } from '../FishTable.js';
 import { rollWeight } from '../Bites.js';
 import { buildGunTurret, buildCannon, buildFlag, buildLightBar } from './WeaponModels.js';
+import { DANGER_ZONES, DANGER_LOOT_BONUS, randomInZone } from '../DangerZones.js';
 
 // The other boats on the water. They reuse the player's lobster-boat geometry (shared buffers and
 // materials, so a boat costs draw calls but no memory), with their own hull paint per faction and a
@@ -14,7 +15,8 @@ import { buildGunTurret, buildCannon, buildFlag, buildLightBar } from './WeaponM
 //   fisher      steams between fishing spots and sits on them a while; sometimes carries a rifle.
 //               Honest: attacking one makes you wanted.
 //   trader      runs long routes with cash aboard and a machine gun; flees and fires back.
-//   pirate      hunts you when you come close; bounty on its head (no wanted level for sinking it).
+//   pirate      lives in the Danger Waters (red on the map) and only attacks on sight in there, or
+//               when you shoot first; bounty on its head (no wanted level for sinking it).
 //   coastguard  only out when you are wanted (two stars and up): it hunts you down.
 //
 // A boat brought to 0 hp is disabled: dead in the water and burning, lootable (G) for a while, then
@@ -34,9 +36,9 @@ export const NPC_TYPES = {
 		names: [ 'Island Trader', 'Copra Queen', 'Rum Runner', 'Cargo Cult', 'Tradewind', 'Spice Isle', 'Mangrove Merchant' ],
 	},
 	pirate: {
-		label: 'Pirate', hp: 150, speed: 9.5, armedChance: 1, hostile: true,
-		gun: { tier: 2, dmg: 3, rate: 4.5, range: 140, spread: 0.05, speed: 220 },
-		cash: [ 160, 420 ], fish: [ 0, 1 ], bounty: 160,
+		label: 'Pirate', hp: 100, speed: 8.5, armedChance: 1, hostile: true,
+		gun: { tier: 2, dmg: 2, rate: 3, range: 120, spread: 0.065, speed: 220 },
+		cash: [ 180, 420 ], fish: [ 0, 2 ], bounty: 200,
 		names: [ 'Black Gull', 'Sea Wolf', 'Bloody Barracuda', 'Rusty Cutlass', 'Widowmaker', 'Salt Reaper', 'Kraken\'s Kiss', 'Mad Morgan' ],
 	},
 	coastguard: {
@@ -176,13 +178,15 @@ export class NPCBoat {
 		this.type = type;
 		this.def = T;
 		this.tier = tier;
-		const k = 1 + 0.6 * ( tier - 1 );
+		const k = 1 + 0.4 * ( tier - 1 );
 		this.maxHp = Math.round( T.hp * k );
 		this.hp = this.maxHp;
-		this.gun = T.gun && Math.random() < T.armedChance ? { ...T.gun, dmg: T.gun.dmg * ( 1 + 0.4 * ( tier - 1 ) ) } : null;
-		this.cannonDef = T.cannon || ( type === 'pirate' && tier >= 3 ? { dmg: 16, rate: 0.14, range: 200, splash: 5 } : null );
+		this.gun = T.gun && Math.random() < T.armedChance ? { ...T.gun, dmg: T.gun.dmg * ( 1 + 0.25 * ( tier - 1 ) ) } : null;
+		this.cannonDef = T.cannon || ( type === 'pirate' && tier >= 3 ? { dmg: 12, rate: 0.1, range: 180, splash: 4 } : null );
 		this.name = pick( T.names ) + ( type === 'pirate' && tier > 1 ? [ '', '', ' (raider)', ' (warlord)' ][ tier ] : '' );
-		this.cash = Math.round( rand( T.cash[ 0 ], T.cash[ 1 ] ) * ( type === 'pirate' ? tier : 1 ) );
+		this.cash = Math.round( rand( T.cash[ 0 ], T.cash[ 1 ] ) * ( type === 'pirate' ? tier * DANGER_LOOT_BONUS : 1 ) );
+		// pirates keep to one stretch of danger water
+		this.home = type === 'pirate' ? DANGER_ZONES.reduce( ( a, z ) => ( ( z.x - at.x ) ** 2 + ( z.z - at.z ) ** 2 < ( a.x - at.x ) ** 2 + ( a.z - at.z ) ** 2 ? z : a ) ) : null;
 		this.fishCargo = [];
 		const nf = Math.round( rand( T.fish[ 0 ], T.fish[ 1 ] ) );
 		const species = Object.keys( FISH );
@@ -241,7 +245,8 @@ export class NPCBoat {
 	pickWaypoint() {
 
 		const f = this.fleet;
-		if ( this.type === 'fisher' ) this.waypoint = f.randomWater( 6, 30, this.pos, 120, 420 );
+		if ( this.type === 'pirate' && this.home ) this.waypoint = randomInZone( this.home, f.terrain );
+		else if ( this.type === 'fisher' ) this.waypoint = f.randomWater( 6, 30, this.pos, 120, 420 );
 		else this.waypoint = f.randomWater( 10, 200, this.pos, 250, 700 );
 
 	}
@@ -288,7 +293,10 @@ export class NPCBoat {
 		const dist = toP.length();
 		this.distToPlayer = dist;
 		const bearing = Math.atan2( toP.x, toP.z );
-		const hunting = ( this.type === 'pirate' && ctx.playerAboard && dist < 170 ) || ( this.type === 'coastguard' && ctx.wanted >= 2 ) || ( this.provoked && this.type === 'pirate' );
+		// pirates: on sight only when you are in the danger waters (a little slack at the edge), or once
+		// you have fired on them; the coast guard: whenever you are wanted
+		if ( this.provoked && this.type === 'pirate' && dist > 320 ) this.provoked = false;
+		const hunting = ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < 220 ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 );
 
 		switch ( this.state ) {
 
@@ -364,9 +372,10 @@ export class NPCBoat {
 
 			case 'attack': {
 
-				if ( ! hunting && dist > 260 ) {
+				if ( ! hunting && ( dist > 260 || this.type === 'pirate' ) ) {
 
 					this.state = 'cruise';
+					this.announced = false;
 					this.pickWaypoint();
 					break;
 
@@ -524,10 +533,10 @@ export class NPCBoat {
 		if ( this.fireT > 0 ) return;
 		// bursts: a few shots, then a pause
 		this.burst = ( this.burst || 0 ) + 1;
-		if ( this.burst > 4 + g.rate ) {
+		if ( this.burst > 3 + g.rate ) {
 
 			this.burst = 0;
-			this.fireT = rand( 1.0, 2.2 );
+			this.fireT = rand( 1.4, 2.8 );
 			return;
 
 		}

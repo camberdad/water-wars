@@ -717,7 +717,8 @@ export class Player {
 		}
 
 		// camera: eye above the feet, following the boat's motion
-		const eyeL = _v.set( p.x, p.y + EYE + Math.sin( this.bob ) * 0.02, p.z );
+		// (deckLift: a bought boat's deck sits higher than the lobster boat's, Water Wars)
+		const eyeL = _v.set( p.x, p.y + EYE + ( this.deckLift || 0 ) + Math.sin( this.bob ) * 0.02, p.z );
 		b.toWorld( eyeL, this.camera.position );
 		this._camY = this.camera.position.y;
 		this.deckBase( _q );
@@ -733,6 +734,8 @@ export class Player {
 		const wheel = inp.consumeWheel();
 
 		if ( inp.hit( 'KeyV' ) ) this.camMode = this.camMode === 'first' ? 'third' : 'first';
+		// bought boats have no modelled helm seat: always the third-person boat camera
+		if ( this.forceThird ) this.camMode = 'third';
 		if ( inp.hit( 'KeyE' ) ) {
 
 			this.leaveHelm();
