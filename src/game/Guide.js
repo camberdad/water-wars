@@ -67,9 +67,9 @@ const row = ( keys, text ) => `<div class="gm-guide-row"><span class="k">${ keys
 
 const CARDS = [
 	{
-		eyebrow: 'Welcome to Tidewater',
-		title: 'Fish the island, sell your catch',
-		body: `<p>Catch fish from the <b>beach</b>, the <b>pier</b> or your <b>boat</b>. Different fish bite in the shallows, around the pier, over the reef and out in deep water, and they change with the time of day.</p>
+		eyebrow: 'Welcome to Water Wars',
+		title: 'Fish for it, or take it by force',
+		body: `<p>Make your fortune on the water. Play it honest: catch fish from the <b>beach</b>, the <b>pier</b> or your <b>boat</b>. Or turn <b>pirate</b>: run down the other boats, shoot them dead in the water and <b>plunder</b> their cash and catch. Pirates prowl offshore too, with a <b>bounty</b> on their heads.</p>
 			<p>Sell your catch to <b>Joe</b> at the fish stand by the pier, then spend the money on upgrades from <b>Marta</b> at the chandlery by the boathouse: stronger line, a faster reel, a bigger hold, a fish finder and lights for fishing at night.</p>`,
 	},
 	{
@@ -83,6 +83,17 @@ const CARDS = [
 			${ row( k( 'RMB' ), 'Reel an empty line back in' ) }
 			${ row( k( 'I' ), 'Your cooler and fish log' ) }
 		</div>`,
+	},
+	{
+		eyebrow: 'Piracy',
+		title: 'Shoot, loot, upgrade',
+		body: `<div class="gm-guide-list">
+			${ row( k( 'LMB' ), 'At the helm: fire the <b>deck gun</b> at the crosshair. It overheats, so fire in bursts' ) }
+			${ row( k( 'RMB' ), 'Fire the <b>bow cannon</b> (buy one at Marta or the harbour; it uses shells)' ) }
+			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash, fish and shells' ) }
+			${ row( k( 'U' ), '<b>Harbour services</b> by the pier: repairs, shells, upgrades, sell your catch' ) }
+		</div>
+		<p style="margin:var(--tw-2) 0 0;color:var(--tw-ink-3);font-size:var(--tw-fs-sm)">Attacking fishing boats and traders makes you <b>wanted</b>. From two stars the <b>coast guard</b> hunts you. Lie low, or pay your fines at the harbour. Sinking pirates is legal and pays a bounty.</p>`,
 	},
 	{
 		eyebrow: 'Getting around',

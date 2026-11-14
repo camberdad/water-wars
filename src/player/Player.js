@@ -771,8 +771,8 @@ export class Player {
 			this.orbitYaw -= look.x * 0.003;
 			this.orbitPitch = THREE.MathUtils.clamp( this.orbitPitch + look.y * 0.003, - 0.05, 1.2 );
 			this.orbitDist = THREE.MathUtils.clamp( this.orbitDist * ( 1 + wheel * 0.08 ), 6, 40 );
-			// gently swing behind the boat when moving
-			if ( b.speed > 2 && Math.abs( look.x ) < 0.5 ) {
+			// gently swing behind the boat when moving (not while aiming the guns: Water Wars)
+			if ( b.speed > 2 && Math.abs( look.x ) < 0.5 && ! this.holdOrbit ) {
 
 				const behind = b.getYaw() + Math.PI;
 				let d = behind - this.orbitYaw;
@@ -782,6 +782,10 @@ export class Player {
 			}
 
 			const target = b.toWorld( new THREE.Vector3( 0, 1.4, 0 ), new THREE.Vector3() );
+			// the crosshair sits at the centre of the view: look over the boat, not at it, when the guns
+			// are manned (eased so the camera does not jump)
+			this._aimLift = ( this._aimLift || 0 ) + ( ( this.aimLift || 0 ) - ( this._aimLift || 0 ) ) * ( 1 - Math.exp( - dt * 3 ) );
+			target.y += this._aimLift;
 			const off = new THREE.Vector3(
 				Math.sin( this.orbitYaw ) * Math.cos( this.orbitPitch ),
 				Math.sin( this.orbitPitch ),

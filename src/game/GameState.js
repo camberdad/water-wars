@@ -1,7 +1,8 @@
 import { FISH, fishValue, fishLengthCm } from './FishTable.js';
-import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE } from './Gear.js';
+import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE, SHELL_PRICE, REPAIR_PRICE } from './Gear.js';
 
-const SAVE_KEY = 'tidewater.save.v1';
+const SAVE_KEY = 'waterwars.save.v1';
+const PIRATE_STATS = () => ( { sunk: 0, looted: 0, plunder: 0, bounties: 0, piratesSunk: 0, deaths: 0 } );
 
 // Everything the player owns: wallet, the fish in the cooler / hold, the fish log and the gear
 // levels. Saved to localStorage (per browser) after every change; storage can be missing or throw
@@ -18,6 +19,10 @@ export class GameState {
 		this.lastCatch = null;
 		this.upgrades = defaultUpgrades();
 		this.fuel = null; // litres left (null = full tank)
+		this.hull = null; // hull points left (null = fully repaired)
+		this.shells = 5; // cannon shells in the locker
+		this.wanted = 0; // 0..5 stars for piracy against honest boats (the coast guard hunts you from 2)
+		this.pirate = PIRATE_STATS();
 		this._nextId = 1;
 		this.listeners = new Set();
 
@@ -132,6 +137,8 @@ export class GameState {
 		this.money -= next.cost;
 		this.upgrades[ key ] = next.index;
 		if ( key === 'fuel' ) this.fuel = null; // a new tank comes full
+		// new plates come undamaged: the extra points are added to what is left
+		if ( key === 'armor' && this.hull !== null ) this.hull += next.hullHP - UPGRADES.armor.levels[ next.index - 1 ].hullHP;
 		this.save();
 		this.emit();
 		return next;
@@ -173,6 +180,70 @@ export class GameState {
 
 	}
 
+	get hullHP() {
+
+		return this.hull === null ? this.stats.hullHP : Math.max( 0, Math.min( this.hull, this.stats.hullHP ) );
+
+	}
+
+	// damage the hull (no save, like fuel); returns the points left
+	damage( hp ) {
+
+		this.hull = Math.max( 0, this.hullHP - hp );
+		return this.hull;
+
+	}
+
+	heal( hp ) {
+
+		const max = this.stats.hullHP;
+		const v = Math.min( max, this.hullHP + hp );
+		this.hull = v >= max - 1e-3 ? null : v;
+
+	}
+
+	repairCost() {
+
+		return Math.ceil( ( this.stats.hullHP - this.hullHP ) * REPAIR_PRICE );
+
+	}
+
+	// patch the hull as far as the money goes; returns points repaired
+	repair() {
+
+		const missing = this.stats.hullHP - this.hullHP;
+		const hp = Math.min( missing, Math.floor( this.money / REPAIR_PRICE ) );
+		if ( hp <= 0 ) return 0;
+		this.money -= Math.ceil( hp * REPAIR_PRICE );
+		this.heal( hp );
+		this.save();
+		this.emit();
+		return hp;
+
+	}
+
+	// buy up to n shells (fills the locker by default); returns how many were bought
+	buyShells( n = Infinity ) {
+
+		const room = this.stats.shellCap - this.shells;
+		const k = Math.min( room, n, Math.floor( this.money / SHELL_PRICE ) );
+		if ( k <= 0 ) return 0;
+		this.money -= k * SHELL_PRICE;
+		this.shells += k;
+		this.save();
+		this.emit();
+		return k;
+
+	}
+
+	earn( amount ) {
+
+		this.money += Math.round( amount );
+		this.save();
+		this.emit();
+
+	}
+
 	onChange( fn ) {
 
 		this.listeners.add( fn );
@@ -188,7 +259,7 @@ export class GameState {
 
 	toJSON() {
 
-		return { v: 1, money: this.money, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId };
+		return { v: 1, money: this.money, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate };
 
 	}
 
@@ -203,6 +274,10 @@ export class GameState {
 		for ( const [ k, v ] of Object.entries( this.log ) ) if ( FISH[ k ] && v && v.bestKg > 0 && ! Number.isFinite( v.bestCm ) ) v.bestCm = Math.round( fishLengthCm( k, v.bestKg ) );
 		this.upgrades = { ...defaultUpgrades(), ...( d.upgrades || {} ) };
 		this.fuel = Number.isFinite( d.fuel ) ? d.fuel : null;
+		this.hull = Number.isFinite( d.hull ) ? d.hull : null;
+		this.shells = Number.isFinite( d.shells ) ? d.shells : 5;
+		this.wanted = Number.isFinite( d.wanted ) ? d.wanted : 0;
+		this.pirate = { ...PIRATE_STATS(), ...( d.pirate && typeof d.pirate === 'object' ? d.pirate : {} ) };
 		this._nextId = Math.max( d.nextId | 0, ...this.inventory.map( ( f ) => f.id + 1 ), 1 );
 		return true;
 
@@ -242,6 +317,10 @@ export class GameState {
 		this.log = {};
 		this.upgrades = defaultUpgrades();
 		this.fuel = null;
+		this.hull = null;
+		this.shells = 5;
+		this.wanted = 0;
+		this.pirate = PIRATE_STATS();
 		this.save();
 		this.emit();
 

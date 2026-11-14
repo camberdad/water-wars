@@ -1,5 +1,5 @@
 import { FISH, fishLengthCm } from './FishTable.js';
-import { UPGRADES, nextLevel, FUEL_PRICE } from './Gear.js';
+import { UPGRADES, CATEGORIES, nextLevel, FUEL_PRICE, SHELL_PRICE, REPAIR_PRICE } from './Gear.js';
 import { FishPortrait } from './FishPortrait.js';
 
 // DOM for the fishing game, in the look of the rest of the HUD (ui/ui.css tokens, .tw-glass):
@@ -75,6 +75,12 @@ const CSS = /* css */`
 .gm-shop-row { display: grid; grid-template-columns: 1fr auto; gap: var(--tw-3); align-items: center; padding: var(--tw-2) 0; border-bottom: 1px solid var(--tw-line); }
 .gm-shop-row small { display: block; color: var(--tw-ink-3); font-size: var(--tw-fs-sm); margin-top: 2px; }
 .gm-shop-row .gm-have { color: var(--tw-ink-3); font-size: var(--tw-fs-sm); }
+.gm-tabs { display: flex; flex-wrap: wrap; gap: var(--tw-1); margin: 0 0 var(--tw-2); }
+.gm-tab { font: 600 var(--tw-fs-sm) var(--tw-font); color: var(--tw-ink-2); background: var(--tw-fill); border: 1px solid var(--tw-line); border-radius: 999px; padding: 3px var(--tw-3); cursor: pointer; }
+.gm-tab.is-on { background: var(--tw-aqua); color: #0b1418; border-color: transparent; }
+.gm-lvl { font-style: normal; font: 500 var(--tw-fs-xs) var(--tw-mono); color: var(--tw-ink-3); }
+.gm-cash { color: var(--tw-sun); font-family: var(--tw-mono); }
+.gm-panel.is-shop { width: calc(540 * var(--tw-u)); max-width: 94vw; }
 .gm-log { margin-top: var(--tw-3); color: var(--tw-ink-3); font-size: var(--tw-fs-sm); line-height: 1.5; }
 .gm-row .gm-cm { font-family: var(--tw-mono); color: var(--tw-ink-3); }
 .gm-row.has-cm { grid-template-columns: 1fr auto auto auto auto; }
@@ -243,7 +249,7 @@ export class GameHUD {
 
 		this._last.money = s.money;
 		if ( this.invOpen ) this.renderInventory();
-		if ( this.standOpen ) this.vendor && this.vendor.kind === 'shop' ? this.renderShop() : this.renderStand();
+		if ( this.standOpen ) this.vendor && ( this.vendor.kind === 'shop' || this.vendor.kind === 'dock' ) ? this.renderShop() : this.renderStand();
 
 	}
 
@@ -404,8 +410,14 @@ export class GameHUD {
 		this.standOpen = true;
 		this.vendor = vendor;
 		this.toggleInventory( false );
-		if ( vendor.kind === 'shop' ) this.renderShop();
-		else this.renderStand();
+		if ( vendor.kind === 'shop' || vendor.kind === 'dock' ) this.renderShop();
+		else {
+
+			this.stand.classList.remove( 'is-shop' );
+			this.renderStand();
+
+		}
+
 		this.stand.classList.add( 'is-open' );
 		releaseMouse();
 
@@ -436,31 +448,118 @@ export class GameHUD {
 
 }
 
+// stat summary of one upgrade level, for the shop rows
+function describe( key, lv ) {
+
+	switch ( key ) {
+
+		case 'armor': return `${ lv.hullHP } hull points`;
+		case 'engine': return `${ Math.round( lv.speedMul * 100 ) }% power`;
+		case 'hold': return `${ lv.holdKg } kg of fish`;
+		case 'fuel': return `${ lv.fuelL } L`;
+		case 'pumps': return lv.repairHPs ? `repairs ${ lv.repairHPs } hp/s out of combat` : 'no self-repair';
+		case 'gun': return `${ lv.gunDmg } dmg × ${ lv.gunRate }/s${ lv.gunBarrels > 1 ? ' (twin)' : '' } · ${ lv.gunRange } m`;
+		case 'cooling': return `cools ${ Math.round( lv.coolRate * 100 ) }%/s`;
+		case 'cannon': return lv.cannon ? `${ lv.canDmg } dmg · ${ lv.canSplash } m blast · ${ lv.canRange } m` : 'no cannon';
+		case 'locker': return `holds ${ lv.shellCap } shells`;
+		case 'line': return `${ lv.lineKg } kg breaking strain`;
+		case 'reel': return `${ lv.reelSpeed }× retrieve`;
+		case 'rod': return `casts ${ lv.castM } m`;
+		default: return '';
+
+	}
+
+}
+
 GameHUD.prototype.renderShop = function () {
 
 	const s = this.game.state;
 	const v = this.vendor;
-	const rows = Object.entries( UPGRADES ).map( ( [ key, track ] ) => {
+	const combat = this.game.combat;
+	const dock = v.kind === 'dock';
+	const tabs = [ { id: 'services', name: 'Services' }, ...CATEGORIES, ...( dock ? [ { id: 'sell', name: 'Sell catch' } ] : [] ) ];
+	if ( ! tabs.some( ( t ) => t.id === this.shopTab ) ) this.shopTab = 'services';
+	const tab = this.shopTab;
+	const tabBar = `<div class="gm-tabs">${ tabs.map( ( t ) => `<button class="gm-tab${ t.id === tab ? ' is-on' : '' }" data-tab="${ t.id }">${ t.name }</button>` ).join( '' ) }</div>`;
+	let rows = '';
+	let foot = '<span class="gm-sub">Upgrades take effect at once</span>';
+	if ( tab === 'services' ) {
 
-		const cur = track.levels[ s.upgrades[ key ] | 0 ];
-		const next = nextLevel( s.upgrades, key );
-		const btn = next
-			? `<button class="gm-btn" data-buy="${ key }" ${ next.cost > s.money ? 'disabled' : '' }>$${ next.cost }</button>`
-			: '<span class="gm-have">Top of the line</span>';
-		return `<div class="gm-shop-row"><span>${ track.name }: ${ next ? next.label : cur.label }<small>Now: ${ cur.label }</small></span>${ btn }</div>`;
+		const missing = s.stats.fuelL - s.fuelL;
+		rows += `<div class="gm-shop-row"><span>Diesel · $${ FUEL_PRICE.toFixed( 2 ) } / L<small>Tank: ${ s.fuelL.toFixed( 0 ) } of ${ s.stats.fuelL } L</small></span>${ missing > 0.5 ? `<button class="gm-btn" data-fuel ${ s.money < FUEL_PRICE ? 'disabled' : '' }>Fill · $${ s.refuelCost() }</button>` : '<span class="gm-have">Full</span>' }</div>`;
+		const dmg = s.stats.hullHP - s.hullHP;
+		rows += `<div class="gm-shop-row"><span>Hull repairs · $${ REPAIR_PRICE } / point<small>Hull: ${ Math.ceil( s.hullHP ) } of ${ s.stats.hullHP }</small></span>${ dmg > 0.5 ? `<button class="gm-btn" data-repair ${ s.money < REPAIR_PRICE ? 'disabled' : '' }>Repair · $${ s.repairCost() }</button>` : '<span class="gm-have">Shipshape</span>' }</div>`;
+		if ( s.stats.cannon ) {
 
-	} ).join( '' );
-	const missing = s.stats.fuelL - s.fuelL;
-	const fuelRow = `<div class="gm-shop-row"><span>Diesel · $${ FUEL_PRICE.toFixed( 2 ) } / L<small>Tank: ${ s.fuelL.toFixed( 0 ) } of ${ s.stats.fuelL } L</small></span>${ missing > 0.5 ? `<button class="gm-btn" data-fuel ${ s.money < FUEL_PRICE ? 'disabled' : '' }>Fill · $${ s.refuelCost() }</button>` : '<span class="gm-have">Full</span>' }</div>`;
+			const room = s.stats.shellCap - s.shells;
+			rows += `<div class="gm-shop-row"><span>Cannon shells · $${ SHELL_PRICE } each<small>Locker: ${ s.shells } of ${ s.stats.shellCap }</small></span>${ room > 0 ? `<span><button class="gm-mini" data-shells="5" ${ s.money < SHELL_PRICE ? 'disabled' : '' }>+5</button> <button class="gm-btn" data-shells="all" ${ s.money < SHELL_PRICE ? 'disabled' : '' }>Fill · $${ room * SHELL_PRICE }</button></span>` : '<span class="gm-have">Locker full</span>' }</div>`;
+
+		} else rows += '<div class="gm-shop-row"><span>Cannon shells<small>Fit a bow cannon first (Weapons tab)</small></span><span class="gm-have">—</span></div>';
+
+		if ( s.wanted > 0 && combat ) {
+
+			const c = combat.fineCost();
+			rows += `<div class="gm-shop-row"><span>Pay off your fines · ${ '★'.repeat( s.wanted ) }<small>Clears your wanted level and calls off the coast guard</small></span><button class="gm-btn" data-fine ${ s.money < c ? 'disabled' : '' }>Pay · $${ c }</button></div>`;
+
+		}
+
+		const P = s.pirate;
+		foot = `<span class="gm-sub">${ P.piratesSunk } pirates sunk · ${ P.sunk } honest boats crippled · $${ P.plunder.toLocaleString() } plundered · $${ P.bounties.toLocaleString() } bounties</span>`;
+
+	} else if ( tab === 'sell' ) {
+
+		rows = s.inventory.map( ( f ) => `<div class="gm-row has-cm"><span>${ FISH[ f.species ].name }</span><span class="gm-cm">${ f.cm ?? Math.round( fishLengthCm( f.species, f.kg ) ) } cm</span><span class="gm-kg">${ f.kg.toFixed( 2 ) } kg</span><span class="gm-val">$${ f.value }</span><button class="gm-mini" data-sell="${ f.id }">Sell</button></div>` ).join( '' ) || '<div class="gm-empty">The hold is empty.</div>';
+		foot = `<span class="gm-sub">Joe's runner takes it off the boat</span><button class="gm-btn" data-all ${ s.inventory.length ? '' : 'disabled' }>Sell all · $${ s.holdValue }</button>`;
+
+	} else {
+
+		rows = Object.entries( UPGRADES ).filter( ( [ , t ] ) => t.cat === tab ).map( ( [ key, track ] ) => {
+
+			const cur = track.levels[ s.upgrades[ key ] | 0 ];
+			const next = nextLevel( s.upgrades, key );
+			const lvl = `${ ( s.upgrades[ key ] | 0 ) + 1 }/${ track.levels.length }`;
+			const btn = next
+				? `<button class="gm-btn" data-buy="${ key }" ${ next.cost > s.money ? 'disabled' : '' }>$${ next.cost.toLocaleString() }</button>`
+				: '<span class="gm-have">Maxed</span>';
+			const sub = next ? `Now: ${ cur.label } (${ describe( key, cur ) }) → ${ describe( key, next ) }` : `${ cur.label } · ${ describe( key, cur ) }`;
+			return `<div class="gm-shop-row"><span>${ track.name } <em class="gm-lvl">${ lvl }</em>: ${ next ? next.label : cur.label }<small>${ sub }</small></span>${ btn }</div>`;
+
+		} ).join( '' );
+
+	}
+
+	this.stand.classList.add( 'is-shop' );
 	this.stand.innerHTML = `
 		<h2>${ v.name }</h2>
-		<p class="gm-sub">${ v.greeting } · You have $${ s.money.toLocaleString() }</p>
-		<div class="gm-list">${ fuelRow }${ rows }</div>
-		<div class="gm-foot"><span class="gm-sub">Upgrades take effect at once</span><button class="gm-btn is-ghost" data-close>Leave (E)</button></div>`;
+		<p class="gm-sub">${ v.greeting } · You have <b class="gm-cash">$${ s.money.toLocaleString() }</b></p>
+		${ tabBar }
+		<div class="gm-list">${ rows }</div>
+		<div class="gm-foot">${ foot }<button class="gm-btn is-ghost" data-close>Leave (${ dock ? 'U' : 'E' })</button></div>`;
 	this.stand.querySelector( '[data-close]' ).onclick = () => this.closeStand();
+	for ( const b of this.stand.querySelectorAll( '[data-tab]' ) ) b.onclick = () => {
+
+		this.shopTab = b.dataset.tab;
+		this.renderShop();
+
+	};
 	for ( const b of this.stand.querySelectorAll( '[data-buy]' ) ) b.onclick = () => this.game.buy( b.dataset.buy );
-	const f = this.stand.querySelector( '[data-fuel]' );
-	if ( f ) f.onclick = () => this.game.refuel();
+	for ( const b of this.stand.querySelectorAll( '[data-sell]' ) ) b.onclick = () => this.game.sell( [ Number( b.dataset.sell ) ] );
+	const q = ( sel ) => this.stand.querySelector( sel );
+	if ( q( '[data-all]' ) ) q( '[data-all]' ).onclick = () => this.game.sellAll();
+	if ( q( '[data-fuel]' ) ) q( '[data-fuel]' ).onclick = () => this.game.refuel();
+	if ( q( '[data-repair]' ) ) q( '[data-repair]' ).onclick = () => {
+
+		const hp = s.repair();
+		if ( hp > 0 ) this.game.toast( `Hull patched · ${ Math.round( hp ) } points` );
+
+	};
+	for ( const b of this.stand.querySelectorAll( '[data-shells]' ) ) b.onclick = () => {
+
+		const n = s.buyShells( b.dataset.shells === 'all' ? Infinity : Number( b.dataset.shells ) );
+		if ( n > 0 ) this.game.toast( `Bought ${ n } shell${ n > 1 ? 's' : '' }` );
+
+	};
+	if ( q( '[data-fine]' ) && combat ) q( '[data-fine]' ).onclick = () => combat.payFine();
 
 };
 

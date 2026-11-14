@@ -15,6 +15,7 @@ if ( /[?&]bench\b/.test( location.search ) ) {
 const ui = new UI();
 const app = new App();
 window.__ui = ui;
+window.__app = app; // debugging / automation
 
 app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async () => {
 

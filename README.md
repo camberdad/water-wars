@@ -1,4 +1,73 @@
-# Tidewater
+# Water Wars
+
+**Fish for it, or take it by force.** A browser game built on [Tidewater](https://github.com/dgreenheck/tidewater)
+(MIT, © DRG Software Solutions LLC). It keeps Tidewater's island, ocean, sky, boat and fishing, and adds
+other boats on the water, deck guns and cannons, piracy, bounties, a wanted level and a full upgrade tree.
+
+## Play
+
+Double-click **`Play Water Wars.bat`**, or run:
+
+```sh
+npm install
+npm run dev      # then open http://127.0.0.1:5189
+```
+
+You need a browser with WebGPU (recent Chrome or Edge). The first load compiles shaders and can take a minute.
+
+## How to play
+
+- **Fish honestly.** Cast from the beach, the pier or the boat (`R` for the rod). Sell to Joe at the fish stand.
+- **Turn pirate.** Take the helm (`E` at the wheel). **Left mouse** fires the deck gun at the crosshair (it
+  overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one; it uses shells.
+  Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash, fish and shells. Ramming
+  at speed hurts both boats.
+- **The other boats:**
+  - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
+  - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
+  - *Pirates* (black, with a skull flag) hunt you when you come close. Sinking them is legal and pays a bounty.
+  - *Coast guard* (grey, flashing lights) come after you once you're wanted.
+- **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
+  hunts you. Lie low for a while to let it cool off, or pay your fines at the harbour.
+- **Getting sunk** loses your catch and a quarter of your money, and you're towed back to the pier.
+- **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` with the boat by the pier):
+  - **Boat:** hull armour, engine, fish hold, fuel tank, damage control (self-repair)
+  - **Weapons:** deck gun (rifle → carbine → MG → twin MG → rotary autocannon), gun cooling, bow cannon
+    (swivel gun → deck cannon → naval gun), shell locker
+  - **Fishing:** line, reel, rod, fish finder, deck lights
+  - **Services:** diesel, hull repairs, cannon shells, paying off fines; the harbour also buys your catch
+
+| Key | Action |
+|---|---|
+| W A S D | Move / throttle and steer at the helm |
+| Mouse | Look / aim (click to capture the mouse) |
+| E | Board, take or leave the helm, talk to Joe and Marta |
+| Left mouse | At the helm: fire the deck gun · on foot/deck: cast, strike, reel |
+| Right mouse | At the helm: fire the bow cannon · on foot/deck: reel in |
+| G | Loot a wreck alongside |
+| U | Harbour services (boat by the pier) |
+| V | Boat camera, 1st / 3rd person |
+| R | Fishing rod |
+| I / Tab | Cooler and fish log |
+| F1 | All controls and the guide |
+
+## What's new on top of Tidewater
+
+| File | What it does |
+|---|---|
+| `src/game/combat/Combat.js` | Aiming and firing from the helm, hit tests, damage, ramming, sinking and respawn, wanted level, bounties, looting, harbour services |
+| `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
+| `src/game/combat/CombatFX.js` | Tracers, cannon shells, muzzle flashes, fire, smoke, splinters, water splashes (through the ocean's spray particles) |
+| `src/game/combat/WeaponModels.js` | Procedural deck guns, cannons, the pirate flag and the coast-guard light bar |
+| `src/game/combat/CombatHUD.js` | Hull, gun heat, shells, wanted stars, crosshair, boat labels, minimap dots, the "Sunk!" screen |
+| `src/game/combat/CombatSFX.js` | Synthesised gunfire and explosions |
+| `src/game/Gear.js`, `GameState.js`, `GameHUD.js` | Upgrade tracks by category, hull / shells / wanted / pirate record in the save, the tabbed shop |
+
+The rest (rendering engine, ocean, sky, world, audio, fishing) is Tidewater's. See below and `CREDITS.md`.
+
+---
+
+# Tidewater (upstream)
 
 An island fishing game for the browser. Cast from the pier, the beach or your own boat, fight the fish,
 sell your catch to Joe at the fish stand, and spend it on better gear at Marta's chandlery. Around it is a

@@ -171,6 +171,28 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( st.buy( 'fishFinder' ) && st.stats.finder === true && st.buy( 'fishFinder' ) === null, 'fish finder: one level' );
 
 }
+// ---- Water Wars: hull, repairs, shells, armour, wanted level and the pirate record survive a save
+{
+
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	ok( st.hullHP === 100 && st.damage( 30 ) === 70 && st.repairCost() === 60, 'hull damage and repair cost' );
+	st.money = 40;
+	ok( st.repair() === 20 && st.money === 0 && st.hullHP === 90, 'repairs stop when the money runs out' );
+	st.money = 1000;
+	ok( st.buy( 'armor' ) && st.stats.hullHP === 160 && st.hullHP === 150, 'new armour adds its points to a damaged hull' );
+	const before = st.money;
+	ok( st.buyShells() === 5 && st.shells === 10 && st.money === before - 60, 'shells fill the locker' );
+	st.heal( 1000 );
+	ok( st.hull === null && st.hullHP === 160, 'healing past full clears the damage' );
+	st.wanted = 3;
+	st.pirate.piratesSunk = 2;
+	st.save();
+	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
+	ok( st2.load() && st2.wanted === 3 && st2.shells === 10 && st2.pirate.piratesSunk === 2 && st2.upgrades.armor === 1, 'combat state round-trips through the save' );
+	ok( Object.values( UPGRADES ).every( ( t ) => [ 'boat', 'weapons', 'fishing' ].includes( t.cat ) && t.levels[ 0 ].cost === 0 ), 'every upgrade track has a shop tab and a free first level' );
+
+}
 console.log( `value check ${ value }` );
 console.log( fails ? `${ fails } FAILED` : 'all passed' );
 process.exit( fails ? 1 : 0 );

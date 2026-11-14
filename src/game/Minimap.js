@@ -122,6 +122,7 @@ export class Minimap {
 
 		};
 
+		this._mk = mk;
 		this.markers = [
 			{ id: 'joe', ...mk( 'joe', ICON.fish ), pos: () => ( { x: STAND.x, z: STAND.z } ) },
 			{ id: 'marta', ...mk( 'marta', ICON.anchor ), pos: () => ( { x: CHANDLERY.x, z: CHANDLERY.z } ) },
@@ -182,6 +183,15 @@ export class Minimap {
 		if ( el[ k ] === on ) return;
 		el[ k ] = on;
 		el.classList.toggle( cls, on );
+
+	}
+
+	// a dynamic marker (Water Wars: the other boats): { id, kind, icon, pos: () => {x, z} | null, hideWhen }
+	addMarker( def ) {
+
+		const m = { ...def, ...this._mk( def.kind, def.icon || '' ) };
+		this.markers.push( m );
+		return m;
 
 	}
 

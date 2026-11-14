@@ -12,6 +12,7 @@ import { UPGRADES, fuelBurn } from './Gear.js';
 import { GameHUD } from './GameHUD.js';
 import { Minimap } from './Minimap.js';
 import { Guide } from './Guide.js';
+import { Combat } from './combat/Combat.js';
 
 // how long the catch card stays up unless dismissed (ms)
 const CATCH_CARD_MS = 9000;
@@ -55,6 +56,8 @@ export class Game {
 		this._tmp = new Vector3();
 		this.applyGear();
 		this.state.onChange( () => this.applyGear() );
+		// Water Wars: the other boats, guns, plunder and the wanted level
+		this.combat = new Combat( this );
 
 	}
 
@@ -71,6 +74,7 @@ export class Game {
 		}
 
 		for ( const f of this.floods || [] ) f.scale = g.deckLights ? 1 : 0;
+		if ( this.combat ) this.combat.applyGear();
 
 	}
 
@@ -258,6 +262,7 @@ export class Game {
 		p.busy = rod.lineInWater || rod.state === 'windup';
 
 		this.updateBoat( dt );
+		this.combat.update( dt );
 
 		// the traders
 		for ( const v of this.vendors ) v.update( dt, p.mode === 'walk' ? p.position : null );
@@ -358,7 +363,7 @@ export class Game {
 		let near = null;
 		if ( p.mode === 'walk' ) for ( const v of this.vendors ) if ( v.inRange( p.position ) ) near = v;
 		for ( const v of this.vendors ) v.talking = !! ( hud && hud.standOpen && hud.vendor === v );
-		if ( hud && hud.standOpen && ( ! near || near !== hud.vendor ) ) hud.closeStand();
+		if ( hud && hud.standOpen && hud.vendor && hud.vendor.kind !== 'dock' && ( ! near || near !== hud.vendor ) ) hud.closeStand();
 		if ( ! near || this.fight || this._cardDismissed || ( hud && hud.catchOpen ) ) return;
 		if ( ! p.prompt ) p.prompt = { key: 'E', text: hud && hud.standOpen ? 'Leave' : `Talk to ${ near.name.split( ' ·' )[ 0 ] }` };
 		if ( inp.hit( 'KeyE' ) ) {

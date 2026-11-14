@@ -1938,7 +1938,7 @@ export class UI {
 		this.sparkEl = stats.querySelector( '.tw-spark' );
 
 		const brand = h( 'div', 'tw-brand' );
-		brand.innerHTML = `${ brandMark() }<span class="tw-brand-name">TIDEWATER</span>`;
+		brand.innerHTML = `${ brandMark() }<span class="tw-brand-name">WATER WARS</span>`;
 		this.modeEl = h( 'div', 'tw-mode is-empty', { role: 'status' } );
 		this.modeIco = h( 'span', 'tw-mode-ico' );
 		this.modeText = h( 'span', 'tw-mode-text' );
@@ -2153,6 +2153,13 @@ export class UI {
 						${ row( k( 'LMB' ), 'Cast, strike, reel<small>Hold to wind up / reel</small>' ) }
 						${ row( k( 'RMB' ), 'Reel in an empty line' ) }
 						${ row( k( 'I' ), 'Cooler and fish log' ) }
+					</section>
+					<section>
+						<h3>Combat (at the helm)</h3>
+						${ row( k( 'LMB' ), 'Deck gun<small>Hold to fire, watch the heat</small>' ) }
+						${ row( k( 'RMB' ), 'Bow cannon<small>Lobs a shell at the crosshair</small>' ) }
+						${ row( k( 'G' ), 'Loot a wreck alongside' ) }
+						${ row( k( 'U' ), 'Harbour services<small>By the pier: repair, shells, upgrades</small>' ) }
 						${ row( k( 'F' ), 'Free camera' ) }
 						${ row( k( 'T' ), 'Pause time' ) }
 						${ row( k( 'L' ), 'Flashlight' ) }
@@ -2167,7 +2174,7 @@ export class UI {
 					</section>
 				</div>
 				<div class="tw-help-guide">
-					<span><b>How to play:</b> catch fish, sell them to Joe at the fish stand by the pier, and buy upgrades from Marta at the chandlery by the boathouse. Both are on the map (lower right).</span>
+					<span><b>How to play:</b> fish and sell to Joe, or turn pirate: shoot boats, loot the wrecks, collect pirate bounties. Spend it on armour, engines, guns and gear from Marta or the harbour (U by the pier). Joe and Marta are on the map (lower right).</span>
 					<button type="button" class="gm-btn is-ghost tw-help-replay">Replay the guide</button>
 				</div>
 			</div>`;
@@ -2188,12 +2195,13 @@ export class UI {
 		el.innerHTML = `
 			<div class="tw-start-inner">
 				${ brandMark( 'tw-start-mark' ) }
-				<div class="tw-start-title">TIDEWATER</div>
-				<button type="button" class="tw-start-cta"><span class="tw-start-pulse" aria-hidden="true"></span>${ icon( 'mouse' ) }<span>Click to explore</span></button>
+				<div class="tw-start-title">WATER WARS</div>
+				<button type="button" class="tw-start-cta"><span class="tw-start-pulse" aria-hidden="true"></span>${ icon( 'mouse' ) }<span>Click to set sail</span></button>
 				<div class="tw-start-keys">
 					<span><span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Move</span>
 					<span><kbd class="tw-kbd-ico">${ icon( 'mouse' ) }</kbd>Look</span>
 					<span><kbd>E</kbd>Interact</span>
+					<span><kbd class="tw-kbd-ico">${ icon( 'mouse' ) }</kbd>Fire (at the helm)</span>
 					<span><kbd>H</kbd>Settings</span>
 					<span><kbd>F1</kbd>All controls</span>
 				</div>
