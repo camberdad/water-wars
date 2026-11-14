@@ -1,4 +1,4 @@
-import { FISH, FISH_IDS } from './FishTable.js';
+import { FISH, FISH_IDS, TIERS, TIER_IDS } from './FishTable.js';
 
 // Where the bobber is and what lives there.
 //   depth     water depth under the bobber (m)
@@ -35,33 +35,99 @@ export function activity( pref, hour ) {
 
 }
 
-// Weighted pick of the species that bites here; null when nothing lives here.
-// rng: () => [0, 1)
-export function pickSpecies( habitat, hour, rng = Math.random ) {
+// The chance of each rarity tier for a bite. Deep water and the danger waters (opts.danger) tilt it
+// toward the epic and legendary fish.
+export function tierChances( habitat, { danger = false } = {} ) {
 
+	const deep = habitat.deep || 0;
+	const boost = ( 1 + 0.4 * deep ) * ( danger ? 1.6 : 1 );
+	const c = {};
 	let total = 0;
-	const w = [];
-	for ( const id of FISH_IDS ) {
+	for ( const t of TIER_IDS ) {
 
-		const f = FISH[ id ];
-		let hw = 0;
-		for ( const k in f.habitat ) hw += f.habitat[ k ] * habitat[ k ];
-		const x = hw * f.rarity * activity( f.time, hour );
-		w.push( x );
-		total += x;
+		c[ t ] = TIERS[ t ].chance * ( t === 'epic' || t === 'legendary' ? boost : 1 );
+		total += c[ t ];
 
 	}
 
-	if ( total < 1e-4 ) return null;
-	let r = rng() * total;
-	for ( let i = 0; i < w.length; i ++ ) {
+	for ( const t of TIER_IDS ) c[ t ] /= total;
+	return c;
 
-		r -= w[ i ];
-		if ( r <= 0 ) return FISH_IDS[ i ];
+}
+
+// Weighted pick of the species that bites here; null when nothing lives here (dry sand).
+// First the tier (tierChances), then a species of that tier that lives in this water (habitat x
+// rarity x time of day). If none of that tier lives here the nearest tier that does is used, except
+// legendary fish: one of those can turn up anywhere there is water.
+// rng: () => [0, 1); opts: { danger }
+export function pickSpecies( habitat, hour, rng = Math.random, opts = {} ) {
+
+	let wet = 0;
+	for ( const k in habitat ) wet += habitat[ k ];
+	if ( wet < 1e-4 ) return null;
+	const chances = tierChances( habitat, opts );
+	let r = rng(), tier = TIER_IDS[ 0 ];
+	for ( const t of TIER_IDS ) {
+
+		tier = t;
+		r -= chances[ t ];
+		if ( r <= 0 ) break;
 
 	}
 
-	return FISH_IDS[ FISH_IDS.length - 1 ];
+	const weights = ( t, anywhere ) => {
+
+		const ids = [], w = [];
+		let total = 0;
+		for ( const id of FISH_IDS ) {
+
+			const f = FISH[ id ];
+			if ( f.tier !== t ) continue;
+			let hw = 0;
+			for ( const k in f.habitat ) hw += f.habitat[ k ] * ( habitat[ k ] || 0 );
+			if ( anywhere ) hw = Math.max( hw, 0.2 );
+			const x = hw * f.rarity * activity( f.time, hour );
+			if ( x <= 1e-5 ) continue;
+			ids.push( id );
+			w.push( x );
+			total += x;
+
+		}
+
+		return { ids, w, total };
+
+	};
+
+	let pool = weights( tier, false );
+	if ( pool.total < 1e-4 ) {
+
+		if ( tier === 'legendary' ) pool = weights( tier, true );
+		else {
+
+			// the nearest tier with fish here (cheaper first)
+			const i = TIER_IDS.indexOf( tier );
+			for ( let d = 1; d < TIER_IDS.length && pool.total < 1e-4; d ++ ) for ( const j of [ i - d, i + d ] ) {
+
+				if ( j < 0 || j >= TIER_IDS.length || TIER_IDS[ j ] === 'legendary' ) continue;
+				pool = weights( TIER_IDS[ j ], false );
+				if ( pool.total >= 1e-4 ) break;
+
+			}
+
+		}
+
+	}
+
+	if ( pool.total < 1e-4 ) return null;
+	let q = rng() * pool.total;
+	for ( let i = 0; i < pool.ids.length; i ++ ) {
+
+		q -= pool.w[ i ];
+		if ( q <= 0 ) return pool.ids[ i ];
+
+	}
+
+	return pool.ids[ pool.ids.length - 1 ];
 
 }
 

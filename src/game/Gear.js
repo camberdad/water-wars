@@ -88,11 +88,13 @@ export const UPGRADES = {
 		{ cost: 1800, label: 'Deck cannon', cannon: true, canDmg: 75, canRate: 0.6, canRange: 260, canSplash: 6 },
 		{ cost: 5000, label: 'Naval gun', cannon: true, canDmg: 130, canRate: 0.7, canRange: 320, canSplash: 9 },
 	] },
-	locker: { cat: 'weapons', name: 'Shell locker', levels: [
-		{ cost: 0, label: '10 shells', shellCap: 10 },
-		{ cost: 200, label: '20 shells', shellCap: 20 },
-		{ cost: 600, label: '40 shells', shellCap: 40 },
-		{ cost: 1500, label: '80 shells', shellCap: 80 },
+	// the cannon never runs out of shells once it is fitted: this track speeds up the reload
+	// (key kept as 'locker' so old saves keep their level)
+	locker: { cat: 'weapons', name: 'Cannon loader', levels: [
+		{ cost: 0, label: 'Hand loading', canRateMul: 1 },
+		{ cost: 200, label: 'Ammo hoist', canRateMul: 1.3 },
+		{ cost: 600, label: 'Autoloader', canRateMul: 1.7 },
+		{ cost: 1500, label: 'Belt-fed autoloader', canRateMul: 2.3 },
 	] },
 };
 
@@ -103,7 +105,6 @@ export const CATEGORIES = [
 ];
 
 export const FUEL_PRICE = 1.5; // $ per litre of diesel at the chandlery
-export const SHELL_PRICE = 12; // $ per cannon shell
 export const REPAIR_PRICE = 2; // $ per hull point
 // litres per second at the helm: idle plus a lot more at full rpm (40 L lasts ~25 min flat out)
 export function fuelBurn( rpm ) {

@@ -89,9 +89,9 @@ const CARDS = [
 		title: 'Shoot, loot, upgrade',
 		body: `<div class="gm-guide-list">
 			${ row( k( 'LMB' ), 'At the helm: fire the <b>deck gun</b> at the crosshair. It overheats, so fire in bursts' ) }
-			${ row( k( 'RMB' ), 'Fire the <b>bow cannon</b> (buy one at Marta or the harbour; it uses shells)' ) }
-			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash, fish and shells' ) }
-			${ row( k( 'U' ), '<b>Harbour services</b> by the pier: repairs, shells, upgrades, sell your catch' ) }
+			${ row( k( 'RMB' ), 'Fire the <b>bow cannon</b> (buy one at Marta or the harbour; unlimited shells)' ) }
+			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash and fish' ) }
+			${ row( k( 'U' ), '<b>Harbour services</b> by the pier or at the four sea stations: repairs, upgrades, boats, sell your catch. All are <b>safe zones</b>' ) }
 		</div>
 		<p style="margin:var(--tw-2) 0 0;color:var(--tw-ink-3);font-size:var(--tw-fs-sm)"><b style="color:#ff7a6a">Danger Waters</b> (red on the map, ringed by red buoys) are pirate country: they attack on sight there, but fish fetch more and pirates carry more plunder. Elsewhere pirates leave you alone unless you shoot first. Save up for a whole new boat in the <b>Boats</b> tab. Attacking fishing boats and traders makes you <b>wanted</b>. From two stars the <b>coast guard</b> hunts you. Lie low, or pay your fines at the harbour. Sinking pirates is legal and pays a bounty.</p>`,
 	},

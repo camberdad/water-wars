@@ -17,30 +17,46 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 
 ## How to play
 
-- **Fish honestly.** Cast from the beach, the pier or the boat (`R` for the rod). Sell to Joe at the fish stand.
+- **Fish.** Cast from the beach, the pier or the boat (`R` for the rod). Sell to Joe at the fish stand, or at any
+  harbour service point. There are 40 real Caribbean and Atlantic species in five rarity tiers:
+
+  | Tier | Value | Share of catches | Examples |
+  |---|---|---|---|
+  | Common | $75 – $400 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
+  | Uncommon | $400 – $2,500 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
+  | Rare | $2,500 – $12,000 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
+  | Epic | $12,000 – $60,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
+  | Legendary | $60,000 – $80,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
+
+  Bigger fish of a species are worth more. Deep water and the danger waters bring epic and legendary fish up
+  more often. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
+  hold are strapped on deck.
 - **Turn pirate.** Take the helm (`E` at the wheel). **Left mouse** fires the deck gun at the crosshair (it
-  overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one; it uses shells.
-  Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash, fish and shells. Ramming
+  overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one. Ammo is
+  unlimited. Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash and fish. Ramming
   at speed hurts both boats.
 - **The other boats:**
   - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
   - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
   - *Pirates* (black, with a skull flag) live in the **Danger Waters**, the red zones on the map ringed by red
     buoys. They attack on sight in there, and only fight back elsewhere if you shoot first. Sinking them is
-    legal and pays a bounty. Fish caught in danger waters sell for 60% more.
+    legal and pays a bounty. Epic and legendary fish bite more often in danger waters.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
   hunts you. Lie low for a while to let it cool off, or pay your fines at the harbour.
 - **Getting sunk** loses your catch and a quarter of your money, and you're towed back to the pier.
-- **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($25,000, tough, big hold), a
-  *Sport-fishing yacht* ($60,000, fastest), and a *Deep-sea fishing ship* ($150,000, a fortress with a huge
-  hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's.
-- **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` with the boat by the pier):
+- **Safe zones** (green on the map): the harbour (the bay, the pier, the beach and the reef) and the four
+  **sea stations** (Westpoint Station, Eastwind Station, Southreach Barge, Coral Light Rig). Nobody fires on
+  you there and your guns stay holstered. Press **`U`** alongside a station for full harbour services.
+- **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($150,000, tough, big hold), a
+  *Sport-fishing yacht* ($400,000, fastest), and a *Deep-sea fishing ship* ($1,000,000, a fortress with a
+  huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's.
+- **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
   - **Boat:** hull armour, engine, fish hold, fuel tank, damage control (self-repair)
   - **Weapons:** deck gun (rifle → carbine → MG → twin MG → rotary autocannon), gun cooling, bow cannon
-    (swivel gun → deck cannon → naval gun), shell locker
+    (swivel gun → deck cannon → naval gun), cannon loader (faster reloads)
   - **Fishing:** line, reel, rod, fish finder, deck lights
-  - **Services:** diesel, hull repairs, cannon shells, paying off fines; the harbour also buys your catch
+  - **Services:** diesel, hull repairs, paying off fines; every service point also buys your catch
 
 | Key | Action |
 |---|---|
@@ -50,7 +66,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | Left mouse | At the helm: fire the deck gun · on foot/deck: cast, strike, reel |
 | Right mouse | At the helm: fire the bow cannon · on foot/deck: reel in |
 | G | Loot a wreck alongside |
-| U | Harbour services (boat by the pier) |
+| U | Harbour services (by the pier or at a sea station) |
 | V | Boat camera, 1st / 3rd person |
 | R | Fishing rod |
 | I / Tab | Cooler and fish log |
@@ -68,6 +84,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | `src/game/combat/CombatSFX.js` | Synthesised gunfire and explosions |
 | `src/game/BoatCatalog.js`, `Boats.js` | The boats you can buy (stats, model fitting) and their loader |
 | `src/game/DangerZones.js` | The danger waters, their buoys and rewards |
+| `src/game/Harbours.js` | Safe zones and the four sea stations |
+| `src/game/FishTable.js`, `Bites.js` | The 40 species, rarity tiers, values and bite odds |
+| `src/version.js` | The version shown on the start screen |
 | `tools/boats/convert.mjs` | Converts the boat models (OBJ/FBX) into `public/models/boats/` (`node tools/boats/convert.mjs`) |
 | `src/game/Gear.js`, `GameState.js`, `GameHUD.js` | Upgrade tracks by category, hull / shells / wanted / pirate record in the save, the tabbed shop |
 

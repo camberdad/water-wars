@@ -1,5 +1,5 @@
-import { FISH, fishValue, fishLengthCm } from './FishTable.js';
-import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE, SHELL_PRICE, REPAIR_PRICE } from './Gear.js';
+import { FISH, fishValue, fishLengthCm, TROPHY_VALUE } from './FishTable.js';
+import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE, REPAIR_PRICE } from './Gear.js';
 import { BOATS, applyBoat } from './BoatCatalog.js';
 
 const SAVE_KEY = 'waterwars.save.v1';
@@ -104,8 +104,10 @@ export class GameState {
 		}
 
 		const value = fishValue( species, kg );
-		const kept = this.fits( kg );
-		this.lastCatch = { species, kg, cm, value, newSpecies, record, prevBestKg, prevBestCm, kept };
+		// trophies (rare and better) are strapped on deck when the hold is full: never thrown back for space
+		const trophy = value >= TROPHY_VALUE;
+		const kept = this.fits( kg ) || trophy;
+		this.lastCatch = { species, kg, cm, value, newSpecies, record, prevBestKg, prevBestCm, kept, onDeck: kept && trophy && ! this.fits( kg ), tier: FISH[ species ].tier };
 		if ( ! kept ) {
 
 			this.save();
@@ -247,20 +249,6 @@ export class GameState {
 		this.save();
 		this.emit();
 		return hp;
-
-	}
-
-	// buy up to n shells (fills the locker by default); returns how many were bought
-	buyShells( n = Infinity ) {
-
-		const room = this.stats.shellCap - this.shells;
-		const k = Math.min( room, n, Math.floor( this.money / SHELL_PRICE ) );
-		if ( k <= 0 ) return 0;
-		this.money -= k * SHELL_PRICE;
-		this.shells += k;
-		this.save();
-		this.emit();
-		return k;
 
 	}
 

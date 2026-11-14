@@ -1,6 +1,6 @@
 // Plain-node tests of the fishing game logic (no GPU): bites, the catch fight, inventory, save.
-import { FISH, FISH_IDS, fishValue, fishLengthCm } from '../src/game/FishTable.js';
-import { habitatAt, pickSpecies, rollWeight, biteDelay } from '../src/game/Bites.js';
+import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE } from '../src/game/FishTable.js';
+import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES } from '../src/game/Gear.js';
@@ -44,11 +44,11 @@ ok( biteDelay( habitatAt( spots.sand ), 12, rng ) === Infinity, 'no bite delay o
 {
 
 	let deepOnly = 0;
-	for ( let i = 0; i < 500; i ++ ) if ( [ 'tuna', 'mahi', 'redSnapper', 'grouper', 'barracuda' ].includes( pickSpecies( habitatAt( spots.deep ), 12, rng ) ) ) deepOnly ++;
+	for ( let i = 0; i < 500; i ++ ) if ( FISH[ pickSpecies( habitatAt( spots.deep ), 12, rng ) ].habitat.deep ) deepOnly ++;
 	ok( deepOnly === 500, 'deep water gives offshore species only' );
 	let reefFish = 0;
 	for ( let i = 0; i < 500; i ++ ) if ( FISH[ pickSpecies( habitatAt( spots.reef ), 12, rng ) ].habitat.reef ) reefFish ++;
-	ok( reefFish > 400, `the reef gives mostly reef fish (${ reefFish / 5 }%)` );
+	ok( reefFish > 300, `the reef gives mostly reef fish (${ reefFish / 5 }%)` );
 
 }
 {
@@ -114,7 +114,12 @@ ok( s.stats.holdKg === 30, 'cooler holds 30 kg' );
 const a = s.addFish( 'grunt', 0.84, 9.5 );
 const b = s.addFish( 'yellowtail', 1.31, 10 );
 ok( a && b && s.inventory.length === 2, 'fish go into the cooler' );
-ok( s.addFish( 'tarpon', 40, 22 ) === null && s.log.tarpon.count === 1, 'a fish too big for the hold is logged but not kept' );
+const p1 = s.addFish( 'permit', 14 );
+ok( p1 && s.addFish( 'permit', 14.5 ) === null && s.log.permit.count === 2, 'a cheap fish too big for the hold is logged but not kept' );
+const tro = s.addFish( 'tarpon', 40, 22 );
+ok( tro && s.lastCatch.onDeck && tro.value >= TROPHY_VALUE, 'a trophy that does not fit is strapped on deck' );
+s.release( p1.id );
+s.release( tro.id );
 const value = s.holdValue;
 const sale = s.sell( [ a.id ] );
 ok( sale.count === 1 && s.money === a.value && s.inventory.length === 1, 'selling one fish pays for it' );
@@ -131,11 +136,11 @@ ok( s2.addFish( 'grunt', 0.5 ).id > b.id, 'ids keep counting after a load' );
 
 		const f = FISH[ id ];
 		const lo = fishLengthCm( id, f.kg[ 0 ] ), hi = fishLengthCm( id, f.kg[ 1 ] );
-		if ( ! ( lo > 5 && hi < 200 && hi > lo && typeof f.sci === 'string' ) ) sane = false;
+		if ( ! ( lo > 5 && hi < 450 && hi > lo && typeof f.sci === 'string' ) ) sane = false;
 
 	}
 
-	ok( sane, 'every species has a scientific name and a plausible, increasing length (5–200 cm)' );
+	ok( sane, 'every species has a scientific name and a plausible, increasing length (5–450 cm)' );
 	ok( Math.abs( fishLengthCm( 'mahi', 10 ) - 108 ) < 3 && Math.abs( fishLengthCm( 'grunt', 0.84 ) - 36 ) < 2, 'length-weight: a 10 kg mahi ~108 cm, a 0.84 kg grunt ~36 cm' );
 	const m = new Map();
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
@@ -147,8 +152,9 @@ ok( s2.addFish( 'grunt', 0.5 ).id > b.id, 'ids keep counting after a load' );
 	st.addFish( 'jack', 4.05 );
 	const i3 = st.lastCatch;
 	ok( i3.record && i3.prevBestKg === 3.2 && i3.prevBestCm === i1.cm && st.log.jack.bestKg === 4.05 && st.log.jack.bestCm === i3.cm, 'a bigger one: new record, previous best reported, log updated' );
-	st.addFish( 'tarpon', 40 );
-	ok( st.lastCatch.kept === false && st.lastCatch.newSpecies, 'a fish that does not fit: logged, card says released' );
+	st.addFish( 'permit', 14 );
+	st.addFish( 'permit', 14.5 );
+	ok( st.lastCatch.kept === false && ! st.lastCatch.newSpecies && st.log.permit.count === 2, 'a fish that does not fit: logged, card says released' );
 	// a save from before lengths: inventory and log get lengths on load
 	const old = { v: 1, money: 5, inventory: [ { id: 1, species: 'grunt', kg: 0.84, value: 6, caughtAt: 9 } ], log: { grunt: { count: 1, bestKg: 0.84 } }, upgrades: {}, fuel: null, nextId: 2 };
 	const st2 = new GameState( { getItem: () => JSON.stringify( old ), setItem: () => {} } );
@@ -183,15 +189,14 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( st.repair() === 20 && st.money === 0 && st.hullHP === 90, 'repairs stop when the money runs out' );
 	st.money = 1000;
 	ok( st.buy( 'armor' ) && st.stats.hullHP === 160 && st.hullHP === 150, 'new armour adds its points to a damaged hull' );
-	const before = st.money;
-	ok( st.buyShells() === 5 && st.shells === 10 && st.money === before - 60, 'shells fill the locker' );
+	ok( st.stats.canRateMul === 1 && UPGRADES.locker.levels.every( ( l ) => l.canRateMul >= 1 ), 'the cannon loader speeds up the (unlimited) cannon' );
 	st.heal( 1000 );
 	ok( st.hull === null && st.hullHP === 160, 'healing past full clears the damage' );
 	st.wanted = 3;
 	st.pirate.piratesSunk = 2;
 	st.save();
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
-	ok( st2.load() && st2.wanted === 3 && st2.shells === 10 && st2.pirate.piratesSunk === 2 && st2.upgrades.armor === 1, 'combat state round-trips through the save' );
+	ok( st2.load() && st2.wanted === 3 && st2.pirate.piratesSunk === 2 && st2.upgrades.armor === 1, 'combat state round-trips through the save' );
 	ok( Object.values( UPGRADES ).every( ( t ) => [ 'boat', 'weapons', 'fishing' ].includes( t.cat ) && t.levels[ 0 ].cost === 0 ), 'every upgrade track has a shop tab and a free first level' );
 
 }
@@ -212,6 +217,37 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( st2.load() && st2.boat === 'trawler' && st2.boats.length === 2, 'owned boats survive a save' );
 	ok( Object.values( BOATS ).every( ( b ) => b.price === 0 || b.price >= 20000 ), 'new boats are big purchases' );
 	ok( DANGER_ZONES.every( ( z ) => dangerZoneAt( z.x, z.z ) === z ) && dangerZoneAt( 55, 0 ) === null && dangerZoneAt( 64.5, 36.5 ) === null, 'danger zones: the harbour is safe' );
+
+}
+// ---- Water Wars: 30+ species, $75 - $80,000 by rarity
+{
+
+	ok( FISH_IDS.length >= 30, `at least 30 species (${ FISH_IDS.length })` );
+	let inBand = true;
+	for ( const id of FISH_IDS ) {
+
+		const f = FISH[ id ], T = TIERS[ f.tier ];
+		if ( ! T || f.value[ 0 ] < T.min || f.value[ 1 ] > T.max || f.value[ 0 ] >= f.value[ 1 ] ) inBand = false;
+
+	}
+
+	ok( inBand, 'every species sits in its tier\'s value band' );
+	ok( fishValue( 'silverside', 0.02 ) === 75 && fishValue( 'marlin', 200 ) === 80000, 'values run from $75 to $80,000' );
+	ok( TIER_IDS.every( ( t ) => FISH_IDS.some( ( id ) => FISH[ id ].tier === t ) ), 'every tier has fish' );
+	let over60 = 0, rare = 0;
+	const N = 20000, h = habitatAt( spots.pier );
+	for ( let i = 0; i < N; i ++ ) {
+
+		const id = pickSpecies( h, 12, rng );
+		if ( fishValue( id, rollWeight( id, rng ) ) > 60000 ) over60 ++;
+		if ( [ 'rare', 'epic', 'legendary' ].includes( FISH[ id ].tier ) ) rare ++;
+
+	}
+
+	ok( rare / N > 0.25 && rare / N < 0.45, `rare-or-better fish are common (${ ( rare / N * 100 ).toFixed( 1 ) }%)` );
+	ok( over60 / N > 0.005 && over60 / N < 0.04, `fish over $60,000 turn up now and then (${ ( over60 / N * 100 ).toFixed( 2 ) }%)` );
+	const d = tierChances( habitatAt( spots.deep ), { danger: true } ), c = tierChances( habitatAt( spots.pier ) );
+	ok( d.legendary > c.legendary && d.legendary < 0.06, 'deep and danger water tilt the odds, within reason' );
 
 }
 console.log( `value check ${ value }` );

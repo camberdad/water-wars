@@ -4,7 +4,7 @@ import { standard } from '../../materials/Materials.js';
 import { roofTopY } from '../../world/boat/Wheelhouse.js';
 import { SPRAY } from '../../fx/Spray.js';
 import { FISH } from '../FishTable.js';
-import { rollWeight } from '../Bites.js';
+import { rollWeight, pickSpecies } from '../Bites.js';
 import { buildGunTurret, buildCannon, buildFlag, buildLightBar } from './WeaponModels.js';
 import { DANGER_ZONES, DANGER_LOOT_BONUS, randomInZone } from '../DangerZones.js';
 
@@ -26,26 +26,26 @@ export const NPC_TYPES = {
 	fisher: {
 		label: 'Fishing boat', hp: 70, speed: 5.5, armedChance: 0.35, honest: true,
 		gun: { tier: 0, dmg: 3, rate: 0.9, range: 95, spread: 0.05, speed: 200 },
-		cash: [ 40, 140 ], fish: [ 1, 4 ],
+		cash: [ 200, 700 ], fish: [ 1, 4 ],
 		names: [ 'Lucky Lou', 'Marlin Mary', 'Sea Biscuit', 'Reel Deal', 'Salty Sue', 'Knot Working', 'Bait & Switch', 'Codfather', 'Fin & Tonic', 'Wet Dream', 'Hooked', 'Tuna Turner' ],
 	},
 	trader: {
 		label: 'Trader', hp: 140, speed: 7.5, armedChance: 1, honest: true,
 		gun: { tier: 2, dmg: 2.5, rate: 4, range: 120, spread: 0.055, speed: 220 },
-		cash: [ 220, 650 ], fish: [ 0, 2 ],
+		cash: [ 1200, 3500 ], fish: [ 0, 2 ],
 		names: [ 'Island Trader', 'Copra Queen', 'Rum Runner', 'Cargo Cult', 'Tradewind', 'Spice Isle', 'Mangrove Merchant' ],
 	},
 	pirate: {
 		label: 'Pirate', hp: 100, speed: 8.5, armedChance: 1, hostile: true,
 		gun: { tier: 2, dmg: 2, rate: 3, range: 120, spread: 0.065, speed: 220 },
-		cash: [ 180, 420 ], fish: [ 0, 2 ], bounty: 200,
+		cash: [ 900, 2100 ], fish: [ 0, 2 ], bounty: 1000,
 		names: [ 'Black Gull', 'Sea Wolf', 'Bloody Barracuda', 'Rusty Cutlass', 'Widowmaker', 'Salt Reaper', 'Kraken\'s Kiss', 'Mad Morgan' ],
 	},
 	coastguard: {
 		label: 'Coast guard', hp: 230, speed: 11.5, armedChance: 1, law: true,
 		gun: { tier: 3, dmg: 3.5, rate: 6, range: 160, spread: 0.05, speed: 240 },
 		cannon: { dmg: 18, rate: 0.14, range: 220, splash: 5 },
-		cash: [ 40, 120 ], fish: [ 0, 0 ], shells: 3,
+		cash: [ 200, 600 ], fish: [ 0, 0 ],
 		names: [ 'CG Patrol 7', 'CG Vigilant', 'CG Resolute', 'CG Sentinel', 'CG Guardian' ],
 	},
 };
@@ -189,10 +189,11 @@ export class NPCBoat {
 		this.home = type === 'pirate' ? DANGER_ZONES.reduce( ( a, z ) => ( ( z.x - at.x ) ** 2 + ( z.z - at.z ) ** 2 < ( a.x - at.x ) ** 2 + ( a.z - at.z ) ** 2 ? z : a ) ) : null;
 		this.fishCargo = [];
 		const nf = Math.round( rand( T.fish[ 0 ], T.fish[ 1 ] ) );
-		const species = Object.keys( FISH );
+		// their catch follows the same odds as yours (open water)
+		const water = { shallows: 0.3, reef: 0.4, pier: 0.2, bay: 1, deep: 0.8 };
 		for ( let i = 0; i < nf; i ++ ) {
 
-			const s = pick( species );
+			const s = pickSpecies( water, 12 ) || 'grunt';
 			this.fishCargo.push( { species: s, kg: Math.round( rollWeight( s ) * 100 ) / 100 } );
 
 		}
@@ -296,7 +297,8 @@ export class NPCBoat {
 		// pirates: on sight only when you are in the danger waters (a little slack at the edge), or once
 		// you have fired on them; the coast guard: whenever you are wanted
 		if ( this.provoked && this.type === 'pirate' && dist > 320 ) this.provoked = false;
-		const hunting = ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < 220 ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 );
+		// nobody hunts you in a safe zone (the harbour, the sea stations) or ashore
+		const hunting = ! ctx.playerSafe && ( ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < 220 ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 ) );
 
 		switch ( this.state ) {
 
@@ -357,7 +359,7 @@ export class NPCBoat {
 			case 'flee': {
 
 				this.steer( bearing + Math.PI, T.speed * 1.25, dt );
-				if ( this.gun && dist < this.gun.range && ctx.playerAboard ) this.shoot( dt, ctx, dist );
+				if ( this.gun && dist < this.gun.range && ctx.playerAboard && ! ctx.playerSafe ) this.shoot( dt, ctx, dist );
 				if ( dist > 280 && this.lastHitT > 12 ) {
 
 					this.provoked = false;
@@ -372,7 +374,7 @@ export class NPCBoat {
 
 			case 'attack': {
 
-				if ( ! hunting && ( dist > 260 || this.type === 'pirate' ) ) {
+				if ( ! hunting ) {
 
 					this.state = 'cruise';
 					this.announced = false;

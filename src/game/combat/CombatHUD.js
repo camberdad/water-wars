@@ -1,7 +1,7 @@
 import { Vector3 } from '../../engine/index.js';
 
 // Combat HUD (same look as the fishing HUD: ui.css tokens, .tw-glass):
-//   status card   hull, deck gun heat, cannon shells, wanted stars (top right, under the purse)
+//   status card   hull, deck gun heat, cannon reload, wanted stars, the safe / danger water you are in
 //   crosshair     at the helm, with the gun's heat ring and a hit marker
 //   boat labels   name, faction and a health bar over the boats nearby; "G loot" on wrecks
 //   overlays      a red vignette when you are hit, the "sunk" screen
@@ -30,6 +30,9 @@ const CSS = /* css */`
 	color: #ffb0a6; font: 700 var(--tw-fs-xs) var(--tw-font); letter-spacing: 0.06em; text-transform: uppercase; text-align: center; animation: ww-zone 2s ease-in-out infinite; }
 .ww-zone.is-on { display: block; }
 @keyframes ww-zone { 50% { background: rgba(200, 30, 20, 0.45); } }
+.ww-zone.is-safe { background: rgba(40, 170, 90, 0.25); color: #a8f0c0; animation: none; }
+.ww-cross.is-holstered { opacity: 0.35 !important; }
+.gm-mk.is-station > i { background: #3ee07a; }
 .ww-range.is-far { color: #ffb45a; }
 .ww-range.is-out { color: #ff6a5a; }
 
@@ -88,6 +91,7 @@ const h = ( tag, cls, html ) => {
 
 const SKULL = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.4 0-8 3.1-8 7.2 0 2.4 1.2 4.4 3 5.6V19h2v-2h2v2h2v-2h2v2h2v-3.2c1.8-1.2 3-3.2 3-5.6C20 6.1 16.4 3 12 3Zm-3 9.5a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Zm6 0a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Z"/></svg>';
 const DOT = '';
+const ANCHOR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M7 11h10M4 14c1 4 4 6 8 6s7-2 8-6"/></svg>';
 const _p = new Vector3();
 const _f = new Vector3();
 
@@ -152,6 +156,8 @@ export class CombatHUD {
 
 		} );
 		const map = combat.game.minimap;
+		// the sea stations (harbour services, safe zones)
+		if ( map && map.addMarker ) for ( const s of combat.stationList ) map.addMarker( { id: 'station-' + s.id, kind: 'station', icon: ANCHOR, pos: () => s } );
 		if ( map && map.addMarker ) {
 
 			this.mapMarks = combat.fleet.boats.map( ( b ) => map.addMarker( { id: 'npc' + b.index, kind: 'npc-fisher', icon: DOT, pos: () => b.active && b.state !== 'sinking' ? b.pos : null } ) );
@@ -194,12 +200,13 @@ export class CombatHUD {
 		const c = this.combat, s = c.state, st = s.stats, app = c.app;
 		const aboard = c.aboard;
 		this.status.style.opacity = aboard || s.wanted > 0 ? '1' : '0.0';
-		const zoneText = c.zone ? `⚠ Danger waters · ${ c.zone.name }` : '';
+		const zoneText = c.zone ? `⚠ Danger waters · ${ c.zone.name }` : c.safe ? `✓ Safe zone · ${ c.safe.name }` : '';
 		if ( this._zoneText !== zoneText ) {
 
 			this._zoneText = zoneText;
 			this.zoneEl.textContent = zoneText;
 			this.zoneEl.classList.toggle( 'is-on', !! zoneText );
+			this.zoneEl.classList.toggle( 'is-safe', ! c.zone && !! c.safe );
 
 		}
 
@@ -219,7 +226,7 @@ export class CombatHUD {
 		if ( st.cannon ) {
 
 			this.canName.textContent = c.cannonT > 0 ? 'reloading…' : 'ready';
-			this.shellsN.textContent = `${ s.shells }/${ st.shellCap }`;
+			this.shellsN.textContent = '∞';
 
 		}
 
@@ -233,6 +240,7 @@ export class CombatHUD {
 
 			this.ring.setAttribute( 'stroke-dashoffset', `${ this.ringC * ( 1 - c.heat ) }` );
 			this.cross.classList.toggle( 'is-over', c.overheated );
+			this.cross.classList.toggle( 'is-holstered', !! c.holstered );
 			this.cross.classList.toggle( 'is-target', !! c.aimTarget );
 			const R = st.gunRange, d = c.aimDist;
 			const far = d > R, out = d > R * 1.4;

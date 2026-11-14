@@ -1,4 +1,5 @@
-// Catchable fish: game data for the species the world already swims (world/fish/FishSpecies.js).
+// Catchable fish: 40 real Caribbean / western Atlantic species. Tidewater swam 18 of them; the rest
+// borrow the closest body plan from the world's fish models (world/fish/FishSpecies.js).
 //
 //   name      display name
 //   sci       scientific name
@@ -7,42 +8,91 @@
 //   habitat   weights per water type (see Bites.habitatAt): shallows (sand, < 3 m), reef (over the
 //             reef), pier (around the piles), bay (open water 3–20 m), deep (offshore, > 20 m)
 //   kg        [ min, max ] weight; sizes follow a skewed distribution (most fish are small)
-//   price     $ per kg at the fish stand
+//   tier      rarity: common, uncommon, rare, epic, legendary (Water Wars; see TIERS and Bites.pickSpecies)
+//   value     [ min, max ] $ for the smallest .. the biggest of the species (bigger fish are worth more)
 //   fight     0..1 how hard it pulls (surge strength and frequency in the catch mini-game)
 //   stamina   seconds of good pressure it takes to tire a typical one
 //   time      activity by time of day: 'day', 'dawnDusk', 'night' or 'any'
-//   rarity    0..1, scales how often it bites relative to the others in the same water
+//   rarity    0..1, how often it bites relative to the others of its tier in the same water
+
+// Rarity tiers: the chance a bite is of each tier (before the water and the danger waters shift it),
+// the value band and the catch card's colours. Rare fish are common enough; legendary ones, the only
+// fish worth more than $60,000, turn up now and then.
+export const TIERS = {
+	common: { name: 'Common', chance: 0.36, color: '#cfd8dc', min: 75, max: 400 },
+	uncommon: { name: 'Uncommon', chance: 0.30, color: '#7fdc8c', min: 400, max: 2500 },
+	rare: { name: 'Rare', chance: 0.22, color: '#5cb8ff', min: 2500, max: 12000 },
+	epic: { name: 'Epic', chance: 0.10, color: '#c38bff', min: 12000, max: 60000 },
+	legendary: { name: 'Legendary', chance: 0.02, color: '#ffc845', min: 60000, max: 80000 },
+};
+export const TIER_IDS = Object.keys( TIERS );
+
 export const FISH = {
-	silverside: { name: 'Hardhead silverside', sci: 'Atherinomorus stipes', lw: [ 0.0074, 3.1 ], model: 'silverside', habitat: { shallows: 1, pier: 0.6, bay: 0.2 }, kg: [ 0.02, 0.08 ], price: 3, fight: 0.05, stamina: 1.5, time: 'any', rarity: 0.2 },
-	mullet: { name: 'Striped mullet', sci: 'Mugil cephalus', lw: [ 0.0112, 2.98 ], model: 'mullet', habitat: { shallows: 1, pier: 0.4 }, kg: [ 0.4, 2.2 ], price: 5, fight: 0.3, stamina: 5, time: 'day', rarity: 0.8 },
-	needlefish: { name: 'Houndfish', sci: 'Tylosurus crocodilus', lw: [ 0.0012, 3.1 ], model: 'needlefish', habitat: { shallows: 0.7, bay: 0.5, pier: 0.3 }, kg: [ 0.5, 2.5 ], price: 4, fight: 0.45, stamina: 5, time: 'day', rarity: 0.5 },
-	sergeant: { name: 'Sergeant major', sci: 'Abudefduf saxatilis', lw: [ 0.0234, 3.0 ], model: 'sergeant', habitat: { pier: 1, reef: 0.8 }, kg: [ 0.1, 0.35 ], price: 6, fight: 0.15, stamina: 2.5, time: 'day', rarity: 1 },
-	grunt: { name: 'Bluestriped grunt', sci: 'Haemulon sciurus', lw: [ 0.0145, 3.06 ], model: 'grunt', habitat: { pier: 1, reef: 0.8, bay: 0.2 }, kg: [ 0.3, 1.2 ], price: 7, fight: 0.25, stamina: 4, time: 'any', rarity: 1 },
-	yellowtail: { name: 'Yellowtail snapper', sci: 'Ocyurus chrysurus', lw: [ 0.0137, 2.98 ], model: 'yellowtail', habitat: { reef: 1, pier: 0.4, bay: 0.4 }, kg: [ 0.4, 1.6 ], price: 12, fight: 0.4, stamina: 5, time: 'dawnDusk', rarity: 0.9 },
-	chromis: { name: 'Blue chromis', sci: 'Chromis cyanea', lw: [ 0.0209, 3.0 ], model: 'chromis', habitat: { reef: 1 }, kg: [ 0.03, 0.1 ], price: 4, fight: 0.05, stamina: 1.5, time: 'day', rarity: 0.4 },
-	tang: { name: 'Blue tang', sci: 'Acanthurus coeruleus', lw: [ 0.0282, 2.95 ], model: 'tang', habitat: { reef: 1 }, kg: [ 0.2, 0.6 ], price: 8, fight: 0.2, stamina: 3, time: 'day', rarity: 0.6 },
-	wrasse: { name: 'Hogfish', sci: 'Lachnolaimus maximus', lw: [ 0.0151, 3.07 ], model: 'wrasse', habitat: { reef: 0.8, bay: 0.3 }, kg: [ 0.5, 4 ], price: 16, fight: 0.35, stamina: 6, time: 'day', rarity: 0.35 },
-	parrot: { name: 'Stoplight parrotfish', sci: 'Sparisoma viride', lw: [ 0.0151, 3.06 ], model: 'parrot', habitat: { reef: 1 }, kg: [ 0.8, 4 ], price: 9, fight: 0.35, stamina: 6, time: 'day', rarity: 0.5 },
-	angel: { name: 'Queen angelfish', sci: 'Holacanthus ciliaris', lw: [ 0.0302, 2.94 ], model: 'angel', habitat: { reef: 1 }, kg: [ 0.4, 1.6 ], price: 14, fight: 0.25, stamina: 4, time: 'day', rarity: 0.3 },
-	jack: { name: 'Crevalle jack', sci: 'Caranx hippos', lw: [ 0.02, 2.93 ], model: 'jack', habitat: { shallows: 0.5, pier: 0.7, bay: 0.8 }, kg: [ 1, 9 ], price: 6, fight: 0.75, stamina: 12, time: 'dawnDusk', rarity: 0.5 },
-	barracuda: { name: 'Great barracuda', sci: 'Sphyraena barracuda', lw: [ 0.0051, 3.08 ], model: 'barracuda', habitat: { reef: 0.5, bay: 0.8, deep: 0.5 }, kg: [ 2, 16 ], price: 5, fight: 0.7, stamina: 11, time: 'any', rarity: 0.45 },
-	grouper: { name: 'Nassau grouper', sci: 'Epinephelus striatus', lw: [ 0.0107, 3.07 ], model: 'grouper', habitat: { reef: 0.6, deep: 0.6 }, kg: [ 3, 14 ], price: 15, fight: 0.6, stamina: 12, time: 'any', rarity: 0.3 },
-	redSnapper: { name: 'Red snapper', sci: 'Lutjanus campechanus', lw: [ 0.0137, 2.98 ], model: 'redSnapper', habitat: { deep: 1, bay: 0.2 }, kg: [ 1.5, 9 ], price: 18, fight: 0.5, stamina: 9, time: 'any', rarity: 0.7 },
-	tuna: { name: 'Blackfin tuna', sci: 'Thunnus atlanticus', lw: [ 0.0145, 3.0 ], model: 'tuna', habitat: { deep: 1 }, kg: [ 3, 14 ], price: 16, fight: 0.85, stamina: 16, time: 'dawnDusk', rarity: 0.5 },
-	mahi: { name: 'Mahi-mahi', sci: 'Coryphaena hippurus', lw: [ 0.0079, 3.0 ], model: 'mahi', habitat: { deep: 0.8 }, kg: [ 4, 18 ], price: 14, fight: 0.8, stamina: 15, time: 'day', rarity: 0.4 },
-	tarpon: { name: 'Tarpon', sci: 'Megalops atlanticus', lw: [ 0.0077, 3.02 ], model: 'tarpon', habitat: { pier: 0.35, bay: 0.5, shallows: 0.15 }, kg: [ 10, 45 ], price: 4, fight: 1, stamina: 24, time: 'night', rarity: 0.2 },
+	// ---- common ($75 - $400)
+	silverside: { name: 'Hardhead silverside', sci: 'Atherinomorus stipes', lw: [ 0.0074, 3.1 ], model: 'silverside', habitat: { shallows: 1, pier: 0.6, bay: 0.2 }, kg: [ 0.02, 0.08 ], tier: 'common', value: [ 75, 110 ], fight: 0.05, stamina: 1.5, time: 'any', rarity: 0.6 },
+	pinfish: { name: 'Pinfish', sci: 'Lagodon rhomboides', lw: [ 0.0164, 3.0 ], model: 'grunt', habitat: { shallows: 1, pier: 0.8 }, kg: [ 0.08, 0.5 ], tier: 'common', value: [ 80, 140 ], fight: 0.12, stamina: 2, time: 'day', rarity: 1 },
+	sergeant: { name: 'Sergeant major', sci: 'Abudefduf saxatilis', lw: [ 0.0234, 3.0 ], model: 'sergeant', habitat: { pier: 1, reef: 0.8 }, kg: [ 0.1, 0.35 ], tier: 'common', value: [ 85, 160 ], fight: 0.15, stamina: 2.5, time: 'day', rarity: 1 },
+	chromis: { name: 'Blue chromis', sci: 'Chromis cyanea', lw: [ 0.0209, 3.0 ], model: 'chromis', habitat: { reef: 1 }, kg: [ 0.03, 0.1 ], tier: 'common', value: [ 90, 170 ], fight: 0.05, stamina: 1.5, time: 'day', rarity: 0.6 },
+	mullet: { name: 'Striped mullet', sci: 'Mugil cephalus', lw: [ 0.0112, 2.98 ], model: 'mullet', habitat: { shallows: 1, pier: 0.4 }, kg: [ 0.4, 2.2 ], tier: 'common', value: [ 100, 240 ], fight: 0.3, stamina: 5, time: 'day', rarity: 0.8 },
+	grunt: { name: 'Bluestriped grunt', sci: 'Haemulon sciurus', lw: [ 0.0145, 3.06 ], model: 'grunt', habitat: { pier: 1, reef: 0.8, bay: 0.2 }, kg: [ 0.3, 1.2 ], tier: 'common', value: [ 110, 260 ], fight: 0.25, stamina: 4, time: 'any', rarity: 1 },
+	needlefish: { name: 'Houndfish', sci: 'Tylosurus crocodilus', lw: [ 0.0012, 3.1 ], model: 'needlefish', habitat: { shallows: 0.7, bay: 0.5, pier: 0.3 }, kg: [ 0.5, 2.5 ], tier: 'common', value: [ 130, 350 ], fight: 0.45, stamina: 5, time: 'day', rarity: 0.5 },
+	laneSnapper: { name: 'Lane snapper', sci: 'Lutjanus synagris', lw: [ 0.0145, 2.98 ], model: 'yellowtail', habitat: { reef: 0.8, bay: 1, pier: 0.4 }, kg: [ 0.3, 1.8 ], tier: 'common', value: [ 150, 380 ], fight: 0.3, stamina: 4, time: 'any', rarity: 0.9 },
+	blueRunner: { name: 'Blue runner', sci: 'Caranx crysos', lw: [ 0.0158, 2.95 ], model: 'jack', habitat: { bay: 1, pier: 0.7, deep: 0.4 }, kg: [ 0.5, 3 ], tier: 'common', value: [ 140, 400 ], fight: 0.5, stamina: 6, time: 'dawnDusk', rarity: 0.8 },
+	vermilion: { name: 'Vermilion snapper', sci: 'Rhomboplites aurorubens', lw: [ 0.0134, 3.0 ], model: 'redSnapper', habitat: { deep: 1, bay: 0.3 }, kg: [ 0.3, 2.5 ], tier: 'common', value: [ 150, 380 ], fight: 0.3, stamina: 4, time: 'any', rarity: 1 },
+	littleTunny: { name: 'Little tunny', sci: 'Euthynnus alletteratus', lw: [ 0.0132, 3.05 ], model: 'tuna', habitat: { deep: 1, bay: 0.5 }, kg: [ 1, 6 ], tier: 'common', value: [ 160, 400 ], fight: 0.6, stamina: 7, time: 'dawnDusk', rarity: 0.8 },
+
+	// ---- uncommon ($400 - $2,500)
+	yellowtail: { name: 'Yellowtail snapper', sci: 'Ocyurus chrysurus', lw: [ 0.0137, 2.98 ], model: 'yellowtail', habitat: { reef: 1, pier: 0.4, bay: 0.4 }, kg: [ 0.4, 1.6 ], tier: 'uncommon', value: [ 400, 1100 ], fight: 0.4, stamina: 5, time: 'dawnDusk', rarity: 1 },
+	tang: { name: 'Blue tang', sci: 'Acanthurus coeruleus', lw: [ 0.0282, 2.95 ], model: 'tang', habitat: { reef: 1 }, kg: [ 0.2, 0.6 ], tier: 'uncommon', value: [ 450, 1000 ], fight: 0.2, stamina: 3, time: 'day', rarity: 0.8 },
+	triggerfish: { name: 'Queen triggerfish', sci: 'Balistes vetula', lw: [ 0.0281, 2.93 ], model: 'angel', habitat: { reef: 1, pier: 0.3 }, kg: [ 0.6, 2.5 ], tier: 'uncommon', value: [ 500, 1500 ], fight: 0.35, stamina: 5, time: 'day', rarity: 0.8 },
+	spanishMackerel: { name: 'Spanish mackerel', sci: 'Scomberomorus maculatus', lw: [ 0.0061, 3.07 ], model: 'barracuda', habitat: { bay: 1, deep: 0.6, pier: 0.3 }, kg: [ 0.8, 4 ], tier: 'uncommon', value: [ 550, 1700 ], fight: 0.55, stamina: 7, time: 'day', rarity: 1 },
+	jack: { name: 'Crevalle jack', sci: 'Caranx hippos', lw: [ 0.02, 2.93 ], model: 'jack', habitat: { shallows: 0.5, pier: 0.7, bay: 0.8 }, kg: [ 1, 9 ], tier: 'uncommon', value: [ 600, 2000 ], fight: 0.75, stamina: 12, time: 'dawnDusk', rarity: 0.9 },
+	parrot: { name: 'Stoplight parrotfish', sci: 'Sparisoma viride', lw: [ 0.0151, 3.06 ], model: 'parrot', habitat: { reef: 1 }, kg: [ 0.8, 4 ], tier: 'uncommon', value: [ 650, 1900 ], fight: 0.35, stamina: 6, time: 'day', rarity: 0.8 },
+	muttonSnapper: { name: 'Mutton snapper', sci: 'Lutjanus analis', lw: [ 0.0145, 2.98 ], model: 'redSnapper', habitat: { reef: 0.8, bay: 0.6, deep: 0.6 }, kg: [ 1.5, 8 ], tier: 'uncommon', value: [ 800, 2400 ], fight: 0.5, stamina: 8, time: 'dawnDusk', rarity: 0.8 },
+	permit: { name: 'Permit', sci: 'Trachinotus falcatus', lw: [ 0.0228, 2.95 ], model: 'jack', habitat: { shallows: 1, bay: 0.5, pier: 0.3 }, kg: [ 3, 15 ], tier: 'uncommon', value: [ 1000, 2500 ], fight: 0.8, stamina: 14, time: 'day', rarity: 0.6 },
+
+	// ---- rare ($2,500 - $12,000)
+	wrasse: { name: 'Hogfish', sci: 'Lachnolaimus maximus', lw: [ 0.0151, 3.07 ], model: 'wrasse', habitat: { reef: 0.8, bay: 0.3 }, kg: [ 0.5, 4 ], tier: 'rare', value: [ 2500, 6000 ], fight: 0.35, stamina: 6, time: 'day', rarity: 1 },
+	angel: { name: 'Queen angelfish', sci: 'Holacanthus ciliaris', lw: [ 0.0302, 2.94 ], model: 'angel', habitat: { reef: 1 }, kg: [ 0.4, 1.6 ], tier: 'rare', value: [ 3000, 7000 ], fight: 0.25, stamina: 4, time: 'day', rarity: 0.8 },
+	barracuda: { name: 'Great barracuda', sci: 'Sphyraena barracuda', lw: [ 0.0051, 3.08 ], model: 'barracuda', habitat: { reef: 0.5, bay: 0.8, deep: 0.5 }, kg: [ 2, 16 ], tier: 'rare', value: [ 2600, 8000 ], fight: 0.7, stamina: 11, time: 'any', rarity: 1 },
+	kingMackerel: { name: 'King mackerel', sci: 'Scomberomorus cavalla', lw: [ 0.0047, 3.06 ], model: 'barracuda', habitat: { deep: 1, bay: 0.4 }, kg: [ 4, 25 ], tier: 'rare', value: [ 2800, 8500 ], fight: 0.8, stamina: 14, time: 'dawnDusk', rarity: 0.9 },
+	redSnapper: { name: 'Red snapper', sci: 'Lutjanus campechanus', lw: [ 0.0137, 2.98 ], model: 'redSnapper', habitat: { deep: 1, bay: 0.2 }, kg: [ 1.5, 9 ], tier: 'rare', value: [ 3000, 9000 ], fight: 0.5, stamina: 9, time: 'any', rarity: 1 },
+	bonefish: { name: 'Bonefish', sci: 'Albula vulpes', lw: [ 0.0083, 3.06 ], model: 'mullet', habitat: { shallows: 1, bay: 0.2 }, kg: [ 1.5, 6 ], tier: 'rare', value: [ 3200, 10000 ], fight: 0.85, stamina: 12, time: 'day', rarity: 0.9 },
+	snook: { name: 'Common snook', sci: 'Centropomus undecimalis', lw: [ 0.0071, 3.07 ], model: 'tarpon', habitat: { pier: 1, shallows: 0.5, bay: 0.3 }, kg: [ 2, 12 ], tier: 'rare', value: [ 3500, 11000 ], fight: 0.7, stamina: 12, time: 'night', rarity: 0.9 },
+	blackGrouper: { name: 'Black grouper', sci: 'Mycteroperca bonaci', lw: [ 0.0098, 3.08 ], model: 'grouper', habitat: { reef: 0.8, deep: 0.8 }, kg: [ 5, 35 ], tier: 'rare', value: [ 3500, 11500 ], fight: 0.7, stamina: 14, time: 'any', rarity: 0.7 },
+	cobia: { name: 'Cobia', sci: 'Rachycentron canadum', lw: [ 0.0042, 3.17 ], model: 'barracuda', habitat: { pier: 0.6, bay: 0.8, deep: 0.6 }, kg: [ 5, 30 ], tier: 'rare', value: [ 4000, 12000 ], fight: 0.8, stamina: 16, time: 'any', rarity: 0.7 },
+	wahoo: { name: 'Wahoo', sci: 'Acanthocybium solandri', lw: [ 0.0017, 3.27 ], model: 'barracuda', habitat: { deep: 1 }, kg: [ 8, 35 ], tier: 'rare', value: [ 4500, 12000 ], fight: 0.9, stamina: 16, time: 'dawnDusk', rarity: 0.7 },
+
+	// ---- epic ($12,000 - $60,000)
+	tuna: { name: 'Blackfin tuna', sci: 'Thunnus atlanticus', lw: [ 0.0145, 3.0 ], model: 'tuna', habitat: { deep: 1 }, kg: [ 3, 14 ], tier: 'epic', value: [ 12000, 28000 ], fight: 0.85, stamina: 16, time: 'dawnDusk', rarity: 1 },
+	grouper: { name: 'Nassau grouper', sci: 'Epinephelus striatus', lw: [ 0.0107, 3.07 ], model: 'grouper', habitat: { reef: 0.6, deep: 0.6 }, kg: [ 3, 14 ], tier: 'epic', value: [ 14000, 34000 ], fight: 0.6, stamina: 12, time: 'any', rarity: 0.9 },
+	mahi: { name: 'Mahi-mahi', sci: 'Coryphaena hippurus', lw: [ 0.0079, 3.0 ], model: 'mahi', habitat: { deep: 0.8 }, kg: [ 4, 18 ], tier: 'epic', value: [ 15000, 38000 ], fight: 0.8, stamina: 15, time: 'day', rarity: 1 },
+	tarpon: { name: 'Tarpon', sci: 'Megalops atlanticus', lw: [ 0.0077, 3.02 ], model: 'tarpon', habitat: { pier: 0.35, bay: 0.5, shallows: 0.15 }, kg: [ 10, 45 ], tier: 'epic', value: [ 20000, 52000 ], fight: 1, stamina: 24, time: 'night', rarity: 0.8 },
+	yellowfin: { name: 'Yellowfin tuna', sci: 'Thunnus albacares', lw: [ 0.0158, 3.0 ], model: 'tuna', habitat: { deep: 1 }, kg: [ 15, 80 ], tier: 'epic', value: [ 18000, 50000 ], fight: 0.95, stamina: 24, time: 'dawnDusk', rarity: 0.8 },
+	sailfish: { name: 'Atlantic sailfish', sci: 'Istiophorus albicans', lw: [ 0.0019, 3.08 ], model: 'needlefish', habitat: { deep: 1, bay: 0.2 }, kg: [ 15, 45 ], tier: 'epic', value: [ 22000, 56000 ], fight: 0.95, stamina: 22, time: 'day', rarity: 0.7 },
+	goliath: { name: 'Goliath grouper', sci: 'Epinephelus itajara', lw: [ 0.0139, 3.04 ], model: 'grouper', habitat: { pier: 0.6, reef: 0.5, deep: 0.5 }, kg: [ 40, 150 ], tier: 'epic', value: [ 25000, 60000 ], fight: 0.9, stamina: 30, time: 'any', rarity: 0.6 },
+	swordfish: { name: 'Swordfish', sci: 'Xiphias gladius', lw: [ 0.0039, 3.1 ], model: 'needlefish', habitat: { deep: 1 }, kg: [ 30, 120 ], tier: 'epic', value: [ 26000, 60000 ], fight: 1, stamina: 30, time: 'night', rarity: 0.6 },
+
+	// ---- legendary ($60,000 - $80,000)
+	tilefish: { name: 'Golden tilefish', sci: 'Lopholatilus chamaeleonticeps', lw: [ 0.0085, 3.1 ], model: 'redSnapper', habitat: { deep: 1 }, kg: [ 5, 25 ], tier: 'legendary', value: [ 60000, 70000 ], fight: 0.7, stamina: 18, time: 'any', rarity: 1 },
+	bluefin: { name: 'Atlantic bluefin tuna', sci: 'Thunnus thynnus', lw: [ 0.0177, 3.0 ], model: 'tuna', habitat: { deep: 1 }, kg: [ 60, 180 ], tier: 'legendary', value: [ 64000, 80000 ], fight: 1, stamina: 34, time: 'dawnDusk', rarity: 0.9 },
+	marlin: { name: 'Blue marlin', sci: 'Makaira nigricans', lw: [ 0.0012, 3.24 ], model: 'needlefish', habitat: { deep: 1 }, kg: [ 60, 200 ], tier: 'legendary', value: [ 66000, 80000 ], fight: 1, stamina: 36, time: 'day', rarity: 0.8 },
 };
 
 export const FISH_IDS = Object.keys( FISH );
 
-// $ value of a fish; trophy-sized ones fetch a bit more per kg
+// $ value of a fish: from the species' smallest to its biggest along its value band, rounded to $5
 export function fishValue( id, kg ) {
 
 	const f = FISH[ id ];
-	const t = ( kg - f.kg[ 0 ] ) / Math.max( f.kg[ 1 ] - f.kg[ 0 ], 1e-6 );
-	return Math.max( 1, Math.round( f.price * kg * ( 1 + 0.25 * Math.max( 0, t - 0.7 ) / 0.3 ) ) );
+	const t = Math.min( 1, Math.max( 0, ( kg - f.kg[ 0 ] ) / Math.max( f.kg[ 1 ] - f.kg[ 0 ], 1e-6 ) ) );
+	const v = f.value[ 0 ] + ( f.value[ 1 ] - f.value[ 0 ] ) * t;
+	return Math.max( 5, Math.round( v / 5 ) * 5 );
 
 }
+
+// fish worth this much are strapped on deck when the hold is full (never thrown back for space)
+export const TROPHY_VALUE = 2500;
 
 // total length (cm) of a fish of `kg`, from its species' length-weight relation
 export function fishLengthCm( id, kg ) {

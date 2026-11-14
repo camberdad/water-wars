@@ -1,4 +1,5 @@
 import { icon, brandMark } from './icons.js';
+import { VERSION } from '../version.js';
 
 // Tidewater UI: settings panel (tabs → folders → controls), HUD, help,
 // photo mode, start overlay and loader. Plain DOM, no dependencies.
@@ -2157,9 +2158,9 @@ export class UI {
 					<section>
 						<h3>Combat (at the helm)</h3>
 						${ row( k( 'LMB' ), 'Deck gun<small>Hold to fire, watch the heat</small>' ) }
-						${ row( k( 'RMB' ), 'Bow cannon<small>Lobs a shell at the crosshair</small>' ) }
+						${ row( k( 'RMB' ), 'Bow cannon<small>Lobs a shell at the crosshair, unlimited ammo</small>' ) }
 						${ row( k( 'G' ), 'Loot a wreck alongside' ) }
-						${ row( k( 'U' ), 'Harbour services<small>By the pier: repair, shells, upgrades</small>' ) }
+						${ row( k( 'U' ), 'Harbour services<small>Pier or sea station: repair, upgrades, boats</small>' ) }
 						${ row( k( 'F' ), 'Free camera' ) }
 						${ row( k( 'T' ), 'Pause time' ) }
 						${ row( k( 'L' ), 'Flashlight' ) }
@@ -2205,7 +2206,8 @@ export class UI {
 					<span><kbd>H</kbd>Settings</span>
 					<span><kbd>F1</kbd>All controls</span>
 				</div>
-			</div>`;
+			</div>
+			<div class="tw-start-version" style="position:absolute;right:16px;bottom:12px;font:500 11px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:0.06em;color:rgba(255,255,255,0.5);pointer-events:none">Water Wars v${ VERSION }</div>`;
 		this.root.append( el );
 
 	}

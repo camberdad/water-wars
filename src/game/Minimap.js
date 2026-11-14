@@ -2,6 +2,7 @@ import { WORLD } from '../world/WorldLayout.js';
 import { STAND } from './FishStand.js';
 import { CHANDLERY } from './Chandlery.js';
 import { DANGER_ZONES } from './DangerZones.js';
+import { SAFE_ZONES } from './Harbours.js';
 
 // Minimap, lower right: the island baked once from the terrain data into a 2D canvas (depth-tinted
 // sea, reef and seagrass, sand, grass and forest by height, rock, paths, village pads, the pier,
@@ -312,6 +313,22 @@ export class Minimap {
 		const [ hx1, hz1 ] = P( W.x + W.headWidth / 2, W.zEnd );
 		ctx.fillRect( hx0, hz0, hx1 - hx0, hz1 - hz0 );
 		ctx.strokeRect( hx0, hz0, hx1 - hx0, hz1 - hz0 );
+
+		// Water Wars: the safe zones (the harbour, the sea stations), a green tint with a dashed rim
+		for ( const z of SAFE_ZONES ) {
+
+			const [ cx, cy ] = P( z.x, z.z );
+			ctx.beginPath();
+			ctx.arc( cx, cy, z.r * PPM, 0, Math.PI * 2 );
+			ctx.fillStyle = 'rgba(40, 190, 100, 0.16)';
+			ctx.fill();
+			ctx.setLineDash( [ 3, 3 ] );
+			ctx.strokeStyle = 'rgba(90, 230, 140, 0.85)';
+			ctx.lineWidth = 1.2;
+			ctx.stroke();
+			ctx.setLineDash( [] );
+
+		}
 
 		// Water Wars: the danger waters, hatched red with a dashed rim and their names
 		for ( const d of DANGER_ZONES ) {

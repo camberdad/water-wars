@@ -1,7 +1,7 @@
 import { Vector3, Quaternion } from '../../engine/index.js';
 import { roofTopY } from '../../world/boat/Wheelhouse.js';
 import { WORLD } from '../../world/WorldLayout.js';
-import { FISH, fishValue, fishLengthCm } from '../FishTable.js';
+import { FISH, fishValue, fishLengthCm, TROPHY_VALUE } from '../FishTable.js';
 import { CombatFX } from './CombatFX.js';
 import { CombatSFX } from './CombatSFX.js';
 import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPCBoats.js';
@@ -10,11 +10,12 @@ import { CombatHUD } from './CombatHUD.js';
 import { BOATS } from '../BoatCatalog.js';
 import { createBoatMesh, surfaceY } from '../Boats.js';
 import { DANGER_ZONES, dangerZoneAt, randomInZone, buildDangerBuoys } from '../DangerZones.js';
+import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations } from '../Harbours.js';
 
 // Water Wars' combat layer on top of the fishing game:
-//   at the helm   left mouse fires the deck gun (it overheats), right mouse the bow cannon (shells)
-//   G             loot a disabled boat alongside (cash, fish, shells)
-//   U             harbour services when the boat is by the pier (repairs, shells, upgrades, sell fish)
+//   at the helm   left mouse fires the deck gun (it overheats), right mouse the bow cannon (unlimited shells)
+//   G             loot a disabled boat alongside (cash and fish)
+//   U             harbour services by the pier or at a sea station (repairs, fuel, upgrades, boats, sell fish)
 // Sinking honest boats (fishers, traders) or firing on the coast guard raises your wanted level;
 // from two stars the coast guard comes for you. Pirates carry a bounty. If your hull goes to zero
 // you lose your catch and part of your money, and start again at the pier.
@@ -77,6 +78,12 @@ export class Combat {
 		// the danger waters: red buoys around them, and where the player is
 		this.buoys = buildDangerBuoys( app.scene, app.terrainData );
 		this.zone = null;
+		// safe zones: the harbour and the four sea stations (harbour services at each)
+		this.stations = buildStations( app.scene, app.colliders );
+		this.stationList = STATIONS;
+		this.safe = null;
+		this.stationVendors = new Map( STATIONS.map( ( s ) => [ s.id, { name: s.name, kind: 'dock', greeting: 'Safe harbour out here: repairs, fuel, upgrades, boats, and we buy your catch.' } ] ) );
+		this.service = null; // the vendor of the service point alongside, or null
 		this.applyGear();
 
 	}
@@ -233,6 +240,8 @@ export class Combat {
 		ctx.wanted = s.wanted;
 		ctx.time = this.time;
 		ctx.playerZoneLoose = aboard ? dangerZoneAt( ctx.playerPos.x, ctx.playerPos.z, 25 ) : null;
+		// ashore you are always out of the fight; afloat in the harbour or by a station too
+		ctx.playerSafe = ! aboard || !! safeZoneAt( ctx.playerPos.x, ctx.playerPos.z );
 		this.updateZone( ctx.playerPos, aboard );
 		this.manageSpawns( dt, ctx.playerPos );
 		this.fleet.update( dt, ctx );
@@ -246,6 +255,7 @@ export class Combat {
 		this.heat = Math.max( 0, this.heat - st.coolRate * dt * ( this.overheated ? 1.3 : 1 ) );
 		if ( this.overheated && this.heat < 0.3 ) this.overheated = false;
 		const helm = this.atHelm && ! this.dead;
+		this.holstered = helm && !! this.safe;
 		if ( helm ) {
 
 			this.computeAim( st );
@@ -253,8 +263,22 @@ export class Combat {
 			if ( this.cannon ) this.aimTurret( app.boat.group, this.cannon, this.aim, dt, - 0.6, 0.12 );
 			const lmb = inp.mouseDown && inp.enabled && ! panelOpen;
 			const rmb = inp.rightDown && inp.enabled && ! panelOpen;
-			if ( lmb && ! this.overheated && this.gunT <= 0 ) this.fireGun( st );
-			if ( rmb && this.cannon && this.cannonT <= 0 ) this.fireCannon( st );
+			if ( this.safe && ( lmb || rmb ) ) {
+
+				// no shooting in a safe zone
+				if ( ( this._holsterT || 0 ) < this.time ) {
+
+					this._holsterT = this.time + 3;
+					this.game.toast( `Weapons are holstered in ${ this.safe.name.replace( /^The /, 'the ' ) } (safe zone)`, 2000 );
+
+				}
+
+			} else {
+
+				if ( lmb && ! this.overheated && this.gunT <= 0 ) this.fireGun( st );
+				if ( rmb && this.cannon && this.cannonT <= 0 ) this.fireCannon( st );
+
+			}
 
 		} else if ( this.gun ) {
 
@@ -304,8 +328,18 @@ export class Combat {
 
 	}
 
-	// entering / leaving the danger waters
+	// entering / leaving the danger waters and the safe zones
 	updateZone( pos, aboard ) {
+
+		const safe = aboard ? safeZoneAt( pos.x, pos.z ) : null;
+		if ( safe !== this.safe ) {
+
+			const was = this.safe;
+			this.safe = safe;
+			if ( safe ) this.game.toast( `✓ ${ safe.name }: safe zone. Nobody fires here; shop, repair and fish in peace.`, 3200 );
+			else if ( was ) this.game.toast( `Leaving the safe zone of ${ was.name.replace( /^The /, 'the ' ) }`, 2200 );
+
+		}
 
 		const z = dangerZoneAt( pos.x, pos.z );
 		if ( z === this.zone ) return;
@@ -462,21 +496,6 @@ export class Combat {
 
 	fireCannon( st ) {
 
-		const s = this.state;
-		if ( s.shells <= 0 ) {
-
-			if ( ( this._noShellT || 0 ) < this.time ) {
-
-				this._noShellT = this.time + 2;
-				this.game.toast( 'Out of shells · buy more at the harbour (U by the pier) or from Marta', 2200 );
-				this.sfx.shot( null, 'clank', 0.6 );
-
-			}
-
-			return;
-
-		}
-
 		const c = this.cannon;
 		const muzzle = c.pitch.localToWorld( _w.copy( c.muzzles[ 0 ] ) );
 		// land the shell on the aim point, within the gun's reach
@@ -494,9 +513,7 @@ export class Combat {
 		this.fx.fire( { from: muzzle, vel, dmg: st.canDmg, owner: 'player', kind: 'shell', splash: st.canSplash, life: 10 } );
 		this.fx.muzzle( muzzle, vel.clone().normalize(), true );
 		this.sfx.shot( muzzle, 'cannon' );
-		s.shells --;
-		s.emit();
-		this.cannonT = 1 / st.canRate;
+		this.cannonT = 1 / ( st.canRate * ( st.canRateMul || 1 ) );
 		this.firedT = 0;
 
 	}
@@ -605,7 +622,7 @@ export class Combat {
 
 	damagePlayer( dmg ) {
 
-		if ( this.dead || ! this.aboard ) return;
+		if ( this.dead || ! this.aboard || this.safe ) return;
 		const s = this.state;
 		s.damage( dmg );
 		this.hurtT = 0;
@@ -772,9 +789,9 @@ export class Combat {
 		let fishN = 0, lostN = 0, fishV = 0;
 		for ( const f of b.fishCargo ) {
 
-			if ( s.fits( f.kg ) ) {
+			const value = fishValue( f.species, f.kg );
+			if ( s.fits( f.kg ) || value >= TROPHY_VALUE ) {
 
-				const value = fishValue( f.species, f.kg );
 				s.inventory.push( { id: s._nextId ++, species: f.species, kg: f.kg, cm: Math.round( fishLengthCm( f.species, f.kg ) ), value, caughtAt: game.hour, record: false } );
 				fishN ++;
 				fishV += value;
@@ -783,10 +800,6 @@ export class Combat {
 
 		}
 
-		let shells = 0;
-		if ( b.def.shells ) shells = Math.min( b.def.shells, s.stats.shellCap - s.shells );
-		if ( b.type === 'pirate' || b.type === 'trader' ) shells += Math.min( Math.floor( Math.random() * 3 ), s.stats.shellCap - s.shells - shells );
-		s.shells += Math.max( 0, shells );
 		s.money += cash;
 		s.pirate.looted ++;
 		s.pirate.plunder += cash + fishV;
@@ -795,7 +808,6 @@ export class Combat {
 		if ( this.app.audio && this.app.audio.coin ) this.app.audio.coin();
 		const bits = [ `$${ cash }` ];
 		if ( fishN ) bits.push( `${ fishN } fish` );
-		if ( shells > 0 ) bits.push( `${ shells } shell${ shells > 1 ? 's' : '' }` );
 		game.toast( `Plundered the ${ b.name }: ${ bits.join( ', ' ) }${ lostN ? ` · no room for ${ lostN } more fish` : '' }`, 3800 );
 
 	}
@@ -805,9 +817,12 @@ export class Combat {
 		const hud = this.game.hud;
 		const bc = this.app.boatCtl.position, d = WORLD.boatDock.position;
 		this.atDock = aboard && Math.hypot( bc.x - d.x, bc.z - d.z ) < DOCK_RADIUS;
-		if ( hud && hud.standOpen && hud.vendor === this.dockVendor && ! this.atDock ) hud.closeStand();
-		if ( ! this.atDock || this.dead || this.loot ) return;
-		if ( hud && hud.standOpen && hud.vendor === this.dockVendor ) {
+		const st = aboard ? stationNear( bc.x, bc.z, SERVICE_RADIUS ) : null;
+		this.service = this.atDock ? this.dockVendor : st ? this.stationVendors.get( st.id ) : null;
+		const servicesOpen = hud && hud.standOpen && hud.vendor && hud.vendor.kind === 'dock';
+		if ( servicesOpen && hud.vendor !== this.service ) hud.closeStand();
+		if ( ! this.service || this.dead || this.loot ) return;
+		if ( servicesOpen && hud.vendor === this.service ) {
 
 			p.prompt = { key: 'U', text: 'Close harbour services' };
 			if ( inp.hit( 'KeyU' ) ) hud.closeStand();
@@ -815,15 +830,15 @@ export class Combat {
 
 		}
 
-		if ( ! p.prompt || p.mode === 'boat' ) p.prompt = { key: 'U', text: 'Harbour services' + ( p.mode === 'boat' ? '   ·   E  leave helm' : '' ) };
-		if ( inp.hit( 'KeyU' ) && hud ) hud.openStand( this.dockVendor );
+		if ( ! p.prompt || p.mode === 'boat' ) p.prompt = { key: 'U', text: ( this.atDock ? 'Harbour services' : this.service.name ) + ( p.mode === 'boat' ? '   ·   E  leave helm' : '' ) };
+		if ( inp.hit( 'KeyU' ) && hud ) hud.openStand( this.service );
 
 	}
 
 	// pay off the wanted level at the harbour office
 	fineCost() {
 
-		return this.state.wanted * 300;
+		return this.state.wanted * 1500;
 
 	}
 

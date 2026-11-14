@@ -5,7 +5,8 @@ import { PAT, createPropMaterial } from './GameMaterials.js';
 
 // Danger Waters: the pirates' hunting grounds, out in the deep water off the island. Pirates only
 // attack on sight in here (elsewhere they leave you alone unless you shoot first), and the reward
-// matches the risk: fish caught in danger waters fetch more, and the pirates carry more plunder.
+// matches the risk: epic and legendary fish bite twice as often in there (Bites.tierChances), and the
+// pirates carry more plunder.
 // Each zone is ringed with red marker buoys and shown in red on the minimap.
 export const DANGER_ZONES = [
 	{ id: 'devils-deep', name: 'Devil\'s Deep', x: - 515, z: 250, r: 120 },
@@ -13,7 +14,6 @@ export const DANGER_ZONES = [
 	{ id: 'graveyard', name: 'The Graveyard', x: 0, z: 370, r: 90 },
 ];
 
-export const DANGER_FISH_BONUS = 1.6; // catch value in danger waters
 export const DANGER_LOOT_BONUS = 1.5; // pirates' cash there
 
 // the zone at (x, z), with `margin` metres of slack (positive = larger), or null
