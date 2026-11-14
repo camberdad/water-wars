@@ -48,8 +48,8 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **Safe zones** (green on the map): the harbour (the bay, the pier, the beach and the reef) and the four
   **sea stations** (Westpoint Station, Eastwind Station, Southreach Barge, Coral Light Rig). Nobody fires on
   you there and your guns stay holstered. Press **`U`** alongside a station for full harbour services.
-- **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($150,000, tough, big hold), a
-  *Sport-fishing yacht* ($400,000, fastest), and a *Deep-sea fishing ship* ($1,000,000, a fortress with a
+- **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($60,000, tough, big hold), a
+  *Sport-fishing yacht* ($160,000, fastest), and a *Deep-sea fishing ship* ($400,000, a fortress with a
   huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's.
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
   - **Boat:** hull armour, engine, fish hold, fuel tank, damage control (self-repair)
@@ -71,16 +71,6 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | R | Fishing rod |
 | I / Tab | Cooler and fish log |
 | F1 | All controls and the guide |
-
-## Embedding it in another site (Google Sites and the like)
-
-The game can run inside another page. On Google Sites: **Insert → Embed → By URL** and paste
-`https://camberdad.github.io/water-wars/`, then make the embed as large as the page allows.
-
-Framed pages usually can't capture the mouse, so the game switches to **cursor look** by itself: just move
-the cursor over the game to look around, and rest it near an edge to keep turning. Click once inside the
-game first so it gets the keyboard. Add `?cursor` to the URL to force cursor look anywhere, or `?lock` to
-force mouse capture. `test/embed.html` on the dev server frames the game the same way for testing.
 
 ## What's new on top of Tidewater
 

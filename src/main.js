@@ -37,8 +37,6 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 
 		app.input.requestLock();
 		if ( app.audio ) app.audio.resume();
-		// embedded in another page (Google Sites...): no mouse capture there, the cursor steers the view
-		if ( app.input.cursorLook ) setTimeout( () => ui.toast( 'Move the cursor to look around · rest it near an edge to keep turning', 6000 ), 600 );
 
 	} );
 

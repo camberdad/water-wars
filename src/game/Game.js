@@ -59,9 +59,6 @@ export class Game {
 		this.state.onChange( () => this.applyGear() );
 		// Water Wars: the other boats, guns, plunder and the wanted level
 		this.combat = new Combat( this );
-		// cursor look (embedded pages) pauses while a panel is open or the cursor is over the interface
-		app.input.lookBlocked = () => !! ( this.hud && ( this.hud.invOpen || this.hud.standOpen || this.hud.catchOpen ) )
-			|| !! ( typeof window !== 'undefined' && window.__ui && ( window.__ui.isPointerOverUI || window.__ui._start ) );
 
 	}
 
