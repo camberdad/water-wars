@@ -399,7 +399,7 @@ export class Combat {
 
 	}
 
-	// the hulls push apart; ramming at speed hurts both
+	// the hulls push apart; ramming at speed hurts the other boat only (touching boats never damages yours)
 	collideBoats( dt ) {
 
 		const bc = this.app.boatCtl;
@@ -425,7 +425,6 @@ export class Combat {
 					this.fx.hit( at, _w.set( nx, 0, nz ), 0.8 );
 					this.sfx.shot( at, 'hit', 1.2 );
 					b.damage( dmg, true, this._ctx );
-					this.damagePlayer( dmg * 0.45 );
 					this.game.toast( 'Ramming!', 1200 );
 
 				}

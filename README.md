@@ -34,7 +34,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **Turn pirate.** Take the helm (`E` at the wheel). **Left mouse** fires the deck gun at the crosshair (it
   overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one. Ammo is
   unlimited. Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash and fish. Ramming
-  at speed hurts both boats.
+  at speed damages the other boat; bumping into boats never damages yours.
 - **The other boats:**
   - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
   - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
