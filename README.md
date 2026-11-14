@@ -22,11 +22,11 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 
   | Tier | Value | Share of catches | Examples |
   |---|---|---|---|
-  | Common | $75 – $400 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
-  | Uncommon | $400 – $2,500 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
-  | Rare | $2,500 – $12,000 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
-  | Epic | $12,000 – $60,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
-  | Legendary | $60,000 – $80,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
+  | Common | $750 – $4,000 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
+  | Uncommon | $4,000 – $25,000 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
+  | Rare | $25,000 – $120,000 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
+  | Epic | $120,000 – $600,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
+  | Legendary | $600,000 – $800,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
 
   Bigger fish of a species are worth more. Deep water and the danger waters bring epic and legendary fish up
   more often. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
@@ -71,6 +71,16 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | R | Fishing rod |
 | I / Tab | Cooler and fish log |
 | F1 | All controls and the guide |
+
+## Embedding it in another site (Google Sites and the like)
+
+The game can run inside another page. On Google Sites: **Insert → Embed → By URL** and paste
+`https://camberdad.github.io/water-wars/`, then make the embed as large as the page allows.
+
+Framed pages usually can't capture the mouse, so the game switches to **cursor look** by itself: just move
+the cursor over the game to look around, and rest it near an edge to keep turning. Click once inside the
+game first so it gets the keyboard. Add `?cursor` to the URL to force cursor look anywhere, or `?lock` to
+force mouse capture. `test/embed.html` on the dev server frames the game the same way for testing.
 
 ## What's new on top of Tidewater
 

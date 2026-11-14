@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Water Wars embed test</title>
+	<style>
+		:root { color-scheme: light; }
+		body { margin: 0; padding: 24px; background: #f1f3f4; font: 15px/1.5 system-ui, sans-serif; color: #202124; }
+		h1 { font-size: 20px; margin: 0 0 12px; }
+		iframe { display: block; width: min(100%, 1100px); aspect-ratio: 16 / 10; border: 0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); background: #000; }
+		p { max-width: 1100px; }
+	</style>
+</head>
+<body>
+	<!-- Dev page: the game framed the way Google Sites embeds a URL (a sandboxed iframe without
+	     pointer-lock permission), to test cursor look. Open /test/embed.html on the dev server. -->
+	<h1>Water Wars embedded (like Google Sites)</h1>
+	<p>The frame has no pointer-lock permission, as on Google Sites: moving the cursor should turn the view,
+		and resting it near an edge should keep turning.</p>
+	<iframe src="../" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="fullscreen; autoplay"></iframe>
+</body>
+</html>
