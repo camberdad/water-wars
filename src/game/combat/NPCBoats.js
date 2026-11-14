@@ -305,6 +305,16 @@ export class NPCBoat {
 			case 'cruise':
 			case 'fish': {
 
+				// the coast guard doesn't come for you in a safe zone: it turns away and leaves (a new patrol
+				// sets out once you are back in open water)
+				if ( this.type === 'coastguard' && ctx.playerSafe ) {
+
+					this.steer( bearing + Math.PI, T.speed, dt );
+					if ( dist > 330 ) this.despawn( rand( 8, 15 ) );
+					break;
+
+				}
+
 				if ( hunting ) {
 
 					this.state = 'attack';

@@ -307,7 +307,7 @@ export class Combat {
 		if ( s.wanted > 0 ) {
 
 			this.crimeT += dt;
-			const chased = this.fleet.boats.some( ( b ) => b.type === 'coastguard' && b.alive && b.distToPlayer < 250 );
+			const chased = ! this._ctx.playerSafe && this.fleet.boats.some( ( b ) => b.type === 'coastguard' && b.alive && b.distToPlayer < 250 );
 			if ( chased ) this.crimeT = Math.min( this.crimeT, 30 );
 			if ( this.crimeT > 60 ) {
 
@@ -354,7 +354,8 @@ export class Combat {
 
 		const counts = { fisher: 0, trader: 0, pirate: 0, coastguard: 0 };
 		for ( const b of this.fleet.boats ) if ( b.active ) counts[ b.type ] ++;
-		const want = { ...POPULATION, coastguard: this.state.wanted >= 2 ? Math.min( 3, this.state.wanted - 1 ) : 0 };
+		// no coast guard sets out after you while you are in a safe zone (or ashore)
+		const want = { ...POPULATION, coastguard: this.state.wanted >= 2 && ! ( this._ctx && this._ctx.playerSafe ) ? Math.min( 3, this.state.wanted - 1 ) : 0 };
 		for ( const b of this.fleet.boats ) {
 
 			if ( b.active ) continue;

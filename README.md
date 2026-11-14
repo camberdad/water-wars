@@ -44,7 +44,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
     legal and pays a bounty. Epic and legendary fish bite more often in danger waters.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
-  hunts you. Lie low for a while to let it cool off, or pay your fines at the harbour.
+  hunts you, but never in a safe zone: it turns back and stays away until you sail out. Lie low for a while to let it cool off, or pay your fines at the harbour.
 - **Getting sunk** loses your catch and a quarter of your money, and you're towed back to the pier.
 - **Safe zones** (green on the map): the harbour (the bay, the pier, the beach and the reef) and the four
   **sea stations** (Westpoint Station, Eastwind Station, Southreach Barge, Coral Light Rig). Nobody fires on
