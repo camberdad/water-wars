@@ -762,10 +762,13 @@ export class Player {
 			this.helmPitch = THREE.MathUtils.clamp( this.helmPitch - look.y * 0.0022, - 1.2, 1.0 );
 			const eye = b.toWorld( b.model.helmEye, new THREE.Vector3() );
 			this.camera.position.copy( eye );
-			// head partially stabilises against roll and pitch (feels natural, less nausea)
-			const boatQ = b.quaternion;
-			const yawOnly = new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), b.getYaw() + Math.PI );
-			const base = new THREE.Quaternion().slerpQuaternions( boatQ.clone().multiply( new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), Math.PI ) ), yawOnly, 0.55 );
+			// Water Wars: the view is fully stabilised at the helm, so the crosshair stays where you put it:
+			// level with the horizon whatever the boat's roll and pitch, and following the heading smoothly
+			// (the waves' small yaw wobble is filtered out; turning the boat still turns the view)
+			const heading = b.getYaw() + Math.PI;
+			if ( this._helmHeading === undefined ) this._helmHeading = heading;
+			this._helmHeading += Math.atan2( Math.sin( heading - this._helmHeading ), Math.cos( heading - this._helmHeading ) ) * ( 1 - Math.exp( - dt * 3 ) );
+			const base = new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), this._helmHeading );
 			const local = new THREE.Quaternion().setFromEuler( _e.set( this.helmPitch, this.helmYaw, 0 ) );
 			this.camera.quaternion.copy( base ).multiply( local );
 
@@ -784,7 +787,9 @@ export class Player {
 
 			}
 
-			const target = b.toWorld( new THREE.Vector3( 0, 1.4, 0 ), new THREE.Vector3() );
+			// Water Wars: orbit a steady point over the boat (its place on the water at a fixed height), not a
+			// point fixed to the hull: the heave, pitch and roll don't move the camera, so the aim holds steady
+			const target = new THREE.Vector3( b.position.x, 1.4, b.position.z );
 			// the crosshair sits at the centre of the view: look over the boat, not at it, when the guns
 			// are manned (eased so the camera does not jump)
 			this._aimLift = ( this._aimLift || 0 ) + ( ( this.aimLift || 0 ) - ( this._aimLift || 0 ) ) * ( 1 - Math.exp( - dt * 3 ) );

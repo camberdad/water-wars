@@ -476,7 +476,8 @@ export class Combat {
 		dir.y += ( Math.random() - 0.5 ) * 2 * sp;
 		dir.z += ( Math.random() - 0.5 ) * 2 * sp;
 		dir.normalize();
-		const vel = dir.clone().multiplyScalar( BULLET_SPEED ).add( app.boatCtl.velocity );
+		// straight down the line of sight: the boat's motion on the waves is not added to the shot
+		const vel = dir.clone().multiplyScalar( BULLET_SPEED );
 		this.fx.fire( { from: muzzle, vel, dmg: st.gunDmg, owner: 'player', range: st.gunRange, life: st.gunRange * BULLET_REACH / BULLET_SPEED } );
 		this.fx.muzzle( muzzle, dir );
 		this.sfx.shot( muzzle, st.gunRate > 6 ? 'mg' : 'rifle', 0.8 );
@@ -508,7 +509,7 @@ export class Combat {
 
 		}
 
-		const vel = this.ballistic( muzzle, tgt, SHELL_SPEED ).add( this.app.boatCtl.velocity );
+		const vel = this.ballistic( muzzle, tgt, SHELL_SPEED ); // (the boat's own motion is not added)
 		this.fx.fire( { from: muzzle, vel, dmg: st.canDmg, owner: 'player', kind: 'shell', splash: st.canSplash, life: 10 } );
 		this.fx.muzzle( muzzle, vel.clone().normalize(), true );
 		this.sfx.shot( muzzle, 'cannon' );
