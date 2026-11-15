@@ -38,6 +38,29 @@ const BOATS = {
 	// the ship's materials are all plain white in the FBX (its textures are not included): give each
 	// a colour here; the hull ('Fishing_Ship', left pure white) is painted by height in the game (Boats.js)
 	ship: { file: 'Fishing_Ship_Asset.fbx', colors: { Fishing_Ship: [ 1, 1, 1, 0.45 ], Windows: [ 0.03, 0.05, 0.07, 0.08 ], Light: [ 1, 0.9, 0.6, 0.3 ], Boat_Interior: [ 0.42, 0.33, 0.24, 0.8 ] } },
+	// Water Wars 1.9: two more, without their .mtl files: colours by material (the old boat) or by object
+	// name prefix (the workboat's parts are all '(null)' material but named for what they are). Linear
+	// rgb + roughness; the old boat's hull is left pure white and painted by height in the game.
+	oldboat: { file: 'Old_boat_Mesh.obj', colors: { Ship_Mat: [ 1, 1, 1, 0.7 ], Windows_Mat: [ 0.03, 0.05, 0.07, 0.08 ], Rope_mat: [ 0.45, 0.33, 0.18, 0.9 ] } },
+	workboat: { file: 'boat (2).obj', objectColors: [
+		[ 'hull_fiberglass', [ 0.8, 0.8, 0.78, 0.4 ] ],
+		[ 'border_painted_metal', [ 0.03, 0.12, 0.3, 0.45 ] ],
+		[ 'breakwater_painted_metal', [ 0.03, 0.12, 0.3, 0.45 ] ],
+		[ 'engine_painted_metal', [ 0.55, 0.56, 0.58, 0.4 ] ],
+		[ 'grid_metal', [ 0.32, 0.33, 0.34, 0.5 ] ],
+		[ 'control_panel', [ 0.08, 0.09, 0.1, 0.5 ] ],
+		[ 'steering_wheel', [ 0.02, 0.02, 0.02, 0.6 ] ],
+		[ 'lamp_painted_metal', [ 0.6, 0.45, 0.02, 0.45 ] ],
+		[ 'lightbulb', [ 1, 0.9, 0.6, 0.2 ] ],
+		[ 'small_box', [ 0.7, 0.15, 0.02, 0.5 ] ],
+		[ 'large_box', [ 0.7, 0.15, 0.02, 0.5 ] ],
+		[ 'power_sockets', [ 0.05, 0.05, 0.05, 0.6 ] ],
+		[ 'capstan', [ 0.25, 0.26, 0.28, 0.4 ] ],
+		[ 'cables', [ 0.02, 0.02, 0.02, 0.7 ] ],
+		[ 'bollards', [ 0.6, 0.45, 0.02, 0.5 ] ],
+		[ 'wood', [ 0.3, 0.17, 0.08, 0.85 ] ],
+		[ 'lantern', [ 0.6, 0.45, 0.02, 0.45 ] ],
+	] },
 };
 
 function parseMTL( text ) {
@@ -130,7 +153,7 @@ function bake( group, colorOf ) {
 
 			const m = mats[ gr.materialIndex ] || mats[ 0 ];
 			if ( m && m.name ) matNames.add( m.name );
-			const { rgb, rough } = colorOf( m );
+			const { rgb, rough } = colorOf( m, o );
 			for ( let i = gr.start; i < Math.min( n, gr.start + gr.count ); i ++ ) {
 
 				col[ i * 4 ] = rgb[ 0 ]; col[ i * 4 + 1 ] = rgb[ 1 ]; col[ i * 4 + 2 ] = rgb[ 2 ]; col[ i * 4 + 3 ] = rough;
@@ -209,12 +232,13 @@ for ( const [ id, cfg ] of Object.entries( BOATS ) ) {
 
 	if ( only && only !== id ) continue;
 	const { group, colorOf: base } = load( id, cfg );
-	const colorOf = cfg.colors ? ( m ) => {
+	const colorOf = ( m, o ) => {
 
-		const c = m && cfg.colors[ m.name ];
+		const byObj = cfg.objectColors && o && cfg.objectColors.find( ( [ prefix ] ) => o.name.startsWith( prefix ) );
+		const c = byObj ? byObj[ 1 ] : cfg.colors && m && cfg.colors[ m.name ];
 		return c ? { rgb: c.slice( 0, 3 ), rough: c[ 3 ] } : base( m );
 
-	} : base;
+	};
 	const { geo, materials } = bake( group, colorOf );
 	write( id, geo, materials );
 

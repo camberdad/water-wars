@@ -159,7 +159,8 @@ export class Combat {
 			// sit the guns on the model's roof / foredeck under their mount points
 			if ( def.gun ) this.mounts.gun.fromArray( def.gun );
 			if ( def.cannon ) this.mounts.cannon.fromArray( def.cannon );
-			for ( const m of [ this.mounts.gun, this.mounts.cannon ] ) {
+			// (fixedMounts: the catalogue heights are exact, e.g. over a see-through grating deck)
+			if ( ! def.fixedMounts ) for ( const m of [ this.mounts.gun, this.mounts.cannon ] ) {
 
 				const y = surfaceY( mesh.geometry, m.x, m.z );
 				if ( y !== null ) m.y = y - 0.02;
@@ -196,7 +197,7 @@ export class Combat {
 
 		app.player.forceThird = !! mesh;
 		// walk on the model's own deck (see Boats.buildDeckMap), at its real height
-		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry, def.floorMin ?? 0.05 ) : null;
+		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry, def.floorMin ?? 0.05, def.deckPlanes || null ) : null;
 		app.player.deckLift = 0;
 		// the camera stands back to suit the boat's size; bigger boats get a more responsive rudder
 		app.player.orbitDist = mesh ? Math.max( app.player.orbitDist, 13 * ( def.length || 8.2 ) / 8.2 ) : app.player.orbitDist;

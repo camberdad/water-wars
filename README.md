@@ -83,9 +83,10 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   **sea stations** (Westpoint Station, Eastwind Station, Southreach Barge, Coral Light Rig, and out in the far
   tiers Midway Station, Southern Cross, Eastmost and Westmost Outposts). Nobody fires on
   you there and your guns stay holstered. Press **`U`** alongside a station for full harbour services.
-- **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($60,000, tough, big hold), a
-  *Sport-fishing yacht* ($160,000, fastest), and a *Deep-sea fishing ship* ($400,000, a fortress with a
-  huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's. You can walk the deck
+- **New boats** are the big savings goal (Boats tab): a *Harbour workboat* ($25,000, an open steel boat,
+  cheap and quick), a *Harbour trawler* ($60,000, tough, big hold), an *Old fishing launch* ($95,000, slow but a
+  cavernous hold and a thick hide), a *Sport-fishing yacht* ($160,000, fastest), and a *Deep-sea fishing ship*
+  ($400,000, a fortress with a huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's. You can walk the deck
   of every boat (its walkable deck is worked out from the model: rails, cabins and deck fittings are solid).
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
   - **Boat:** hull armour (up to battleship plating, 1,600 hp), engine (up to a hydrofoil jet drive), fish

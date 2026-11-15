@@ -71,7 +71,8 @@ export function loadBoatGeometry( id ) {
 			if ( def.paint && C8[ i * 4 ] === 255 && C8[ i * 4 + 1 ] === 255 && C8[ i * 4 + 2 ] === 255 ) {
 
 				const y = pos[ i * 3 + 1 ];
-				const band = def.paint.find( ( b ) => y < b[ 0 ] ) || def.paint[ def.paint.length - 1 ];
+				// deckColor: surfaces facing up above the waterline are decks, not hull sides
+				const band = def.deckColor && y > 0.25 && y < ( def.deckMaxY ?? 1.6 ) && nrm[ i * 3 + 1 ] > 0.75 ? [ 0, def.deckColor ] : def.paint.find( ( b ) => y < b[ 0 ] ) || def.paint[ def.paint.length - 1 ];
 				col[ i * 3 ] = band[ 1 ][ 0 ]; col[ i * 3 + 1 ] = band[ 1 ][ 1 ]; col[ i * 3 + 2 ] = band[ 1 ][ 2 ];
 
 			}
@@ -248,7 +249,9 @@ export function surfaceY( geo, x, z, r = 0.45 ) {
 // boat's boxes: you go wherever the deck goes, step up / down small ledges, and stop at the rails.
 const DECK_CELL = 0.3;
 // floorMin: the lowest a deck can be (m from the waterline; lower surfaces are the inside of the hull)
-export function buildDeckMap( geo, floorMin = 0.05 ) {
+// planes: [ [ x0, z0, x1, z1, y ], ... ] extra walkable floor (a grating deck the cell sampling falls
+// through)
+export function buildDeckMap( geo, floorMin = 0.05, planes = null ) {
 
 	if ( geo.userData && geo.userData.deckMap ) return geo.userData.deckMap;
 	const p = geo.attributes.position.array, idx = geo.index.array;
@@ -275,6 +278,15 @@ export function buildDeckMap( geo, floorMin = 0.05 ) {
 			hits[ k * nx + i ].push( w0 * p[ a + 1 ] + w1 * p[ b + 1 ] + w2 * p[ c + 1 ] );
 
 		}
+
+	}
+
+	if ( planes ) for ( const [ px0, pz0, px1, pz1, py ] of planes ) for ( let k = 0; k < nz; k ++ ) for ( let i = 0; i < nx; i ++ ) {
+
+		const px = x0 + ( i + 0.5 ) * DECK_CELL, pz = z0 + ( k + 0.5 ) * DECK_CELL;
+		// only inside the hull (a cell with some of the boat under it), never out over the water
+		const h = hits[ k * nx + i ];
+		if ( h.length && px >= px0 && px <= px1 && pz >= pz0 && pz <= pz1 ) h.push( py );
 
 	}
 

@@ -8,7 +8,9 @@
 //            the height is found on the model (the roof / deck under that point), y here is the fallback
 //   hitHalf: half extents of the hit box; length / beam: the model is fitted to these (metres)
 //   draft: how deep the keel sits below the waterline (bigger = lower in the water)
+//   deckPlanes: [ [ x0, z0, x1, z1, y ] ] extra walkable floor, e.g. over a grating deck
 //   floorMin: the lowest walkable deck (m from the waterline) when the deck sits below it
+//   fixedMounts: gun / cannon heights are used as given (not found on the model)
 //   stern: [ x, y, z ] the harpoon mount (and the stern rod holders); found on the model when absent
 //   cut: boxes { min, max, dark } in the boat frame: triangles inside one are removed (dark: only
 //        near-black ones), e.g. doors that block the way
@@ -19,12 +21,35 @@ export const BOATS = {
 		blurb: 'The old Downeast lobster boat you started with. Slow, honest, cheap to run.',
 		hullMul: 1, speedMul: 1, holdKg: 0, fuelMul: 1,
 	},
+	// Water Wars 1.9: an open steel workboat (bow on +x, modelled in centimetres: fitted by length)
+	workboat: {
+		name: 'Harbour workboat', price: 25000, model: 'workboat',
+		blurb: 'An open steel workboat with a capstan and a big engine box. Cheap to run, quick off the mark, room for a good catch.',
+		hullMul: 1.25, speedMul: 1.25, holdKg: 90, fuelMul: 1.3,
+		up: 'y', fwd: 'x', length: 9.3, beam: 3.3, draft: 0.4, rudderMul: 1.1,
+		// the deck gun on the engine box, the cannon on the raised foredeck (its deck is a grating: rays
+		// fall through it, so the heights are given)
+		gun: [ 0, 1.62, - 0.9 ], cannon: [ 0, 1.62, 3.7 ], fixedMounts: true, hitHalf: [ 1.7, 1.6, 4.7 ],
+		// the open well between the engine box and the foredeck is a steel grating: walk on it
+		deckPlanes: [ [ - 1.25, - 0.3, 1.25, 2.7, 0.12 ], [ - 1.25, - 3.1, 1.25, - 2.1, 0.17 ] ],
+	},
 	trawler: {
 		name: 'Harbour trawler', price: 60000, model: 'trawler',
 		blurb: 'A stout steel trawler with a big hold and thick plating. Shrugs off small-arms fire.',
 		hullMul: 1.7, speedMul: 1.1, holdKg: 220, fuelMul: 1.6, rudderMul: 1.5,
 		up: 'y', fwd: 'x', length: 12.5, beam: 4.6, draft: 1.1,
 		gun: [ 0, 3.3, - 1.5 ], cannon: [ 0, 1.9, 4.4 ], hitHalf: [ 2.4, 2.4, 6.2 ],
+	},
+	// Water Wars 1.9: a weathered old fishing launch (bow on +z); its hull material is plain white in the
+	// source, painted by height here: antifouling, a boot stripe, a dark green hull, cream topsides
+	oldboat: {
+		name: 'Old fishing launch', price: 95000, model: 'oldboat',
+		blurb: 'A weathered old fishing launch with tyre fenders and a cavernous hold. Slow and thirsty, but she carries a mountain of fish and takes a beating.',
+		hullMul: 1.9, speedMul: 0.95, holdKg: 320, fuelMul: 2.0,
+		up: 'y', fwd: 'z', length: 14.4, beam: 5.7, draft: 0.9, rudderMul: 1.4,
+		paint: [ [ 0.1, [ 0.3, 0.05, 0.03 ] ], [ 0.3, [ 0.75, 0.73, 0.68 ] ], [ 1.15, [ 0.03, 0.09, 0.06 ] ], [ 99, [ 0.62, 0.58, 0.48 ] ] ],
+		deckColor: [ 0.26, 0.17, 0.09 ], // weathered wooden decks
+		gun: [ 0, 4.0, - 2.0 ], cannon: [ 0, 2.2, 5.0 ], hitHalf: [ 2.85, 2.5, 7.2 ],
 	},
 	sportfisher: {
 		name: 'Sport-fishing yacht', price: 160000, model: 'sportfisher',

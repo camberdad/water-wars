@@ -221,6 +221,8 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
 	ok( st2.load() && st2.boat === 'trawler' && st2.boats.length === 2, 'owned boats survive a save' );
 	ok( Object.values( BOATS ).every( ( b ) => b.price === 0 || b.price >= 20000 ), 'new boats are big purchases' );
+	ok( BOATS.workboat && BOATS.oldboat && Object.keys( BOATS ).length === 6, 'six boats, with the workboat and the old launch (1.9)' );
+	ok( [ 'workboat', 'oldboat' ].every( ( id ) => BOATS[ id ].model === id && BOATS[ id ].length > 8 && BOATS[ id ].hitHalf ), 'the new boats are fitted models' );
 	ok( dangerZoneAt( 55, 0 ) === null && dangerZoneAt( 64.5, 36.5 ) === null && dangerZoneAt( 40, 20 ) === null, 'danger zones: the harbour is safe' );
 	ok( DANGER_ZONES.length === 3 && DANGER_ZONES.every( ( t ) => dangerZoneAt( 40 + ( t.r0 + t.r1 ) / 2, 20 ) === t ), 'three danger tiers, outward from the harbour' );
 	ok( dangerZoneAt( 40, 20 + 500 ).tier === 1 && dangerZoneAt( 40, 20 + 1000 ).tier === 2 && dangerZoneAt( 40, 20 + 2000 ).tier === 3, 'the tiers get harder further out' );
