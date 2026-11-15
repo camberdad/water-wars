@@ -13,6 +13,25 @@ import * as U from './Units.js';
 // player's own.
 
 const APP_ID = 'water-wars-open-sea-v1';
+// The Nostr relays players meet on. Trystero's built-in pick for this app id had only 2 of 5 relays
+// working (dead, auth-only or refusing the event kind), so friends often never found each other.
+// These were tested (Nov 2026) to accept and deliver the game's ephemeral events; all are used at once.
+const RELAYS = [
+	'wss://relay.primal.net',
+	'wss://relay.snort.social',
+	'wss://offchain.pub',
+	'wss://relay.nostr.net',
+	'wss://yabu.me/v2',
+	'wss://multiplexer.huszonegy.world',
+	'wss://nostr.sathoarder.com',
+];
+// STUN servers find each player's public address for the direct (WebRTC) link. Players behind strict
+// routers (some mobile / carrier networks) also need a TURN relay; add one here (e.g. a free Metered or
+// Cloudflare TURN account): { urls: 'turn:…', username: '…', credential: '…' }
+const ICE_SERVERS = [
+	{ urls: [ 'stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478' ] },
+];
+const TURN_SERVERS = [];
 const ROOM = 'open-sea';
 const SEND_HZ = 10;
 const STALE_S = 12; // a peer not heard from this long is gone
@@ -163,8 +182,10 @@ export class Multiplayer {
 		try {
 
 			// loaded only for multiplayer: single-player downloads nothing extra
-			const { joinRoom } = await import( 'trystero/nostr' );
-			const room = this.room = joinRoom( { appId: APP_ID }, ROOM );
+			const { joinRoom, getRelaySockets } = await import( 'trystero/nostr' );
+			this.getRelaySockets = getRelaySockets;
+			const room = this.room = joinRoom( { appId: APP_ID, relayUrls: RELAYS, rtcConfig: { iceServers: ICE_SERVERS.concat( TURN_SERVERS ) } }, ROOM );
+			this.joinedAt = performance.now();
 			const [ sendState, getState ] = room.makeAction( 'state' );
 			const [ sendShot, getShot ] = room.makeAction( 'shot' );
 			this.sendStateFn = sendState;
@@ -309,7 +330,17 @@ export class Multiplayer {
 
 		this.updateTags();
 		const n = this.peers.size;
-		this.setStatus( `🌐 Online · ${ this.name } · ${ n ? `${ n } other player${ n > 1 ? 's' : '' }` : 'waiting for players' }` );
+		// how many meeting points (relays) we are connected to: 0 means our network blocks them
+		let relays = 0, total = RELAYS.length;
+		try {
+
+			const socks = this.getRelaySockets ? this.getRelaySockets() : {};
+			for ( const ws of Object.values( socks ) ) if ( ws && ws.readyState === 1 ) relays ++;
+
+		} catch ( e ) { /* ignore */ }
+
+		const lonely = ! n && performance.now() - ( this.joinedAt || 0 ) > 45000;
+		this.setStatus( `🌐 Online · ${ this.name } · ${ n ? `${ n } other player${ n > 1 ? 's' : '' }` : 'waiting for players' } · relays ${ relays }/${ total }${ relays === 0 ? ' · offline: your network blocks the relays' : lonely ? ' · no one found yet: friends must click Multiplayer on v1.6.1+' : '' }` );
 
 	}
 
