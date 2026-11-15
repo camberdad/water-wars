@@ -105,7 +105,7 @@ export class AppUI {
 				},
 			} ) ),
 		} );
-		sea.addSlider( { label: 'Wind speed', object: s, key: 'wind', min: 0.5, max: 30, step: 0.1, unit: 'm/s', tooltip: 'Wind 10 m above the sea. Drives the local wind waves, whitecaps and spray.', onChange: () => {
+		sea.addSlider( { label: 'Wind speed', object: s, key: 'wind', min: 0.5, max: 30, step: 0.1, unit: 'mph', format: ( v ) => `${ ( v * 2.23694 ).toFixed( 1 ) } mph`, tooltip: 'Wind 33 ft above the sea. Drives the local wind waves, whitecaps and spray.', onChange: () => {
 
 			spectrum();
 			whitecaps();
@@ -122,7 +122,7 @@ export class AppUI {
 		// ---------------------------------------------------------------- Shore
 		const shoreTab = ui.addTab( 'shore', 'Shore', 'shore' );
 		const surf = shoreTab.addFolder( 'Surf', { icon: 'wave' } );
-		surf.addSlider( { label: 'Wave height', object: s, key: 'surf', min: 0, max: 1.4, step: 0.01, unit: 'm', format: ( v ) => `${ ( v * 2 ).toFixed( 2 ) } m`, onChange: ( v ) => { shore.amplitude.value = v; } } );
+		surf.addSlider( { label: 'Wave height', object: s, key: 'surf', min: 0, max: 1.4, step: 0.01, unit: 'ft', format: ( v ) => `${ ( v * 2 * 3.28084 ).toFixed( 1 ) } ft`, onChange: ( v ) => { shore.amplitude.value = v; } } );
 		surf.addSlider( { label: 'Wave period', object: s, key: 'period', min: 5, max: 16, step: 0.1, unit: 's', onChange: ( v ) => { shore.period.value = v; } } );
 		surf.addSlider( { label: 'Breaking depth ratio', object: s, key: 'gamma', min: 0.5, max: 1.1, step: 0.01, tooltip: 'Waves break when height exceeds this fraction of the depth.', onChange: ( v ) => { shore.gamma.value = v; } } );
 		surf.addSlider( { label: 'Curl', object: s, key: 'curl', min: 0, max: 1.5, step: 0.01, onChange: ( v ) => { shore.curl.value = v; } } );

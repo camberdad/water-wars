@@ -2199,6 +2199,11 @@ export class UI {
 				${ brandMark( 'tw-start-mark' ) }
 				<div class="tw-start-title">WATER WARS</div>
 				<button type="button" class="tw-start-cta"><span class="tw-start-pulse" aria-hidden="true"></span>${ icon( 'mouse' ) }<span>Click to set sail</span></button>
+				<div class="tw-start-mp" style="display:flex;gap:8px;justify-content:center;align-items:center;margin-top:12px">
+					<input class="tw-start-name" maxlength="18" placeholder="Your captain name" aria-label="Your captain name (required)" required style="width:150px;height:36px;box-sizing:border-box;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.3);background:rgba(8,18,26,0.55);color:#eef6fb;font:500 14px Inter,system-ui,sans-serif;outline:none" />
+					<button type="button" class="tw-start-mp-btn" style="height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(111,214,198,0.7);background:rgba(8,18,26,0.55);color:#9be8dc;font:600 14px Inter,system-ui,sans-serif;cursor:pointer">🌐 Multiplayer</button>
+				</div>
+				<div class="tw-start-name-hint" style="min-height:18px;margin-top:6px;font:600 13px Inter,system-ui,sans-serif;color:#ff9a8a;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,0.8)"></div>
 				<div class="tw-start-keys">
 					<span><span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Move</span>
 					<span><kbd class="tw-kbd-ico">${ icon( 'mouse' ) }</kbd>Look</span>
@@ -3182,7 +3187,40 @@ export class UI {
 
 		this._startPromise = new Promise( ( resolve ) => {
 
+			const nameIn = el.querySelector( '.tw-start-name' );
+			try {
+
+				if ( nameIn && ! nameIn.value ) nameIn.value = localStorage.getItem( 'waterwars.name' ) || '';
+
+			} catch ( err ) { /* no storage */ }
+
 			const go = ( e ) => {
+
+				// Water Wars multiplayer: typing a name doesn't start the game (Enter in it starts multiplayer)
+				const inName = e.target && e.target.classList && e.target.classList.contains( 'tw-start-name' );
+				if ( inName && ( e.type === 'click' || e.key !== 'Enter' ) ) return;
+				this.startMode = inName || ( e.target && e.target.closest && e.target.closest( '.tw-start-mp-btn' ) ) ? 'multi' : 'single';
+				this.startName = nameIn ? nameIn.value.trim().slice( 0, 18 ) : '';
+				// a captain name is required before setting sail (single player or multiplayer)
+				if ( nameIn && this.startName.length < 2 ) {
+
+					if ( e.type === 'keydown' && e.key !== 'Enter' && e.code !== 'Space' ) return;
+					e.preventDefault();
+					e.stopPropagation();
+					const hint = el.querySelector( '.tw-start-name-hint' );
+					if ( hint ) hint.textContent = 'Choose a captain name (2 letters or more) to set sail';
+					nameIn.style.borderColor = '#ff7a6a';
+					nameIn.style.boxShadow = '0 0 0 3px rgba(255, 122, 106, 0.35)';
+					nameIn.focus();
+					return;
+
+				}
+
+				try {
+
+					if ( nameIn ) localStorage.setItem( 'waterwars.name', this.startName );
+
+				} catch ( err ) { /* no storage */ }
 
 				if ( e.type === 'keydown' ) {
 
@@ -3426,7 +3464,7 @@ export class UI {
 			label: 'Conditions', active: 'Breezy',
 			presets: Object.keys( SEA ).map( ( k ) => ( { label: k, icon: k.toLowerCase(), apply: () => Object.assign( s, SEA[ k ] ) } ) ),
 		} );
-		sea.addSlider( { label: 'Wind speed', object: s, key: 'windSpeed', min: 0, max: 30, step: 0.1, unit: 'm/s', tooltip: 'Wind 10 m above the sea. Drives wave height and whitecaps.', onChange: log( 'windSpeed' ) } );
+		sea.addSlider( { label: 'Wind speed', object: s, key: 'windSpeed', min: 0, max: 30, step: 0.1, unit: 'mph', format: ( v ) => `${ ( v * 2.23694 ).toFixed( 1 ) } mph`, tooltip: 'Wind 33 ft above the sea. Drives wave height and whitecaps.', onChange: log( 'windSpeed' ) } );
 		sea.addSlider( { label: 'Wind direction', object: s, key: 'windDir', min: 0, max: 360, step: 1, unit: '°' } );
 		sea.addSlider( { label: 'Choppiness', object: s, key: 'choppiness', min: 0, max: 2, step: 0.01 } );
 		sea.addSlider( { label: 'Swell', object: s, key: 'swell', min: 0, max: 1, step: 0.01 } );
@@ -3499,7 +3537,7 @@ export class UI {
 		stats.addInfo( { label: 'Frame rate', get: () => `${ live.fps.toFixed( 0 ) } fps` } );
 		stats.addInfo( { label: 'Frame time', get: () => `${ live.frameMs.toFixed( 2 ) } ms` } );
 		stats.addInfo( { label: 'GPU time', get: () => `${ live.gpuMs.toFixed( 2 ) } ms` } );
-		stats.addInfo( { label: 'Significant wave height', get: () => `${ ( 0.0246 * s.windSpeed * s.windSpeed ).toFixed( 2 ) } m` } );
+		stats.addInfo( { label: 'Significant wave height', get: () => `${ ( 0.0246 * s.windSpeed * s.windSpeed * 3.28084 ).toFixed( 1 ) } ft` } );
 		stats.addInfo( { label: 'Render size', get: () => `${ Math.round( window.innerWidth * s.renderScale ) } × ${ Math.round( window.innerHeight * s.renderScale ) }` } );
 		const quality = perf.addFolder( 'Quality', { icon: 'layers' } );
 		quality.addSelect( { label: 'Preset', object: s, key: 'quality', options: { Low: 'low', Medium: 'medium', High: 'high', Ultra: 'ultra' } } );

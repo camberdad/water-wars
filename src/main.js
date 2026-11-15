@@ -50,6 +50,8 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 
 		app.input.requestLock();
 		if ( app.audio ) app.audio.resume();
+		// "Multiplayer": join the open sea with everyone else online (src/game/Multiplayer.js)
+		if ( ui.startMode === 'multi' && app.game && app.game.multiplayer ) app.game.multiplayer.start( ui.startName );
 
 	} );
 

@@ -82,12 +82,12 @@ export const UPGRADES = {
 		{ cost: 50000, label: 'Factory-ship hold', holdKg: 1200 },
 	] },
 	fuel: { cat: 'boat', name: 'Fuel tank', levels: [
-		{ cost: 0, label: '40 L tank', fuelL: 40 },
-		{ cost: 150, label: '80 L tank', fuelL: 80 },
-		{ cost: 380, label: '150 L tank', fuelL: 150 },
-		{ cost: 900, label: '300 L long-range tanks', fuelL: 300 },
-		{ cost: 8000, label: '600 L expedition tanks', fuelL: 600 },
-		{ cost: 25000, label: '1,200 L ocean-crossing tanks', fuelL: 1200 },
+		{ cost: 0, label: '10.6 gal tank', fuelL: 40 },
+		{ cost: 150, label: '21 gal tank', fuelL: 80 },
+		{ cost: 380, label: '40 gal tank', fuelL: 150 },
+		{ cost: 900, label: '79 gal long-range tanks', fuelL: 300 },
+		{ cost: 8000, label: '159 gal expedition tanks', fuelL: 600 },
+		{ cost: 25000, label: '317 gal ocean-crossing tanks', fuelL: 1200 },
 	] },
 	pumps: { cat: 'boat', name: 'Damage control', levels: [
 		{ cost: 0, label: 'A bucket', repairHPs: 0 },
@@ -165,7 +165,7 @@ export const CATEGORIES = [
 	{ id: 'fishing', name: 'Fishing' },
 ];
 
-export const FUEL_PRICE = 1.5; // $ per litre of diesel at the chandlery
+export const FUEL_PRICE = 20; // $ per litre of diesel (Water Wars 1.6: was $1.50)
 export const REPAIR_PRICE = 2; // $ per hull point
 // litres per second at the helm: idle plus a lot more at full rpm (40 L lasts ~25 min flat out)
 export function fuelBurn( rpm ) {

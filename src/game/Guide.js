@@ -329,7 +329,7 @@ export class Guide {
 				for ( const [ id, t ] of [ [ 'joe', STAND ], [ 'marta', CHANDLERY ] ] ) {
 
 					const el = this.body.querySelector( `[data-where="${ id }"]` );
-					if ( el ) el.textContent = `${ Math.round( Math.hypot( t.x - x, t.z - z ) ) } m ${ compassWord( x, z, t.x, t.z ) }`;
+					if ( el ) el.textContent = `${ Math.round( Math.hypot( t.x - x, t.z - z ) * 3.28084 ) } ft ${ compassWord( x, z, t.x, t.z ) }`;
 
 				}
 

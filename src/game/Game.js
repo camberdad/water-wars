@@ -14,7 +14,9 @@ import { Minimap } from './Minimap.js';
 import { Guide } from './Guide.js';
 import { Combat } from './combat/Combat.js';
 import { Giants } from './Giants.js';
+import { Multiplayer } from './Multiplayer.js';
 import { dangerZoneAt } from './DangerZones.js';
+import * as U from './Units.js';
 
 // how long the catch card stays up unless dismissed (ms)
 const CATCH_CARD_MS = 9000;
@@ -62,6 +64,8 @@ export class Game {
 		this.combat = new Combat( this );
 		// giant fish out at sea, harpooned from the stern and towed into a harbour
 		this.giants = new Giants( this );
+		// open-world multiplayer (joined from the start screen)
+		this.multiplayer = new Multiplayer( this );
 
 	}
 
@@ -127,7 +131,7 @@ export class Game {
 		if ( l > 0 ) {
 
 			this._fuelOut = false;
-			this.toast( `Filled up · ${ l.toFixed( 0 ) } L` );
+			this.toast( `Filled up · ${ U.gal( l ) }` );
 
 		}
 
@@ -271,6 +275,7 @@ export class Game {
 		this.updateBoat( dt );
 		this.combat.update( dt );
 		this.giants.update( dt );
+		this.multiplayer.update( dt );
 
 		// the traders
 		for ( const v of this.vendors ) v.update( dt, p.mode === 'walk' ? p.position : null );
@@ -539,8 +544,8 @@ export class Game {
 			if ( this.hud ) this.landing = { species: f.species, kg: f.kg, card: info, cardT: 0 };
 			else {
 
-				if ( entry ) this.toast( `${ info.record ? 'New record! ' : '' }${ name } · ${ entry.kg.toFixed( 2 ) } kg · $${ entry.value }`, 3600 );
-				else this.toast( `${ name } · ${ f.kg.toFixed( 1 ) } kg · no room in the ${ this.state.upgrades.hold > 0 ? 'hold' : 'cooler' }, let it go`, 3600 );
+				if ( entry ) this.toast( `${ info.record ? 'New record! ' : '' }${ name } · ${ U.lb( entry.kg ) } · $${ entry.value.toLocaleString() }`, 3600 );
+				else this.toast( `${ name } · ${ U.lb( f.kg ) } · no room in the ${ this.state.upgrades.hold > 0 ? 'hold' : 'cooler' }, let it go`, 3600 );
 				this.landing = { species: f.species, kg: f.kg };
 
 			}

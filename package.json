@@ -1,6 +1,6 @@
 {
   "name": "water-wars",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5189",
     "build": "vite build",
@@ -14,5 +14,8 @@
   },
   "license": "MIT",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "trystero": "^0.21.5"
+  }
 }

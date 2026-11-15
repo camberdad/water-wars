@@ -17,6 +17,15 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 
 ## How to play
 
+- **Start.** Choose a captain name on the start screen (required), then **Click to set sail** for single
+  player, or **🌐 Multiplayer** to join the open sea with everyone else playing.
+- **Multiplayer.** One shared open world: you see the other players' boats (their own boat model) sailing live,
+  with name tags and blue minimap dots, and their gunfire and cannon shells. No PvP: their shots can't hurt you.
+  The NPC boats, fish and giants are your own. Peer-to-peer: players find each other through public Nostr relays
+  ([Trystero](https://github.com/dmotz/trystero)) and connect directly over WebRTC, so there is no game server.
+- **Diesel** costs $75.71 a gallon: mind the gauge on long trips.
+- **Units.** Everything is shown in US units: pounds, inches and feet, gallons, mph and knots.
+
 - **Fish.** Cast from the beach, the pier or the boat (`R` for the rod). Sell to Joe at the fish stand, or at any
   harbour service point. There are 40 real Caribbean and Atlantic species in five rarity tiers:
 
@@ -31,7 +40,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   Bigger fish of a species are worth more. Deep water and the danger waters bring epic and legendary fish up
   more often. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
   hold are strapped on deck.
-- **Giant fish.** Whale-sized fish (Leviathan grouper, Titan bluefin, Giant oarfish, Colossal tarpon, 7–16 m)
+- **Giant fish.** Whale-sized fish (Leviathan grouper, Titan bluefin, Giant oarfish, Colossal tarpon, 23–52 ft)
   surface out in deep water now and then; the minimap marks them in pink. Fit a **harpoon** (Weapons tab), aim
   at a surfaced giant from the helm and press **`Q`** to spear it from the stern. It is tethered to your boat
   and fights, dragging you, until it tires; then tow it into a harbour (the pier or a sea station), where it is
@@ -62,7 +71,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   of every boat (its walkable deck is worked out from the model: rails, cabins and deck fittings are solid).
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
   - **Boat:** hull armour (up to battleship plating, 1,600 hp), engine (up to a hydrofoil jet drive), fish
-    hold (up to 1,200 kg), fuel tank (up to 1,200 L), damage control (up to a self-sealing nano hull), and
+    hold (up to 2,646 lb), fuel tank (up to 317 gal), damage control (up to a self-sealing nano hull), and
     **salvage gear** (up to +100% cash from every wreck you plunder)
   - **Weapons:** deck gun (rifle → carbine → MG → twin MG → rotary → twin 20 mm → twin 30 mm autocannon),
     gun cooling (up to cryogenic), bow cannon (swivel gun → deck cannon → naval gun → heavy naval gun → rail
@@ -109,6 +118,7 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/Harbours.js` | Safe zones and the four sea stations |
 | `src/game/Giants.js` | Giant fish: surfacing, the stern harpoon, the tether, towing and landing |
 | `src/game/FishTable.js`, `Bites.js` | The 40 species, rarity tiers, values and bite odds |
+| `src/game/Multiplayer.js` | Open-world multiplayer: joining, sending your boat, drawing other players |
 | `src/version.js` | The version shown on the start screen |
 | `tools/boats/convert.mjs` | Converts the boat models (OBJ/FBX) into `public/models/boats/` (`node tools/boats/convert.mjs`) |
 | `src/game/Gear.js`, `GameState.js`, `GameHUD.js` | Upgrade tracks by category, hull / shells / wanted / pirate record in the save, the tabbed shop |

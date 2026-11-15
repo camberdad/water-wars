@@ -72,6 +72,8 @@ them from J. Jimenez et al.'s SMAA reference implementation (MIT).
 
 [Vite](https://vite.dev) (MIT) is an npm dependency and is not vendored here.
 
+[Trystero](https://github.com/dmotz/trystero) (MIT) provides Water Wars' peer-to-peer multiplayer (bundled from npm).
+
 ## Techniques and references
 
 These are published techniques. No code from the papers is included.

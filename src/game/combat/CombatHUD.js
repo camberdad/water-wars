@@ -1,4 +1,5 @@
 import { Vector3 } from '../../engine/index.js';
+import * as U from '../Units.js';
 
 // Combat HUD (same look as the fishing HUD: ui.css tokens, .tw-glass):
 //   status card   hull, deck gun heat, cannon reload, wanted stars, the safe / danger water you are in
@@ -244,7 +245,7 @@ export class CombatHUD {
 			this.cross.classList.toggle( 'is-target', !! c.aimTarget );
 			const R = st.gunRange, d = c.aimDist;
 			const far = d > R, out = d > R * 1.4;
-			this.range.textContent = c.aimTarget ? `${ c.aimTarget.name } · ${ Math.round( d ) } m${ out ? ' · out of range' : far ? ' · long range' : '' }` : '';
+			this.range.textContent = c.aimTarget ? `${ c.aimTarget.name } · ${ U.ft( d ) }${ out ? ' · out of range' : far ? ' · long range' : '' }` : '';
 			this.range.classList.toggle( 'is-far', far && ! out );
 			this.range.classList.toggle( 'is-out', out );
 
@@ -303,7 +304,7 @@ export class CombatHUD {
 			t.el.style.opacity = d > 300 ? ( 1 - ( d - 300 ) / 120 ).toFixed( 2 ) : '1';
 			const label = wreck ? `${ b.name } (wreck)` : b.name;
 			if ( t._name !== label ) t.name.textContent = t._name = label;
-			const sub = wreck ? ( b.looted ? 'plundered · sinking' : 'disabled · lootable' ) : `${ b.def.label }${ b.gun ? ' · armed' : '' } · ${ Math.round( d ) } m`;
+			const sub = wreck ? ( b.looted ? 'plundered · sinking' : 'disabled · lootable' ) : `${ b.def.label }${ b.gun ? ' · armed' : '' } · ${ U.ft( d ) }`;
 			if ( t._sub !== sub ) t.sub.textContent = t._sub = sub;
 			t.hp.style.width = `${ b.hp / b.maxHp * 100 }%`;
 			const canLoot = wreck && ! b.looted && Math.hypot( b.pos.x - bc.x, b.pos.z - bc.z ) < 18 && aboard;

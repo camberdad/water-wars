@@ -525,6 +525,7 @@ export class Combat {
 		// straight down the line of sight: the boat's motion on the waves is not added to the shot
 		const vel = dir.clone().multiplyScalar( BULLET_SPEED );
 		this.fx.fire( { from: muzzle, vel, dmg: st.gunDmg, owner: 'player', range: st.gunRange, life: st.gunRange * BULLET_REACH / BULLET_SPEED } );
+		if ( this.game.multiplayer ) this.game.multiplayer.shot( 'bullet', muzzle, vel );
 		this.fx.muzzle( muzzle, dir );
 		this.sfx.shot( muzzle, st.gunRate > 6 ? 'mg' : 'rifle', 0.8 );
 		this.gunT = 1 / st.gunRate;
@@ -557,6 +558,7 @@ export class Combat {
 
 		const vel = this.ballistic( muzzle, tgt, SHELL_SPEED ); // (the boat's own motion is not added)
 		this.fx.fire( { from: muzzle, vel, dmg: st.canDmg, owner: 'player', kind: 'shell', splash: st.canSplash, life: 10 } );
+		if ( this.game.multiplayer ) this.game.multiplayer.shot( 'shell', muzzle, vel );
 		this.fx.muzzle( muzzle, vel.clone().normalize(), true );
 		this.sfx.shot( muzzle, 'cannon' );
 		this.cannonT = 1 / ( st.canRate * ( st.canRateMul || 1 ) );
@@ -565,6 +567,9 @@ export class Combat {
 	}
 
 	hitTest( p, a, b ) {
+
+		// other players' shots (multiplayer) are drawn but hit nothing: no PvP
+		if ( p.owner === 'remote' ) return null;
 
 		if ( p.owner === 'player' ) {
 

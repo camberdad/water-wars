@@ -5,6 +5,7 @@ import { FISH, FISH_IDS, fishValue, fishLengthCm } from './FishTable.js';
 import { safeZoneAt } from './Harbours.js';
 import { compassWord } from './Guide.js';
 import { buildCannon } from './combat/WeaponModels.js';
+import * as U from './Units.js';
 
 // Giant fish (Water Wars): whale-sized fish that surface out at sea now and then. Harpoon one from the
 // stern of your boat (Q at the helm, with the harpoon upgrade), and it is tethered to the boat: it
@@ -259,7 +260,7 @@ export class Giants {
 
 				const g = this.nearest( bc.position, st.harpoon ? st.harpRange + 15 : 140 );
 				if ( g ) p.prompt = st.harpoon
-					? { key: 'Q', text: `Harpoon the ${ g.name } (${ Math.round( g.pos.distanceTo( bc.position ) ) } m · aim at it)` }
+					? { key: 'Q', text: `Harpoon the ${ g.name } (${ U.ft( g.pos.distanceTo( bc.position ) ) } · aim at it)` }
 					: { key: '!', text: `A ${ g.name } · fit a harpoon (Weapons) to catch it` };
 
 			}
@@ -496,7 +497,7 @@ export class Giants {
 		const d = g.pos.distanceTo( ref );
 		if ( d > 650 ) return;
 		g.announced = true;
-		this.game.toast( `A ${ g.name } is surfacing ${ Math.round( d / 10 ) * 10 } m to the ${ compassWord( ref.x, ref.z, g.pos.x, g.pos.z ) } · worth up to $${ FISH[ g.species ].value[ 1 ].toLocaleString() }`, 4500 );
+		this.game.toast( `A ${ g.name } is surfacing ${ U.ft( Math.round( d / 10 ) * 10 ) } to the ${ compassWord( ref.x, ref.z, g.pos.x, g.pos.z ) } · worth up to $${ FISH[ g.species ].value[ 1 ].toLocaleString() }`, 4500 );
 
 	}
 
@@ -590,7 +591,7 @@ export class Giants {
 		this.target = g;
 		this.game.combat.fx.splash( g.pos, 1 );
 		this.game.combat.fx.hit( _v.set( g.pos.x, 0.5, g.pos.z ), _w.set( 0, 1, 0 ), 0.3 );
-		this.game.toast( `Harpooned a ${ g.name } (${ ( g.L ).toFixed( 1 ) } m) · let it tire, then tow it in`, 3600 );
+		this.game.toast( `Harpooned a ${ g.name } (${ U.len( g.L * 100 ) }) · let it tire, then tow it in`, 3600 );
 
 	}
 

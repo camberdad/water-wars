@@ -3,7 +3,7 @@ import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE 
 import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
-import { gearStats, defaultUpgrades, UPGRADES } from '../src/game/Gear.js';
+import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE } from '../src/game/Gear.js';
 import { BOATS } from '../src/game/BoatCatalog.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 
@@ -172,9 +172,11 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	st.money = 100;
 	ok( st.buy( 'reel' ) && st.upgrades.reel === 1 && st.money === 10 && st.stats.reelSpeed === 1.6, 'buying the reel upgrade' );
 	ok( st.buy( 'reel' ) === null && st.upgrades.reel === 1, 'cannot buy what you cannot afford' );
-	ok( st.fuelL === 40 && st.burn( 30 ) === 10 && st.refuelCost() === 45, 'fuel burns and costs to refill' );
-	st.money = 20;
+	ok( st.fuelL === 40 && st.burn( 30 ) === 10 && st.refuelCost() === 30 * FUEL_PRICE, 'fuel burns and costs to refill' );
+	st.money = 13 * FUEL_PRICE;
 	ok( st.refuel() === 13 && st.money === 0 && Math.abs( st.fuelL - 23 ) < 1e-6, 'refuel stops when the money runs out' );
+	ok( FUEL_PRICE >= 10, 'diesel is dear' );
+	st.money = 1000;
 	st.money = 1000;
 	ok( st.buy( 'fuel' ) && st.fuelL === 80, 'a new tank comes full' );
 	ok( st.buy( 'fishFinder' ) && st.stats.finder === true && st.buy( 'fishFinder' ) === null, 'fish finder: one level' );
