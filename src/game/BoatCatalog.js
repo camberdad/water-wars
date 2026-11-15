@@ -57,12 +57,12 @@ export const BOATS = {
 		name: 'Sport-fishing yacht', price: 160000, model: 'sportfisher',
 		blurb: 'A fast flybridge sport-fisher. Outruns anything on the water and lands the big game fish.',
 		hullMul: 1.3, speedMul: 1.6, holdKg: 120, fuelMul: 1.8,
-		up: 'y', fwd: 'x', length: 13.5, beam: 4.4, draft: 0.9, rudderMul: 1.2,
+		up: 'y', fwd: 'x', length: 13.5, beam: 4.4, draft: 1.2, rudderMul: 1.2, // 1.12.3: 0.3 m lower (its transom sat clear of the water)
 		gun: [ 0, 2.9, - 1.5 ], cannon: [ 0, 2.0, 5.0 ], hitHalf: [ 2.3, 2.3, 6.8 ],
 		// the harpoon low on the transom (the model's highest point over the stern is the hardtop)
-		stern: [ 0, 1.3, - 6.0 ],
+		stern: [ 0, 1.0, - 6.0 ],
 		// the two doors in the back of the cabin
-		cut: [ { min: [ - 1.3, 0.45, - 3.62 ], max: [ 1.3, 2.5, - 3.46 ], dark: true } ],
+		cut: [ { min: [ - 1.3, 0.15, - 3.62 ], max: [ 1.3, 2.2, - 3.46 ], dark: true } ], // (heights after the 1.12.3 lowering)
 	},
 	// Water Wars 1.10: the WaveCutter, a sleek bowrider speedboat and the fastest thing on the water (bow on
 	// -z in the source, which is 4.6 units long and floats at its own water plane, y -0.06). The hull is

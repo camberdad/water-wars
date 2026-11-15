@@ -251,16 +251,25 @@ export function hullVolumeFor( geo, top = 0.55 ) {
 		return Math.min( top, Math.max( 0.55, a[ Math.floor( a.length * 0.8 ) ] - 0.05 ) ); // never under the old 0.55 m
 
 	} );
+	// 1.12.3: only where the hull is in the water. The overhangs past the waterline (a bow, a swim platform)
+	// used to get a 4 cm "fin" up to the lid: seen from the side it cut a rectangle out of the sea.
+	let kFirst = 0, kLast = S;
+	while ( kFirst < S && half[ kFirst ] < 0.01 ) kFirst ++;
+	while ( kLast > kFirst && half[ kLast ] < 0.01 ) kLast --;
 	// a ring of 4 vertices per slice (bottom-left, top-left, top-right, bottom-right), capped at the ends
 	const pos = [], idx = [];
-	for ( let k = 0; k <= S; k ++ ) {
+	for ( let k = kFirst; k <= kLast; k ++ ) {
 
-		const z = z0 + k * dz, w = Math.max( 0.02, half[ k ] ), b = Math.min( - 0.05, bottom[ k ] ), t = lid[ k ];
+		const z = z0 + k * dz, b = Math.min( - 0.05, bottom[ k ] );
+		// a slice with no waterline inside the run: flat, under the water
+		const dry = half[ k ] < 0.01;
+		const w = dry ? 0.001 : half[ k ], t = dry ? - 0.05 : lid[ k ];
 		pos.push( - w, b, z, - w, t, z, w, t, z, w, b, z );
 
 	}
 
-	for ( let k = 0; k < S; k ++ ) for ( let s = 0; s < 4; s ++ ) {
+	const R = kLast - kFirst;
+	for ( let k = 0; k < R; k ++ ) for ( let s = 0; s < 4; s ++ ) {
 
 		const a = k * 4 + s, b = k * 4 + ( s + 1 ) % 4, c = a + 4, d = b + 4;
 		idx.push( a, c, b, b, c, d );
@@ -268,7 +277,7 @@ export function hullVolumeFor( geo, top = 0.55 ) {
 	}
 
 	idx.push( 0, 1, 2, 0, 2, 3 );
-	const e = S * 4;
+	const e = R * 4;
 	idx.push( e, e + 2, e + 1, e, e + 3, e + 2 );
 	const g = new BufferGeometry();
 	g.setAttribute( 'position', new Float32BufferAttribute( new Float32Array( pos ), 3 ) );
