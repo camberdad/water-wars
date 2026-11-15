@@ -89,6 +89,15 @@ export const BOATS = {
 		deckColor: [ 0.3, 0.22, 0.14 ], deckMinY: - 0.55, deckMaxY: 2.5,
 		gun: [ 0, 4.5, 1.6 ], cannon: [ 0, 2.6, 5.4 ], hitHalf: [ 2.5, 2.6, 6.8 ],
 	},
+	// Water Wars 1.13: a 110 m superyacht model (CGTrader, Royalty Free) at 40 m: sealed (ModelKey.js), the
+	// game opens it in memory. Bow on +x; the source's origin is its waterline (keel 5.66 m below at 110 m)
+	superyacht: {
+		name: 'Superyacht', price: 2500000, model: 'superyacht', sealed: true,
+		blurb: 'A 40 m superyacht: glass, chrome and teak over a fortress of a hull, a hold for a whole fleet\'s catch, and real speed for her size. The last word in luxury.',
+		hullMul: 4.2, speedMul: 2.0, holdKg: 2000, fuelMul: 6, rudderMul: 2.4,
+		up: 'y', fwd: 'x', length: 40, beam: 8.78, draft: 1.88,
+		gun: [ 0, 9, 6 ], cannon: [ 0, 4, 16 ], hitHalf: [ 4.4, 4, 20 ],
+	},
 };
 
 export const BOAT_ORDER = Object.keys( BOATS );

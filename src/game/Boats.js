@@ -1,5 +1,6 @@
 import { BufferGeometry, Float32BufferAttribute, BufferAttribute, Mesh, Group, Vector3, Matrix4, Quaternion } from '../engine/index.js';
 import { createPropMaterial } from './GameMaterials.js';
+import { openSealedModel } from './ModelKey.js';
 
 // the catalogue (names, prices, stats, model fitting) lives in BoatCatalog.js (plain data: the
 // save and the node tests read it without the renderer)
@@ -27,7 +28,15 @@ export function loadBoatGeometry( id ) {
 	if ( _cache.has( id ) ) return _cache.get( id );
 	const p = ( async () => {
 
-		const [ meta, bin ] = await Promise.all( [
+		let meta, bin;
+		if ( def.sealed ) {
+
+			// a licensed model, sealed so it isn't published as a plain file (ModelKey.js)
+			const r = await fetch( BASE + def.model + '.dat' );
+			if ( ! r.ok ) throw new Error( `boat model ${ def.model }: ${ r.status }` );
+			( { meta, bin } = await openSealedModel( await r.arrayBuffer() ) );
+
+		} else [ meta, bin ] = await Promise.all( [
 			fetch( BASE + def.model + '.json' ).then( ( r ) => {
 
 				if ( ! r.ok ) throw new Error( `boat model ${ def.model }: ${ r.status }` );

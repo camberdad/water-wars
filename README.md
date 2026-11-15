@@ -88,8 +88,8 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **New boats** are the big savings goal (Boats tab): a *Harbour workboat* ($25,000, an open steel boat,
   cheap and quick), a *Harbour trawler* ($60,000, tough, big hold), an *Old fishing launch* ($95,000, slow but a
   cavernous hold and a thick hide), a *Sport-fishing yacht* ($160,000, fast), a *Deep-sea fishing ship*
-  ($400,000, a fortress with a huge hold) and the *WaveCutter speedboat* ($800,000, the fastest thing on
-  the water). On any boat, press `E` near the wheel or in the middle of the boat to take the helm. Each multiplies its own upgrades; switch between owned boats at the harbour or Marta's.
+  ($400,000, a fortress with a huge hold) the *WaveCutter speedboat* ($800,000, the fastest thing on
+  the water) and the *Superyacht* ($2,500,000, 40 m: the biggest hull and hold, and quick for her size). On any boat, press `E` near the wheel or in the middle of the boat to take the helm. Each multiplies its own upgrades; switch between owned boats at the harbour or Marta's.
   **Every boat is upgraded separately:** the engine, armour, hold, fuel tank, pumps, salvage gear, every
   weapon and the harpoon, the fish finder, deck lights and stern rod holders are fitted to one boat (a new
   boat starts with the basics). Your tackle (rod, reel, line, bait, chum) goes with you onto every boat. You can walk the deck
@@ -322,3 +322,7 @@ Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.y
 The code is released under the MIT license; see [LICENSE](LICENSE). Third-party assets (CC0 audio from
 Freesound, CC0 scans from Poly Haven, MIT characters from Microsoft Rocketbox, OFL / Apache fonts) and
 technique references are listed in [CREDITS.md](CREDITS.md).
+
+The **Superyacht** boat model is a third-party model licensed from CGTrader under its Royalty Free licence. It is
+**not** covered by the MIT licence: it ships only sealed (`public/models/boats/superyacht.dat`, opened in memory by
+`src/game/ModelKey.js`) and may not be extracted, reused or redistributed.

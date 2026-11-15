@@ -221,7 +221,8 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
 	ok( st2.load() && st2.boat === 'trawler' && st2.boats.length === 2, 'owned boats survive a save' );
 	ok( Object.values( BOATS ).every( ( b ) => b.price === 0 || b.price >= 20000 ), 'new boats are big purchases' );
-	ok( BOATS.workboat && BOATS.oldboat && BOATS.wavecutter && Object.keys( BOATS ).length === 7, 'seven boats: the workboat and the old launch (1.9), the WaveCutter (1.10)' );
+	ok( BOATS.workboat && BOATS.oldboat && BOATS.wavecutter && BOATS.superyacht && Object.keys( BOATS ).length === 8, 'eight boats: the workboat and the old launch (1.9), the WaveCutter (1.10), the superyacht (1.13)' );
+	ok( BOATS.superyacht.price === 2500000 && BOATS.superyacht.sealed && BOATS.superyacht.length === 40 && Object.values( BOATS ).every( ( b ) => b.price <= BOATS.superyacht.price ), 'the superyacht: $2,500,000, 40 m, the dearest boat, its model sealed' );
 	ok( BOATS.wavecutter.price === 800000 && Object.values( BOATS ).every( ( b ) => b.speedMul <= BOATS.wavecutter.speedMul ), 'the WaveCutter costs $800,000 and is the fastest boat' );
 	ok( [ 'workboat', 'oldboat' ].every( ( id ) => BOATS[ id ].model === id && BOATS[ id ].length > 8 && BOATS[ id ].hitHalf ), 'the new boats are fitted models' );
 	ok( dangerZoneAt( 55, 0 ) === null && dangerZoneAt( 64.5, 36.5 ) === null && dangerZoneAt( 40, 20 ) === null, 'danger zones: the harbour is safe' );
@@ -301,6 +302,18 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
 	const big = st.addFish( 'leviathan', 20000 );
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
+
+}
+// ---- Water Wars 1.13: the licensed superyacht ships only sealed, and the game can open it
+{
+
+	const fsm = await import( 'node:fs' );
+	const { openSealedModel } = await import( '../src/game/ModelKey.js' );
+	const dir = new URL( '../public/models/boats/', import.meta.url );
+	ok( ! fsm.existsSync( new URL( 'superyacht.bin', dir ) ) && ! fsm.existsSync( new URL( 'superyacht.json', dir ) ), 'no plain copy of the superyacht is published' );
+	const sealed = fsm.readFileSync( new URL( 'superyacht.dat', dir ) );
+	const { meta, bin } = await openSealedModel( sealed.buffer.slice( sealed.byteOffset, sealed.byteOffset + sealed.byteLength ) );
+	ok( meta.vertexCount > 1000 && bin.byteLength === meta.vertexCount * 20 + meta.indexCount * 4, 'the sealed superyacht opens with the game key (' + meta.vertexCount + ' vertices)' );
 
 }
 // ---- Water Wars 1.12.1: a bought boat's water mask follows its real waterline
