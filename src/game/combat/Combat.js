@@ -8,7 +8,7 @@ import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPC
 import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
 import { BOATS } from '../BoatCatalog.js';
-import { createBoatMesh, surfaceY } from '../Boats.js';
+import { createBoatMesh, surfaceY, buildDeckMap } from '../Boats.js';
 import { DANGER_ZONES, dangerZoneAt, randomInZone, buildDangerBuoys } from '../DangerZones.js';
 import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations } from '../Harbours.js';
 
@@ -167,7 +167,20 @@ export class Combat {
 		if ( this.gun ) this.gun.root.position.copy( this.mounts.gun );
 		if ( this.cannon ) this.cannon.root.position.copy( this.mounts.cannon );
 		app.player.forceThird = !! mesh;
-		app.player.deckLift = mesh ? ( def.deckLift ?? 0.9 ) : 0;
+		// walk on the model's own deck (see Boats.buildDeckMap), at its real height
+		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry ) : null;
+		app.player.deckLift = 0;
+		// the camera stands back to suit the boat's size; bigger boats get a more responsive rudder
+		app.player.orbitDist = mesh ? Math.max( app.player.orbitDist, 13 * ( def.length || 8.2 ) / 8.2 ) : app.player.orbitDist;
+		if ( this._rudderBase === undefined ) this._rudderBase = app.boatCtl.rudderLift;
+		app.boatCtl.rudderLift = this._rudderBase * ( def.rudderMul || 1 );
+		// someone standing on the deck lands on the new one
+		if ( app.player.mode === 'deck' && app.player.deckMap ) {
+
+			const s = app.player.deckMap.nearest( app.player.deckPos.x, app.player.deckPos.z );
+			if ( s ) app.player.deckPos.set( s.x, s.y, s.z );
+
+		}
 
 	}
 

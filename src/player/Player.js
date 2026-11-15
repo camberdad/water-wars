@@ -569,6 +569,13 @@ export class Player {
 	// highest walkable box top under the point (boat frame), not above maxY; the sole otherwise
 	deckGroundAt( x, z, maxY ) {
 
+		if ( this.deckMap ) {
+
+			const f = this.deckMap.floorAt( x, z );
+			return Number.isFinite( f ) ? f : - Infinity;
+
+		}
+
 		const L = this.boat.model.lines;
 		let g = L.deckY;
 		for ( const c of this.boat.model.colliders ) {
@@ -620,8 +627,36 @@ export class Player {
 		const oldX = p.x, oldZ = p.z;
 		p.addScaledVector( v, dt );
 
+		// a bought boat (Water Wars): walk on its own deck map; a cell you can't step onto (off the deck,
+		// or a ledge too high) stops that axis of the move, so you slide along rails and cabin sides
+		const DM = this.deckMap;
+		if ( DM ) {
+
+			const can = ( x, z ) => {
+
+				const f = DM.floorAt( x, z );
+				return Number.isFinite( f ) && f <= p.y + 0.6;
+
+			};
+			if ( ! can( p.x, p.z ) ) {
+
+				if ( can( p.x, oldZ ) ) { p.z = oldZ; v.z = 0; }
+				else if ( can( oldX, p.z ) ) { p.x = oldX; v.x = 0; }
+				else { p.x = oldX; p.z = oldZ; v.x = 0; v.z = 0; }
+
+			}
+
+			if ( ! Number.isFinite( DM.floorAt( p.x, p.z ) ) ) {
+
+				const s = DM.nearest( p.x, p.z );
+				if ( s ) { p.x = s.x; p.z = s.z; p.y = Math.max( p.y, s.y ); }
+
+			}
+
+		}
+
 		// walls: push out of the solid boxes you can't step onto (boat frame, axis aligned)
-		for ( let iter = 0; iter < 2; iter ++ ) for ( const c of b.model.colliders ) {
+		if ( ! DM ) for ( let iter = 0; iter < 2; iter ++ ) for ( const c of b.model.colliders ) {
 
 			if ( ! c.solid ) continue;
 			const top = c.center.y + c.half.y, bot = c.center.y - c.half.y;
@@ -635,10 +670,14 @@ export class Player {
 
 		}
 
-		// stay inside the hull (the bulwarks, plus a margin fore and aft)
-		p.z = THREE.MathUtils.clamp( p.z, L.zAft + L.shell + DECK_RADIUS, 4.0 );
-		const halfIn = Math.max( 0.15, L.halfBreadth( L.tAtSheerZ( p.z ), Math.max( p.y, L.deckY ) ) - L.shell - DECK_RADIUS );
-		p.x = THREE.MathUtils.clamp( p.x, - halfIn, halfIn );
+		// stay inside the hull (the bulwarks, plus a margin fore and aft): the lobster boat's lines
+		if ( ! DM ) {
+
+			p.z = THREE.MathUtils.clamp( p.z, L.zAft + L.shell + DECK_RADIUS, 4.0 );
+			const halfIn = Math.max( 0.15, L.halfBreadth( L.tAtSheerZ( p.z ), Math.max( p.y, L.deckY ) ) - L.shell - DECK_RADIUS );
+			p.x = THREE.MathUtils.clamp( p.x, - halfIn, halfIn );
+
+		}
 
 		const g = this.deckGroundAt( p.x, p.z, p.y + DECK_STEP );
 		if ( p.y <= g ) {
@@ -667,8 +706,10 @@ export class Player {
 		this.deckToWorld();
 
 		// prompts: take the helm, or step ashore
-		const hx = HOUSE_HELM.x, hz = HOUSE_HELM.z;
-		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < HELM_REACH && ! this.busy;
+		// (a bought boat: the helm is the walkable spot nearest the lobster boat's helm seat)
+		const helmSpot = DM ? ( DM.helm || ( DM.helm = DM.nearest( HOUSE_HELM.x, HOUSE_HELM.z ) ) ) : HOUSE_HELM;
+		const hx = helmSpot.x, hz = helmSpot.z;
+		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < ( DM ? 1.1 : HELM_REACH ) && ! this.busy;
 		this._ashoreT -= dt;
 		if ( this._ashoreT <= 0 ) {
 
@@ -691,8 +732,8 @@ export class Player {
 
 			// at the rail: step ashore where there is ground on that side, else jump into the sea
 			const ep = this._ashore && this._ashore.ep;
-			const atRail = b.model.exitPoints.some( ( e ) => Math.hypot( p.x - e.x, p.z - e.z ) < 1.3 );
-			if ( ep && Math.hypot( p.x - ep.x, p.z - ep.z ) < 1.3 ) {
+			const atRail = DM ? DM.edgeNear( p.x, p.z, 0.75 ) : b.model.exitPoints.some( ( e ) => Math.hypot( p.x - e.x, p.z - e.z ) < 1.3 );
+			if ( ep && ( DM ? atRail : Math.hypot( p.x - ep.x, p.z - ep.z ) < 1.3 ) ) {
 
 				this.prompt = { key: 'E', text: 'Step ashore' };
 				if ( inp.hit( 'KeyE' ) ) {

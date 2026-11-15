@@ -160,3 +160,136 @@ export function surfaceY( geo, x, z, r = 0.45 ) {
 	return ok.length ? ok[ Math.floor( ok.length / 2 ) ] : null;
 
 }
+
+// ---------------------------------------------------------------- walkable decks
+
+// A walkable deck for a bought boat, built from its model: on a grid over the hull (boat frame) rays
+// straight down find every surface; the floor of a cell is the highest surface no more than a cabin's
+// height above the main deck (so roofs are skipped and you walk under them), and cells with no floor
+// above the waterline are outside the hull. Player.updateDeck walks on this instead of the lobster
+// boat's boxes: you go wherever the deck goes, step up / down small ledges, and stop at the rails.
+const DECK_CELL = 0.3;
+export function buildDeckMap( geo ) {
+
+	if ( geo.userData && geo.userData.deckMap ) return geo.userData.deckMap;
+	const p = geo.attributes.position.array, idx = geo.index.array;
+	geo.computeBoundingBox();
+	const bb = geo.boundingBox;
+	const x0 = bb.min.x, z0 = bb.min.z;
+	const nx = Math.max( 1, Math.ceil( ( bb.max.x - x0 ) / DECK_CELL ) ), nz = Math.max( 1, Math.ceil( ( bb.max.z - z0 ) / DECK_CELL ) );
+	const hits = Array.from( { length: nx * nz }, () => [] );
+	for ( let t = 0; t < idx.length; t += 3 ) {
+
+		const a = idx[ t ] * 3, b = idx[ t + 1 ] * 3, c = idx[ t + 2 ] * 3;
+		const ax = p[ a ], az = p[ a + 2 ], bx = p[ b ], bz = p[ b + 2 ], cx = p[ c ], cz = p[ c + 2 ];
+		const d = ( bz - cz ) * ( ax - cx ) + ( cx - bx ) * ( az - cz );
+		if ( Math.abs( d ) < 1e-9 ) continue; // vertical (a wall): rays don't land on it
+		const i0 = Math.max( 0, Math.floor( ( Math.min( ax, bx, cx ) - x0 ) / DECK_CELL ) ), i1 = Math.min( nx - 1, Math.floor( ( Math.max( ax, bx, cx ) - x0 ) / DECK_CELL ) );
+		const k0 = Math.max( 0, Math.floor( ( Math.min( az, bz, cz ) - z0 ) / DECK_CELL ) ), k1 = Math.min( nz - 1, Math.floor( ( Math.max( az, bz, cz ) - z0 ) / DECK_CELL ) );
+		for ( let k = k0; k <= k1; k ++ ) for ( let i = i0; i <= i1; i ++ ) {
+
+			const px = x0 + ( i + 0.5 ) * DECK_CELL, pz = z0 + ( k + 0.5 ) * DECK_CELL;
+			const w0 = ( ( bz - cz ) * ( px - cx ) + ( cx - bx ) * ( pz - cz ) ) / d;
+			const w1 = ( ( cz - az ) * ( px - cx ) + ( ax - cx ) * ( pz - cz ) ) / d;
+			const w2 = 1 - w0 - w1;
+			if ( w0 < 0 || w1 < 0 || w2 < 0 ) continue;
+			hits[ k * nx + i ].push( w0 * p[ a + 1 ] + w1 * p[ b + 1 ] + w2 * p[ c + 1 ] );
+
+		}
+
+	}
+
+	// the main deck: the lowest surface above the waterline, typical over the hull
+	const lows = [];
+	for ( const h of hits ) {
+
+		let lo = Infinity;
+		for ( const y of h ) if ( y > 0.05 && y < lo ) lo = y;
+		if ( lo < Infinity ) lows.push( lo );
+
+	}
+
+	lows.sort( ( m, n ) => m - n );
+	const deckY = lows.length ? lows[ Math.floor( lows.length * 0.4 ) ] : 1;
+	const ceil = deckY + 1.6; // anything higher is a roof or a mast: walk under it
+	const floor = new Float32Array( nx * nz ).fill( NaN );
+	for ( let c = 0; c < hits.length; c ++ ) {
+
+		let best = - Infinity;
+		for ( const y of hits[ c ] ) if ( y > 0.05 && y <= ceil && y > best ) best = y;
+		if ( best > - Infinity ) floor[ c ] = best;
+
+	}
+
+	// a cell with walkable floor needs neighbours: drop single specks (rail tops, thin trim)
+	const ok = new Uint8Array( nx * nz );
+	for ( let k = 0; k < nz; k ++ ) for ( let i = 0; i < nx; i ++ ) {
+
+		const f = floor[ k * nx + i ];
+		if ( ! Number.isFinite( f ) ) continue;
+		let n = 0;
+		for ( let dk = - 1; dk <= 1; dk ++ ) for ( let di = - 1; di <= 1; di ++ ) {
+
+			const ii = i + di, kk = k + dk;
+			if ( ii < 0 || kk < 0 || ii >= nx || kk >= nz ) continue;
+			const g = floor[ kk * nx + ii ];
+			if ( Number.isFinite( g ) && Math.abs( g - f ) < 0.5 ) n ++;
+
+		}
+
+		if ( n >= 5 ) ok[ k * nx + i ] = 1;
+
+	}
+
+	const map = {
+		deckY, x0, z0, nx, nz, cell: DECK_CELL, floor, ok,
+		// floor height at (x, z), or NaN outside the deck
+		floorAt( x, z ) {
+
+			const i = Math.floor( ( x - x0 ) / DECK_CELL ), k = Math.floor( ( z - z0 ) / DECK_CELL );
+			if ( i < 0 || k < 0 || i >= nx || k >= nz || ! ok[ k * nx + i ] ) return NaN;
+			return floor[ k * nx + i ];
+
+		},
+		// true when (x, z) is within r of the deck's edge (the rail)
+		edgeNear( x, z, r = 0.7 ) {
+
+			const n = Math.ceil( r / DECK_CELL );
+			const i = Math.floor( ( x - x0 ) / DECK_CELL ), k = Math.floor( ( z - z0 ) / DECK_CELL );
+			for ( let dk = - n; dk <= n; dk ++ ) for ( let di = - n; di <= n; di ++ ) {
+
+				const ii = i + di, kk = k + dk;
+				if ( ii < 0 || kk < 0 || ii >= nx || kk >= nz || ! ok[ kk * nx + ii ] ) return true;
+
+			}
+
+			return false;
+
+		},
+		// the walkable cell nearest to (x, z): a safe spot to stand
+		nearest( x, z ) {
+
+			let best = null, bd = Infinity;
+			for ( let k = 0; k < nz; k ++ ) for ( let i = 0; i < nx; i ++ ) {
+
+				if ( ! ok[ k * nx + i ] ) continue;
+				const cx = x0 + ( i + 0.5 ) * DECK_CELL, cz = z0 + ( k + 0.5 ) * DECK_CELL;
+				const dd = ( cx - x ) ** 2 + ( cz - z ) ** 2;
+				if ( dd < bd ) {
+
+					bd = dd;
+					best = { x: cx, z: cz, y: floor[ k * nx + i ] };
+
+				}
+
+			}
+
+			return best;
+
+		},
+	};
+	geo.userData = geo.userData || {};
+	geo.userData.deckMap = map;
+	return map;
+
+}

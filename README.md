@@ -53,7 +53,8 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   you there and your guns stay holstered. Press **`U`** alongside a station for full harbour services.
 - **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($60,000, tough, big hold), a
   *Sport-fishing yacht* ($160,000, fastest), and a *Deep-sea fishing ship* ($400,000, a fortress with a
-  huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's.
+  huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's. You can walk the deck
+  of every boat (its walkable deck is worked out from the model: rails, cabins and deck fittings are solid).
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
   - **Boat:** hull armour (up to battleship plating, 1,600 hp), engine (up to a hydrofoil jet drive), fish
     hold (up to 1,200 kg), fuel tank (up to 1,200 L), damage control (up to a self-sealing nano hull), and
