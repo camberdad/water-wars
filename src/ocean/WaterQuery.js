@@ -1,7 +1,7 @@
 import { G, StorageBuffer, ShaderModule, ComputeKernel, Readback } from '../engine/webgpu.js';
 import { commonModule } from '../engine/render/wgsl/common.js';
 
-export const MAX_QUERIES = 64;
+export const MAX_QUERIES = 128; // (Water Wars 1.13.2: was 64; the NPC fleet, giants and multiplayer boats need more)
 
 // Water surface queries on the GPU.
 //   - slot 0 is always the camera (consumed the same frame by the waterline/underwater passes)
@@ -195,7 +195,7 @@ fn main( @builtin( global_invocation_id ) gid: vec3u ) {
 		// built on first use: the wake / shore attached to the surface after construction are included
 		if ( ! this.kernel ) this._build();
 		this.inputBuffer.write( this.inputs );
-		this.kernel.dispatch( 1 );
+		this.kernel.dispatch( Math.ceil( MAX_QUERIES / 64 ) );
 
 		if ( ! this._pending ) {
 

@@ -621,7 +621,9 @@ ${ reduce( 's7', null, 1, 8, t ) }
 
 		}
 
-		this.time.value += dt * this.timeScale;
+		// clock(): seconds on a clock every player shares (Water Wars 1.13.2: the same waves for everyone)
+		if ( this.clock ) this.time.value = this.clock() * this.timeScale;
+		else this.time.value += dt * this.timeScale;
 		GPU.computePass( 'Ocean FFT', ( pass ) => {
 
 			this.rowKernel.dispatch( [ N, C, 1 ], { pass } );

@@ -171,6 +171,10 @@ export class App {
 		// ---------------------------------------------------------------- ocean
 		await progress( 0.3, 'Simulating the ocean…' );
 		this.fft = new OceanFFT( renderer );
+		// Water Wars 1.13.2: the waves run on the wall clock (the same seed and the same time on every
+		// computer: every player sees the same swell, so the boats of others sit on your water as on theirs).
+		// Wrapped every 2.3 h so the shader's f32 time stays precise.
+		this.fft.clock = () => ( Date.now() / 1000 ) % 8192;
 		if ( this.reef.setOcean ) this.reef.setOcean( this.fft ); // coral / sea fan sway follows the simulated swell
 		this.foamTexture = createFoamTexture( renderer );
 		this.oceanLOD = new CDLOD( { gridSize: Number( qs.get( 'G' ) || 32 ), leafSize: 8, levels: 12, minY: - 25, maxY: 25 } );

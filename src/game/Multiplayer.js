@@ -99,6 +99,8 @@ class RemotePlayer {
 		this.seen = performance.now();
 		if ( typeof d.n === 'string' ) this.name = d.n.slice( 0, 18 ) || 'Captain';
 		this.speed = +d.s || 0;
+		// their boat's height above the water under it (1.13.2): drawn on our water at the same height
+		this.dy = Number.isFinite( d.w ) ? Math.max( - 3, Math.min( 3, d.w ) ) : null;
 		this.mode = d.m || 'walk';
 		if ( Array.isArray( d.p ) && Array.isArray( d.q ) && d.p.every( Number.isFinite ) && d.q.every( Number.isFinite ) ) {
 
@@ -129,9 +131,23 @@ class RemotePlayer {
 	update( dt ) {
 
 		if ( ! this.has ) return;
+		// on our own water: the height of the sea under their boat (read back from the water query) plus
+		// their height above theirs, so a boat never floats over or sinks into the waves we see
+		const q = this.mp.app.query, slot = this.mp.waterSlot( this );
+		let y = this.pos.y;
+		if ( q && slot >= 0 ) {
+
+			q.setPoint( slot, this.group.position.x, this.group.position.z );
+			const h = q.cpuValid ? q.cpu[ slot * 4 ] : NaN;
+			if ( Number.isFinite( h ) && this.dy !== null ) y = h + this.dy;
+
+		}
+
 		// glide toward the latest pose (updates arrive ~10 times a second)
 		const k = 1 - Math.exp( - dt * 10 );
-		this.group.position.lerp( this.pos, k );
+		this.group.position.x += ( this.pos.x - this.group.position.x ) * k;
+		this.group.position.z += ( this.pos.z - this.group.position.z ) * k;
+		this.group.position.y += ( y - this.group.position.y ) * ( 1 - Math.exp( - dt * 14 ) );
 		this.group.quaternion.slerp( this.quat, k );
 		this.group.visible = true;
 
@@ -260,9 +276,61 @@ export class Multiplayer {
 		const p = this.peers.get( id );
 		if ( ! p ) return;
 		this.peers.delete( id );
+		if ( this.slotOwners ) this.slotOwners = this.slotOwners.map( ( o ) => ( o === p ? null : o ) );
 		p.dispose();
 		if ( p.marker && p.marker.el ) p.marker.el.remove();
 		if ( announce && p.has ) this.game.toast( `🌐 ${ p.name } left the open sea`, 2200 );
+
+	}
+
+	// a water-query slot for a remote boat (a small pool, allocated once); -1 when none are left
+	waterSlot( p ) {
+
+		const q = this.app.query;
+		if ( ! q ) return - 1;
+		if ( ! this.slotPool ) {
+
+			try {
+
+				const start = q.allocate( 'multiplayer', 8 );
+				this.slotPool = Array.from( { length: 8 }, ( _, i ) => start + i );
+
+			} catch ( e ) {
+
+				this.slotPool = [];
+
+			}
+
+			this.slotOwners = this.slotPool.map( () => null );
+
+		}
+
+		let i = this.slotOwners.indexOf( p );
+		if ( i < 0 ) {
+
+			i = this.slotOwners.indexOf( null );
+			if ( i < 0 ) return - 1;
+			this.slotOwners[ i ] = p;
+
+		}
+
+		return this.slotPool[ i ];
+
+	}
+
+	// our boat's height above the water under it (the mean of the hull's water samples)
+	heightAboveWater() {
+
+		const bc = this.app.boatCtl;
+		if ( ! bc.hasWater || ! bc.waterH || ! bc.waterH.length ) return null;
+		let s = 0;
+		for ( const h of bc.waterH ) s += h;
+		const v = bc.position.y - s / bc.waterH.length;
+		if ( ! Number.isFinite( v ) ) return null;
+		// smoothed over about a second (sent ~10 times a second): a steady height above the water, while
+		// the receiver's own waves move the boat up and down
+		this._dy = this._dy === undefined ? v : this._dy + ( v - this._dy ) * 0.15;
+		return +this._dy.toFixed( 2 );
 
 	}
 
@@ -277,6 +345,8 @@ export class Multiplayer {
 			q: [ +bc.quaternion.x.toFixed( 4 ), +bc.quaternion.y.toFixed( 4 ), +bc.quaternion.z.toFixed( 4 ), +bc.quaternion.w.toFixed( 4 ) ],
 			s: +bc.velocity.length().toFixed( 1 ),
 			m: app.player.mode,
+			w: this.heightAboveWater(),
+			t: Date.now(), // (the shared wave clock: lets a peer see how far apart the clocks are)
 		};
 
 	}
