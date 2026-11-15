@@ -1,5 +1,5 @@
 import { FISH, fishLengthCm, TIERS } from './FishTable.js';
-import { UPGRADES, CATEGORIES, nextLevel, FUEL_PRICE, REPAIR_PRICE } from './Gear.js';
+import { UPGRADES, CATEGORIES, nextLevel, FUEL_PRICE, REPAIR_PRICE, isBoatTrack } from './Gear.js';
 import { FishPortrait } from './FishPortrait.js';
 import * as U from './Units.js';
 import { BOATS, BOAT_ORDER } from './BoatCatalog.js';
@@ -517,11 +517,13 @@ GameHUD.prototype.renderShop = function () {
 
 	} else if ( tab === 'boats' ) {
 
-		const armour = UPGRADES.armor.levels[ s.upgrades.armor | 0 ].hullHP;
-		const holdBase = UPGRADES.hold.levels[ s.upgrades.hold | 0 ].holdKg;
 		rows = BOAT_ORDER.map( ( id ) => {
 
 			const b = BOATS[ id ];
+			// each boat with its own fitted gear (a boat you don't own yet: the basics)
+			const lv = s.levelsFor( id );
+			const armour = UPGRADES.armor.levels[ lv.armor | 0 ].hullHP;
+			const holdBase = UPGRADES.hold.levels[ lv.hold | 0 ].holdKg;
 			const owned = s.boats.includes( id ), inUse = s.boat === id;
 			const btn = inUse ? '<span class="gm-have">In use</span>'
 				: owned ? `<button class="gm-btn is-ghost" data-useboat="${ id }">Use</button>`
@@ -531,7 +533,7 @@ GameHUD.prototype.renderShop = function () {
 			return `<div class="gm-shop-row gm-boat-row${ inUse ? ' is-current' : '' }"><span>${ b.name }<small>${ b.blurb }</small><small class="gm-boat-stats">${ stats }${ need }</small></span>${ btn }</div>`;
 
 		} ).join( '' );
-		foot = '<span class="gm-sub">Boat stats multiply your upgrades. A boat you switch to comes repaired and fuelled.</span>';
+		foot = '<span class="gm-sub">Each boat has its own engine, armour, weapons and fittings: a new boat starts with the basics. A boat you switch to comes repaired and fuelled.</span>';
 
 	} else if ( tab === 'sell' ) {
 
@@ -540,6 +542,8 @@ GameHUD.prototype.renderShop = function () {
 
 	} else {
 
+		const boatName = ( BOATS[ s.boat ] || BOATS.lobster ).name;
+		foot = `<span class="gm-sub">⚓ Boat gear is fitted to your <b>${ boatName }</b> only: every boat is upgraded separately. Your tackle (rod, reel, line, bait, chum) goes with you.</span>`;
 		rows = Object.entries( UPGRADES ).filter( ( [ , t ] ) => t.cat === tab ).map( ( [ key, track ] ) => {
 
 			const cur = track.levels[ s.upgrades[ key ] | 0 ];
@@ -549,7 +553,8 @@ GameHUD.prototype.renderShop = function () {
 				? `<button class="gm-btn" data-buy="${ key }" ${ next.cost > s.money ? 'disabled' : '' }>$${ next.cost.toLocaleString() }</button>`
 				: '<span class="gm-have">Maxed</span>';
 			const sub = next ? `Now: ${ cur.label } (${ describe( key, cur ) }) → ${ describe( key, next ) }` : `${ cur.label } · ${ describe( key, cur ) }`;
-			return `<div class="gm-shop-row"><span>${ track.name } <em class="gm-lvl">${ lvl }</em>: ${ next ? next.label : cur.label }<small>${ sub }</small></span>${ btn }</div>`;
+			const where = isBoatTrack( key ) ? `<em class="gm-lvl">⚓ ${ boatName }</em>` : '<em class="gm-lvl">🎣 yours</em>';
+			return `<div class="gm-shop-row"><span>${ track.name } <em class="gm-lvl">${ lvl }</em> ${ where }: ${ next ? next.label : cur.label }<small>${ sub }</small></span>${ btn }</div>`;
 
 		} ).join( '' );
 

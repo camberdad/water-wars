@@ -303,6 +303,33 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
 
 }
+// ---- Water Wars 1.11: each boat has its own engine, armour, weapons and fittings
+{
+
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	st.money = 10000000;
+	st.buy( 'engine' ); st.buy( 'engine' ); st.buy( 'gun' ); st.buy( 'reel' ); st.buy( 'fishFinder' );
+	const lobster = { engine: st.upgrades.engine, gun: st.upgrades.gun, finder: st.stats.finder };
+	st.buyBoat( 'trawler' );
+	ok( st.upgrades.engine === 0 && st.upgrades.gun === 0 && ! st.stats.finder, 'a new boat starts with the basic engine, gun and fittings' );
+	ok( st.upgrades.reel === 1, 'your tackle comes with you onto the new boat' );
+	st.buy( 'armor' );
+	ok( st.upgrades.armor === 1 && st.boatGear.trawler.armor === 1, 'an upgrade bought now is fitted to the trawler' );
+	st.useBoat( 'lobster' );
+	ok( st.upgrades.engine === lobster.engine && st.upgrades.gun === lobster.gun && st.stats.finder === lobster.finder && st.upgrades.armor === 0, 'back on the lobster boat: its own engine and gun, not the trawler\'s armour' );
+	st.useBoat( 'trawler' );
+	ok( st.upgrades.armor === 1 && st.upgrades.engine === 0, 'and the trawler keeps its own' );
+	ok( st.levelsFor( 'lobster' ).engine === lobster.engine && st.levelsFor( 'ship' ).engine === 0, 'the Boats tab can show each boat with its own gear' );
+	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
+	ok( st2.load() && st2.boat === 'trawler' && st2.upgrades.armor === 1 && st2.boatGear.lobster.engine === lobster.engine, 'each boat\'s gear survives a save' );
+
+	// a save from before 1.11 (one set of upgrades for every boat): each boat you own keeps it
+	const old = new Map( [ [ 'waterwars.save.v1', JSON.stringify( { v: 1, money: 5, upgrades: { ...defaultUpgrades(), engine: 3, gun: 2, reel: 2 }, boat: 'trawler', boats: [ 'lobster', 'trawler' ] } ) ] ] );
+	const st3 = new GameState( { getItem: ( k ) => old.get( k ) ?? null, setItem: () => {} } );
+	ok( st3.load() && st3.upgrades.engine === 3 && st3.boatGear.lobster.engine === 3 && st3.boatGear.trawler.gun === 2 && st3.upgrades.reel === 2, 'an old save: every boat you own keeps the upgrades you had' );
+
+}
 // ---- Water Wars 1.8.3: fuel burns a little faster, in proportion to engine power
 {
 

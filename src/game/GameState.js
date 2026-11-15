@@ -1,5 +1,5 @@
 import { FISH, fishValue, fishLengthCm, TROPHY_VALUE } from './FishTable.js';
-import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE, REPAIR_PRICE } from './Gear.js';
+import { defaultUpgrades, gearStats, nextLevel, UPGRADES, FUEL_PRICE, REPAIR_PRICE, BOAT_TRACKS } from './Gear.js';
 import { BOATS, applyBoat } from './BoatCatalog.js';
 
 const SAVE_KEY = 'waterwars.save.v1';
@@ -20,7 +20,10 @@ export class GameState {
 		this.log = {}; // species -> { count, bestKg, bestCm }
 		// the last addFish: { species, kg, cm, value, newSpecies, record, prevBestKg, prevBestCm, kept } (the catch card)
 		this.lastCatch = null;
+		// the levels in effect: your tackle plus the gear fitted to the boat in use. Each boat's own gear is
+		// kept in boatGear (boat id -> { track: level }) and swapped in when you switch boats (Water Wars 1.11)
 		this.upgrades = defaultUpgrades();
+		this.boatGear = {};
 		this.fuel = null; // litres left (null = full tank)
 		this.hull = null; // hull points left (null = fully repaired)
 		this.shells = 5; // cannon shells in the locker
@@ -51,16 +54,50 @@ export class GameState {
 
 	}
 
-	// switch to an owned boat: it comes repaired, fuelled and with the hold carried over (what fits)
+	// switch to an owned boat: it comes repaired, fuelled and with the hold carried over (what fits), with
+	// its own engine, armour, weapons and fittings (a new boat starts with the basics)
 	useBoat( id ) {
 
 		if ( ! this.boats.includes( id ) || ! BOATS[ id ] ) return false;
-		this.boat = id;
+		if ( id !== this.boat ) {
+
+			this.stashBoatGear();
+			this.boat = id;
+			this.loadBoatGear( id );
+
+		}
 		this.hull = null;
 		this.fuel = null;
 		this.save();
 		this.emit();
 		return true;
+
+	}
+
+	// the boat in use's fitted gear, from the levels in effect
+	stashBoatGear() {
+
+		const g = {};
+		for ( const k of BOAT_TRACKS ) g[ k ] = this.upgrades[ k ] | 0;
+		this.boatGear[ this.boat ] = g;
+
+	}
+
+	// a boat's fitted gear into the levels in effect (nothing fitted yet: the basics)
+	loadBoatGear( id ) {
+
+		const g = this.boatGear[ id ] || {};
+		for ( const k of BOAT_TRACKS ) this.upgrades[ k ] = g[ k ] | 0;
+
+	}
+
+	// the levels a boat would sail with: your tackle plus that boat's own gear
+	levelsFor( id ) {
+
+		if ( id === this.boat ) return this.upgrades;
+		const u = { ...this.upgrades }, g = this.boatGear[ id ] || {};
+		for ( const k of BOAT_TRACKS ) u[ k ] = g[ k ] | 0;
+		return u;
 
 	}
 
@@ -169,6 +206,7 @@ export class GameState {
 		if ( ! next || next.cost > this.money ) return null;
 		this.money -= next.cost;
 		this.upgrades[ key ] = next.index;
+		this.stashBoatGear();
 		if ( key === 'fuel' ) this.fuel = null; // a new tank comes full
 		// new plates come undamaged: the extra points are added to what is left
 		if ( key === 'armor' && this.hull !== null ) this.hull += ( next.hullHP - UPGRADES.armor.levels[ next.index - 1 ].hullHP ) * ( BOATS[ this.boat ] || BOATS.lobster ).hullMul;
@@ -279,7 +317,8 @@ export class GameState {
 
 	toJSON() {
 
-		return { v: 1, money: this.money, earned: this.earned, furthest: this.furthest, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats };
+		this.stashBoatGear();
+		return { v: 1, money: this.money, earned: this.earned, furthest: this.furthest, boatGear: this.boatGear, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats };
 
 	}
 
@@ -303,6 +342,27 @@ export class GameState {
 		this.pirate = { ...PIRATE_STATS(), ...( d.pirate && typeof d.pirate === 'object' ? d.pirate : {} ) };
 		this.boats = Array.isArray( d.boats ) ? [ 'lobster', ...d.boats.filter( ( b ) => BOATS[ b ] && b !== 'lobster' ) ] : [ 'lobster' ];
 		this.boat = this.boats.includes( d.boat ) ? d.boat : 'lobster';
+		// each boat's own gear; a save from before 1.11 had one set for every boat: each boat you own keeps it
+		this.boatGear = {};
+		if ( d.boatGear && typeof d.boatGear === 'object' ) {
+
+			for ( const id of this.boats ) if ( d.boatGear[ id ] && typeof d.boatGear[ id ] === 'object' ) {
+
+				const g = {};
+				for ( const k of BOAT_TRACKS ) g[ k ] = Math.max( 0, d.boatGear[ id ][ k ] | 0 );
+				this.boatGear[ id ] = g;
+
+			}
+
+			this.loadBoatGear( this.boat );
+
+		} else {
+
+			const g = {};
+			for ( const k of BOAT_TRACKS ) g[ k ] = this.upgrades[ k ] | 0;
+			for ( const id of this.boats ) this.boatGear[ id ] = { ...g };
+
+		}
 		this._nextId = Math.max( d.nextId | 0, ...this.inventory.map( ( f ) => f.id + 1 ), 1 );
 		return true;
 
@@ -343,6 +403,7 @@ export class GameState {
 		this.inventory = [];
 		this.log = {};
 		this.upgrades = defaultUpgrades();
+		this.boatGear = {};
 		this.fuel = null;
 		this.hull = null;
 		this.shells = 5;

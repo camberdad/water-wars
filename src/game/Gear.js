@@ -193,6 +193,13 @@ export function nextLevel( upgrades, key ) {
 
 }
 
+// Water Wars 1.11: everything fitted to a boat (engine, armour, hold, tanks, pumps, salvage gear, every
+// weapon, the fish finder, deck lights, stern rod holders) is bought for each boat separately; your own
+// tackle (rod, reel, line, bait, chum) goes with you onto every boat
+export const CAPTAIN_TRACKS = new Set( [ 'line', 'reel', 'rod', 'bait', 'chum' ] );
+export const isBoatTrack = ( key ) => !! UPGRADES[ key ] && ! CAPTAIN_TRACKS.has( key );
+export const BOAT_TRACKS = Object.keys( UPGRADES ).filter( isBoatTrack );
+
 export function defaultUpgrades() {
 
 	const u = {};

@@ -74,6 +74,8 @@ export class SternRods {
 		if ( n === this.count ) {
 
 			this._synced = true;
+			this._boat = this.game.state.boat;
+			this._lastN = n;
 			return;
 
 		}
@@ -116,8 +118,10 @@ export class SternRods {
 
 		this.place();
 		// a toast when bought (not when a save with holders loads)
-		const bought = this._synced;
+		const bought = this._synced && this._boat === this.game.state.boat && n > ( this._lastN || 0 );
 		this._synced = true;
+		this._boat = this.game.state.boat;
+		this._lastN = n;
 		if ( bought ) this.game.toast( n === 1 ? 'Stern rod holder fitted: stop the boat and it fishes astern for you (B to grab a bite)' : `${ n } stern rods fitted`, 3600 );
 
 	}

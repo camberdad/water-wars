@@ -8,7 +8,8 @@ import { FishingRod } from './FishingRod.js';
 import { FishStand } from './FishStand.js';
 import { Chandlery } from './Chandlery.js';
 import { CatchDisplay } from './CatchDisplay.js';
-import { UPGRADES, fuelBurn } from './Gear.js';
+import { UPGRADES, fuelBurn, isBoatTrack } from './Gear.js';
+import { BOATS } from './BoatCatalog.js';
 import { GameHUD } from './GameHUD.js';
 import { Minimap } from './Minimap.js';
 import { Guide } from './Guide.js';
@@ -158,7 +159,7 @@ export class Game {
 	buy( key ) {
 
 		const r = this.state.buy( key );
-		if ( r ) this.toast( `${ UPGRADES[ key ].name }: ${ r.label }` );
+		if ( r ) this.toast( `${ UPGRADES[ key ].name }: ${ r.label }${ isBoatTrack( key ) ? ` · fitted to your ${ ( BOATS[ this.state.boat ] || BOATS.lobster ).name }` : '' }` );
 		return r;
 
 	}
