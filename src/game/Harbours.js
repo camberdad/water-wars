@@ -46,6 +46,49 @@ export function stationNear( x, z, r = SERVICE_RADIUS ) {
 
 }
 
+// Harbour services on foot (Water Wars 1.8.1): a kiosk on the west end of the main dock's T-head, facing
+// the walkway. Walk up to it and press U (repairs, fuel, upgrades, boats, selling the catch).
+const PIER_DECK_Y = 2.3;
+export const DOCK_KIOSK = { x: 50.2, z: 38.2, yaw: Math.PI / 2 }; // front (+z local) faces east, along the T-head
+
+export function buildDockKiosk( scene, colliders = null ) {
+
+	const parts = [];
+	const K = DOCK_KIOSK, c = Math.cos( K.yaw ), n = Math.sin( K.yaw );
+	const add = ( geo, style, x, y, z, rx = 0, ry = 0, rz = 0 ) => parts.push( prepare( geo, { ...style, matrix: mat4( K.x + x * c + z * n, PIER_DECK_Y + y, K.z - x * n + z * c, rx, K.yaw + ry, rz, 1, 1, 1, 'YXZ' ) } ) );
+	const WHITE = { color: 0xeeeae0, rough: 0.6 }, GREEN = { color: 0x2f7a4a, rough: 0.5, pattern: PAT.rusty }, WOOD = { color: 0x7a6248, rough: 0.85, pattern: PAT.woodX };
+	// the hut: walls, a sloping green roof, a serving hatch with a counter
+	add( box( 2.6, 2.4, 1.9 ), WHITE, 0, 1.2, - 0.1 );
+	add( box( 3.0, 0.14, 2.4 ), GREEN, 0, 2.5, 0, - 0.1 );
+	add( box( 1.7, 0.85, 0.05 ), { color: 0x1a2a33, rough: 0.1 }, 0, 1.55, 0.86 );
+	add( box( 2.0, 0.08, 0.5 ), WOOD, 0, 1.08, 1.05 );
+	add( box( 2.0, 0.9, 0.06 ), WOOD, 0, 0.6, 0.86 );
+	// the sign over the hatch: white with a green cross (services)
+	add( box( 2.2, 0.55, 0.08 ), { color: 0xf4f2ea, rough: 0.6 }, 0, 2.15, 0.92 );
+	add( box( 0.4, 0.12, 0.04 ), { color: 0x22a050, rough: 0.5 }, - 0.7, 2.15, 0.98 );
+	add( box( 0.12, 0.4, 0.04 ), { color: 0x22a050, rough: 0.5 }, - 0.7, 2.15, 0.98 );
+	add( box( 1.05, 0.08, 0.04 ), { color: 0x2f7a4a, rough: 0.5 }, 0.3, 2.22, 0.98 );
+	add( box( 1.05, 0.08, 0.04 ), { color: 0x2f7a4a, rough: 0.5 }, 0.3, 2.08, 0.98 );
+	// a fuel pump and a life ring beside it
+	add( box( 0.45, 1.2, 0.4 ), { color: 0xc23a22, rough: 0.5 }, 1.65, 0.6, 0.5 );
+	add( torus( 0.3, 0.07, 8, 18 ), { color: 0xe86a1a, rough: 0.6 }, - 1.33, 1.4, 0.2, 0, Math.PI / 2 );
+	// a green lamp on a short mast (seen from the water)
+	add( cylinder( 0.05, 0.07, 1.6, 8 ), { color: 0xdcdcdc, rough: 0.3, metal: 1 }, 1.1, 3.3, - 0.8 );
+	const mesh = new Mesh( mergePrepared( parts ), createPropMaterial( 'dockKiosk' ) );
+	mesh.name = 'dock-kiosk';
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	const lampMat = standard( { color: 0x022008, emissive: 0x30ff70, emissiveIntensity: 10 } );
+	lampMat.name = 'dockKioskLamp';
+	const lp = mat4( K.x + 1.1 * c - 0.8 * n, PIER_DECK_Y + 4.2, K.z - 1.1 * n - 0.8 * c );
+	const lamp = new Mesh( mergePrepared( [ prepare( sphere( 0.2, 12, 10 ), { color: 0x30ff70, matrix: lp } ) ] ), lampMat );
+	lamp.name = 'dock-kiosk-lamp';
+	scene.add( mesh, lamp );
+	if ( colliders ) colliders.addBox( new Vector3( K.x - 0.1 * n, PIER_DECK_Y + 1.2, K.z - 0.1 * c ), new Vector3( 1.35, 1.2, 1.0 ), K.yaw, { tag: 'dockKiosk' } );
+	return { mesh, lamp };
+
+}
+
 // The floating service platforms: two pontoons under a plank deck, a white office with a green roof,
 // fuel tanks, a crane, tyre fenders and a mast with a green "safe harbour" lamp. One merged mesh for
 // all four (one draw call), plus the lamps.

@@ -108,7 +108,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | Right mouse | At the helm: fire the bow cannon · on foot/deck: reel in |
 | G | Loot a wreck alongside |
 | Q | At the helm: fire the harpoon at a giant fish · hold to cut the tether |
-| U | Harbour services (by the pier or at a sea station) |
+| U | Harbour services (alongside the pier in your boat, on foot at the kiosk on the end of the main dock, or at a sea station) |
 | V | Boat camera, 1st / 3rd person |
 | R | Fishing rod |
 | B | Grab a bent stern rod (rod holder upgrade) |

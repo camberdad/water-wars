@@ -7,6 +7,11 @@
 //   gun / cannon: where the deck gun and the bow cannon sit (boat frame: +Z forward, +Y up, y 0 = waterline);
 //            the height is found on the model (the roof / deck under that point), y here is the fallback
 //   hitHalf: half extents of the hit box; length / beam: the model is fitted to these (metres)
+//   draft: how deep the keel sits below the waterline (bigger = lower in the water)
+//   floorMin: the lowest walkable deck (m from the waterline) when the deck sits below it
+//   stern: [ x, y, z ] the harpoon mount (and the stern rod holders); found on the model when absent
+//   cut: boxes { min, max, dark } in the boat frame: triangles inside one are removed (dark: only
+//        near-black ones), e.g. doors that block the way
 // Model axes: `up` and `fwd` name the source axes ('x' | 'y' | 'z', with '-' to flip) that become +Y and +Z.
 export const BOATS = {
 	lobster: {
@@ -27,12 +32,17 @@ export const BOATS = {
 		hullMul: 1.3, speedMul: 1.6, holdKg: 120, fuelMul: 1.8,
 		up: 'y', fwd: 'x', length: 13.5, beam: 4.4, draft: 0.9, rudderMul: 1.2,
 		gun: [ 0, 2.9, - 1.5 ], cannon: [ 0, 2.0, 5.0 ], hitHalf: [ 2.3, 2.3, 6.8 ],
+		// the harpoon low on the transom (the model's highest point over the stern is the hardtop)
+		stern: [ 0, 1.3, - 6.0 ],
+		// the two doors in the back of the cabin
+		cut: [ { min: [ - 1.3, 0.45, - 3.62 ], max: [ 1.3, 2.5, - 3.46 ], dark: true } ],
 	},
 	ship: {
 		name: 'Deep-sea fishing ship', price: 400000, model: 'ship',
 		blurb: 'A full-size fishing ship: a fortress of a hull and a hold that never fills. The pride of the island.',
 		hullMul: 2.8, speedMul: 1.2, holdKg: 700, fuelMul: 3,
-		up: 'y', fwd: 'z', length: 13, beam: 4.6, draft: 1.2, rudderMul: 1.5,
+		// sits deep: its working deck is a little under the waterline (the hull keeps the sea out)
+		up: 'y', fwd: 'z', length: 13, beam: 4.6, draft: 1.7, floorMin: - 0.6, rudderMul: 1.5,
 		// the hull material is plain white in the source: antifouling, boot stripe, topsides, white house
 		paint: [ [ 0.1, [ 0.32, 0.035, 0.025 ] ], [ 0.32, [ 0.85, 0.84, 0.8 ] ], [ 2.0, [ 0.025, 0.07, 0.16 ] ], [ 99, [ 0.78, 0.78, 0.75 ] ] ],
 		gun: [ 0, 4.5, 1.6 ], cannon: [ 0, 2.6, 5.4 ], hitHalf: [ 2.5, 2.6, 6.8 ],

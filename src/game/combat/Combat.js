@@ -8,9 +8,9 @@ import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPC
 import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
 import { BOATS } from '../BoatCatalog.js';
-import { createBoatMesh, surfaceY, buildDeckMap } from '../Boats.js';
+import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
-import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations } from '../Harbours.js';
+import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK } from '../Harbours.js';
 
 // Water Wars' combat layer on top of the fishing game:
 //   at the helm   left mouse fires the deck gun (it overheats), right mouse the bow cannon (unlimited shells)
@@ -81,6 +81,8 @@ export class Combat {
 		this.zone = null;
 		// safe zones: the harbour and the four sea stations (harbour services at each)
 		this.stations = buildStations( app.scene, app.colliders );
+		// a harbour services kiosk at the end of the main dock (U on foot)
+		this.kiosk = buildDockKiosk( app.scene, app.colliders );
 		this.stationList = STATIONS;
 		this.safe = null;
 		this.stationVendors = new Map( STATIONS.map( ( s ) => [ s.id, { name: s.name, kind: 'dock', greeting: 'Safe harbour out here: repairs, fuel, upgrades, boats, and we buy your catch.' } ] ) );
@@ -163,19 +165,37 @@ export class Combat {
 
 			}
 			if ( def.hitHalf ) this.hitHalf.fromArray( def.hitHalf );
-			// the harpoon sits on the stern: the deck just inside the transom
-			const sz = - ( def.length || 8 ) / 2 + 1.1;
-			const sy = surfaceY( mesh.geometry, 0, sz );
-			this.mounts.stern.set( 0, ( sy ?? 1.2 ) + 0.02, sz );
+			// the harpoon sits on the stern: where the catalogue says, else the deck just inside the transom
+			if ( def.stern ) this.mounts.stern.fromArray( def.stern );
+			else {
+
+				const sz = - ( def.length || 8 ) / 2 + 1.1;
+				const sy = surfaceY( mesh.geometry, 0, sz );
+				this.mounts.stern.set( 0, ( sy ?? 1.2 ) + 0.02, sz );
+
+			}
 
 		}
 
 		if ( this.gun ) this.gun.root.position.copy( this.mounts.gun );
 		if ( this.cannon ) this.cannon.root.position.copy( this.mounts.cannon );
 		if ( this.game.giants ) this.game.giants.placeMount();
+		// the water mask follows the hull in use (no sea drawn inside a bought boat's hull either)
+		const sr = app.sceneRenderer, hm = sr && sr.hullMasks && sr.hullMasks.find( ( h ) => h.object === boat.group );
+		if ( hm ) {
+
+			if ( ! hm.lobster ) hm.lobster = { geometry: hm.mesh.geometry, box: hm.box, sphere: hm.sphere };
+			const vg = mesh ? ( this._hullVols || ( this._hullVols = new Map() ) ).get( id ) || hullVolumeFor( mesh.geometry ) : null;
+			if ( vg ) this._hullVols.set( id, vg );
+			hm.mesh.geometry = vg || hm.lobster.geometry;
+			hm.box = vg ? vg.boundingBox.clone().expandByScalar( 0.05 ) : hm.lobster.box;
+			hm.sphere = vg ? vg.boundingSphere : hm.lobster.sphere;
+
+		}
+
 		app.player.forceThird = !! mesh;
 		// walk on the model's own deck (see Boats.buildDeckMap), at its real height
-		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry ) : null;
+		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry, def.floorMin ?? 0.05 ) : null;
 		app.player.deckLift = 0;
 		// the camera stands back to suit the boat's size; bigger boats get a more responsive rudder
 		app.player.orbitDist = mesh ? Math.max( app.player.orbitDist, 13 * ( def.length || 8.2 ) / 8.2 ) : app.player.orbitDist;
@@ -894,7 +914,9 @@ export class Combat {
 
 		const hud = this.game.hud;
 		const bc = this.app.boatCtl.position, d = WORLD.boatDock.position;
-		this.atDock = aboard && Math.hypot( bc.x - d.x, bc.z - d.z ) < DOCK_RADIUS;
+		// alongside the pier in the boat, or on foot at the kiosk on the end of the main dock
+		const kiosk = p.mode === 'walk' && p.position.y > 1.6 && Math.hypot( p.position.x - DOCK_KIOSK.x, p.position.z - DOCK_KIOSK.z ) < 4.2;
+		this.atDock = ( aboard && Math.hypot( bc.x - d.x, bc.z - d.z ) < DOCK_RADIUS ) || kiosk;
 		const st = aboard ? stationNear( bc.x, bc.z, SERVICE_RADIUS ) : null;
 		this.service = this.atDock ? this.dockVendor : st ? this.stationVendors.get( st.id ) : null;
 		const servicesOpen = hud && hud.standOpen && hud.vendor && hud.vendor.kind === 'dock';

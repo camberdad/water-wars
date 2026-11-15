@@ -79,7 +79,30 @@ export function loadBoatGeometry( id ) {
 
 		}
 
-		const index = new Uint32Array( I );
+		let index = new Uint32Array( I );
+		// cut boxes: drop the triangles inside (dark: only near-black ones), e.g. doors in the way
+		if ( def.cut && def.cut.length ) {
+
+			const keep = [];
+			const inBox = ( v, c ) => {
+
+				const x = pos[ v * 3 ], y = pos[ v * 3 + 1 ], z = pos[ v * 3 + 2 ];
+				if ( x < c.min[ 0 ] || y < c.min[ 1 ] || z < c.min[ 2 ] || x > c.max[ 0 ] || y > c.max[ 1 ] || z > c.max[ 2 ] ) return false;
+				return ! c.dark || ( col[ v * 3 ] < 0.12 && col[ v * 3 + 1 ] < 0.12 && col[ v * 3 + 2 ] < 0.12 );
+
+			};
+
+			for ( let t = 0; t < index.length; t += 3 ) {
+
+				const a = index[ t ], b = index[ t + 1 ], c = index[ t + 2 ];
+				if ( def.cut.some( ( box ) => inBox( a, box ) && inBox( b, box ) && inBox( c, box ) ) ) continue;
+				keep.push( a, b, c );
+
+			}
+
+			index = new Uint32Array( keep );
+
+		}
 
 		const g = new BufferGeometry();
 		g.setAttribute( 'position', new Float32BufferAttribute( pos, 3 ) );
@@ -129,6 +152,61 @@ export async function createBoatMesh( id ) {
 
 export { Group, Vector3, Matrix4, Quaternion };
 
+// A closed volume around a model's hull at the waterline, for the water mask (no sea drawn inside the
+// hull, e.g. over a deck that sits below the waterline). Slices along the length: each is as wide as the
+// hull around the waterline (the 92nd percentile of |x|, so fenders and rails don't bulge it), from the
+// bottom of the hull up to a lid `top` m above the water (above the waves, below a standing eye).
+export function hullVolumeFor( geo, top = 0.55 ) {
+
+	const P = geo.attributes.position.array, n = P.length / 3;
+	geo.computeBoundingBox();
+	const z0 = geo.boundingBox.min.z, z1 = geo.boundingBox.max.z;
+	const S = 28, dz = ( z1 - z0 ) / S;
+	const xs = Array.from( { length: S + 1 }, () => [] ), bottom = new Array( S + 1 ).fill( 0 );
+	for ( let i = 0; i < n; i ++ ) {
+
+		const y = P[ i * 3 + 1 ];
+		const k = Math.round( ( P[ i * 3 + 2 ] - z0 ) / dz );
+		if ( y < bottom[ k ] ) bottom[ k ] = y;
+		if ( y > - 0.45 && y < 0.35 ) xs[ k ].push( Math.abs( P[ i * 3 ] ) );
+
+	}
+
+	const half = xs.map( ( a ) => {
+
+		if ( a.length < 4 ) return 0;
+		a.sort( ( p, q ) => p - q );
+		return a[ Math.floor( a.length * 0.92 ) ];
+
+	} );
+	// a ring of 4 vertices per slice (bottom-left, top-left, top-right, bottom-right), capped at the ends
+	const pos = [], idx = [];
+	for ( let k = 0; k <= S; k ++ ) {
+
+		const z = z0 + k * dz, w = Math.max( 0.02, half[ k ] ), b = Math.min( - 0.05, bottom[ k ] );
+		pos.push( - w, b, z, - w, top, z, w, top, z, w, b, z );
+
+	}
+
+	for ( let k = 0; k < S; k ++ ) for ( let s = 0; s < 4; s ++ ) {
+
+		const a = k * 4 + s, b = k * 4 + ( s + 1 ) % 4, c = a + 4, d = b + 4;
+		idx.push( a, c, b, b, c, d );
+
+	}
+
+	idx.push( 0, 1, 2, 0, 2, 3 );
+	const e = S * 4;
+	idx.push( e, e + 2, e + 1, e, e + 3, e + 2 );
+	const g = new BufferGeometry();
+	g.setAttribute( 'position', new Float32BufferAttribute( new Float32Array( pos ), 3 ) );
+	g.setIndex( idx );
+	g.computeBoundingBox();
+	g.computeBoundingSphere();
+	return g;
+
+}
+
 // height of the top surface (a roof, a deck) at (x, z) on a boat geometry: rays straight down at a few
 // points around it hit the highest triangle under each; the median skips a mast or an aerial
 export function surfaceY( geo, x, z, r = 0.45 ) {
@@ -169,7 +247,8 @@ export function surfaceY( geo, x, z, r = 0.45 ) {
 // above the waterline are outside the hull. Player.updateDeck walks on this instead of the lobster
 // boat's boxes: you go wherever the deck goes, step up / down small ledges, and stop at the rails.
 const DECK_CELL = 0.3;
-export function buildDeckMap( geo ) {
+// floorMin: the lowest a deck can be (m from the waterline; lower surfaces are the inside of the hull)
+export function buildDeckMap( geo, floorMin = 0.05 ) {
 
 	if ( geo.userData && geo.userData.deckMap ) return geo.userData.deckMap;
 	const p = geo.attributes.position.array, idx = geo.index.array;
@@ -204,7 +283,7 @@ export function buildDeckMap( geo ) {
 	for ( const h of hits ) {
 
 		let lo = Infinity;
-		for ( const y of h ) if ( y > 0.05 && y < lo ) lo = y;
+		for ( const y of h ) if ( y > floorMin && y < lo ) lo = y;
 		if ( lo < Infinity ) lows.push( lo );
 
 	}
@@ -216,7 +295,7 @@ export function buildDeckMap( geo ) {
 	for ( let c = 0; c < hits.length; c ++ ) {
 
 		let best = - Infinity;
-		for ( const y of hits[ c ] ) if ( y > 0.05 && y <= ceil && y > best ) best = y;
+		for ( const y of hits[ c ] ) if ( y > floorMin && y <= ceil && y > best ) best = y;
 		if ( best > - Infinity ) floor[ c ] = best;
 
 	}
