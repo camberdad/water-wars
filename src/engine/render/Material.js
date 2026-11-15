@@ -169,7 +169,7 @@ export class Material {
 
 		return {
 			...this.defines,
-			UNDERWATER_LIGHTING: { none: 0, lite: 1, full: 2 }[ this.underwaterLighting ] ?? 2,
+			UNDERWATER_LIGHTING: { none: 0, lite: 1, full: 2, hull: 3 }[ this.underwaterLighting ] ?? 2,
 			HILL_SHADOW_SELF: this.appliesHillShadow ? 1 : 0,
 			LOCAL_LIGHTS_CHEAP: this.localLightsCheap ? 1 : 0,
 			ALPHA_TEST: this.alphaTest > 0 ? 1 : 0,

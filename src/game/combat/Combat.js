@@ -190,7 +190,10 @@ export class Combat {
 		if ( hm ) {
 
 			if ( ! hm.lobster ) hm.lobster = { geometry: hm.mesh.geometry, box: hm.box, sphere: hm.sphere };
-			const vg = mesh ? ( this._hullVols || ( this._hullVols = new Map() ) ).get( id ) || hullVolumeFor( mesh.geometry ) : null;
+			// the lid sits ~1.1 m over the boat's main deck (a wave crest that rises past it shows the sea
+			// on deck), but below a standing player's eyes (inside the volume the mask switches off)
+			const lid = mesh ? Math.min( 1.5, Math.max( 0.55, buildDeckMap( mesh.geometry, def.floorMin ?? 0.05, def.deckPlanes || null ).deckY + 1.1 ) ) : 0;
+			const vg = mesh ? ( this._hullVols || ( this._hullVols = new Map() ) ).get( id ) || hullVolumeFor( mesh.geometry, lid ) : null;
 			if ( vg ) this._hullVols.set( id, vg );
 			hm.mesh.geometry = vg || hm.lobster.geometry;
 			hm.box = vg ? vg.boundingBox.clone().expandByScalar( 0.05 ) : hm.lobster.box;

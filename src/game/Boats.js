@@ -72,7 +72,7 @@ export function loadBoatGeometry( id ) {
 
 				const y = pos[ i * 3 + 1 ];
 				// deckColor: surfaces facing up above the waterline are decks, not hull sides
-				const band = def.deckColor && y > 0.25 && y < ( def.deckMaxY ?? 1.6 ) && nrm[ i * 3 + 1 ] > 0.75 ? [ 0, def.deckColor ] : def.paint.find( ( b ) => y < b[ 0 ] ) || def.paint[ def.paint.length - 1 ];
+				const band = def.deckColor && y > ( def.deckMinY ?? 0.25 ) && y < ( def.deckMaxY ?? 1.6 ) && nrm[ i * 3 + 1 ] > 0.75 ? [ 0, def.deckColor ] : def.paint.find( ( b ) => y < b[ 0 ] ) || def.paint[ def.paint.length - 1 ];
 				col[ i * 3 ] = band[ 1 ][ 0 ]; col[ i * 3 + 1 ] = band[ 1 ][ 1 ]; col[ i * 3 + 2 ] = band[ 1 ][ 2 ];
 
 			}
@@ -81,6 +81,25 @@ export function loadBoatGeometry( id ) {
 		}
 
 		let index = new Uint32Array( I );
+		// 1.12.2: some triangles in the source models are wound against their own normals. The material is
+		// double-sided and shades a back face with its normal flipped, so such a face lit from above
+		// shades as if it faced down: a dark (sea-green) triangle on a sunny deck. Turn them round to
+		// agree with the authored normals.
+		for ( let t = 0; t < index.length; t += 3 ) {
+
+			const a = index[ t ], b = index[ t + 1 ], c = index[ t + 2 ];
+			const ux = pos[ b * 3 ] - pos[ a * 3 ], uy = pos[ b * 3 + 1 ] - pos[ a * 3 + 1 ], uz = pos[ b * 3 + 2 ] - pos[ a * 3 + 2 ];
+			const vx = pos[ c * 3 ] - pos[ a * 3 ], vy = pos[ c * 3 + 1 ] - pos[ a * 3 + 1 ], vz = pos[ c * 3 + 2 ] - pos[ a * 3 + 2 ];
+			const fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx;
+			const nx = nrm[ a * 3 ] + nrm[ b * 3 ] + nrm[ c * 3 ], ny = nrm[ a * 3 + 1 ] + nrm[ b * 3 + 1 ] + nrm[ c * 3 + 1 ], nz = nrm[ a * 3 + 2 ] + nrm[ b * 3 + 2 ] + nrm[ c * 3 + 2 ];
+			if ( fx * nx + fy * ny + fz * nz < 0 ) {
+
+				index[ t + 1 ] = c;
+				index[ t + 2 ] = b;
+
+			}
+
+		}
 		// cut boxes: drop the triangles inside (dark: only near-black ones), e.g. doors in the way
 		if ( def.cut && def.cut.length ) {
 
@@ -130,7 +149,8 @@ export function boatModelMaterial() {
 
 		_mat = createPropMaterial( 'boughtBoat' );
 		_mat.side = 'double'; // imported meshes are not always closed or consistently wound
-		_mat.underwaterLighting = 'lite';
+		// the hull below the waterline looks under water; its decks never do (they're inside the hull)
+		_mat.underwaterLighting = 'hull';
 
 	}
 
@@ -212,12 +232,31 @@ export function hullVolumeFor( geo, top = 0.55 ) {
 
 	// a hair inside the hull, so no sea is cut away beside it
 	for ( let k = 0; k <= S; k ++ ) half[ k ] = Math.max( 0, half[ k ] - 0.03 );
+	// 1.12.2: the lid follows the hull's sides down. Seen from outside, the volume must stay within the
+	// boat's own outline (anywhere it pokes out, the sea behind is cut away): each slice's lid stays under
+	// its hull side, at the 80th percentile of the side's vertex heights (rails and masts don't count).
+	const sideY = Array.from( { length: S + 1 }, () => [] );
+	for ( let i = 0; i < n; i ++ ) {
+
+		const y = P[ i * 3 + 1 ];
+		const k = Math.round( ( P[ i * 3 + 2 ] - z0 ) / dz );
+		if ( y > 0 && half[ k ] > 0.05 && Math.abs( P[ i * 3 ] ) > half[ k ] * 0.85 ) sideY[ k ].push( y );
+
+	}
+
+	const lid = sideY.map( ( a ) => {
+
+		if ( a.length < 6 ) return Math.min( top, 0.55 );
+		a.sort( ( p, q ) => p - q );
+		return Math.min( top, Math.max( 0.55, a[ Math.floor( a.length * 0.8 ) ] - 0.05 ) ); // never under the old 0.55 m
+
+	} );
 	// a ring of 4 vertices per slice (bottom-left, top-left, top-right, bottom-right), capped at the ends
 	const pos = [], idx = [];
 	for ( let k = 0; k <= S; k ++ ) {
 
-		const z = z0 + k * dz, w = Math.max( 0.02, half[ k ] ), b = Math.min( - 0.05, bottom[ k ] );
-		pos.push( - w, b, z, - w, top, z, w, top, z, w, b, z );
+		const z = z0 + k * dz, w = Math.max( 0.02, half[ k ] ), b = Math.min( - 0.05, bottom[ k ] ), t = lid[ k ];
+		pos.push( - w, b, z, - w, t, z, w, t, z, w, b, z );
 
 	}
 

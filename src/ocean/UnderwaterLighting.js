@@ -24,7 +24,9 @@ const MAP_EXTENTS = [ 128, 1024 ];
 //
 // Per material (material.underwaterLighting -> define UNDERWATER_LIGHTING): 'full' (2, default:
 // terrain, reef, rocks - caustics, waves, foam shading), 'lite' (1, water column attenuation only:
-// pier, boat hull, village) or 'none' (0, never under water: plants). The water itself (IS_WATER)
+// pier, boat hull, village), 'hull' (3, like 'lite' but surfaces facing up are never under water: a
+// boat's decks are inside its hull, where the sea is kept out, even when they sit below the mean sea
+// level as the boat heaves; Water Wars 1.12.2) or 'none' (0, never under water: plants). The water itself (IS_WATER)
 // is shaded by WaterMaterial and gets no modulation here.
 //
 // WGSL: installs `fn hookDirectModulation( P, N ) -> vec3f` and `fn hookAmbientModulation( P, N ) -> vec3f`
@@ -228,8 +230,13 @@ fn hookDirectModulation( P: vec3f, N: vec3f ) -> vec3f {
 	let gdy = lightDPdy.xz;
 #endif
 #if UNDERWATER_LIGHTING != 0
+#if UNDERWATER_LIGHTING == 3
+	let dryDeck = N.y > 0.6;
+#else
+	let dryDeck = false;
+#endif
 	// cheap reject: above anything the water reaches
-	if ( P.y < frame.seaLevel + uwReach() ) {
+	if ( ! dryDeck && P.y < frame.seaLevel + uwReach() ) {
 #if UNDERWATER_LIGHTING == 2
 		let lw = uwMapLookup( P.xz, true );
 		let lwHeight = lw.height;
@@ -278,7 +285,12 @@ fn hookAmbientModulation( P: vec3f, N: vec3f ) -> vec3f {
 	var result = vec3f( 1.0 );
 #if !IS_WATER
 #if UNDERWATER_LIGHTING != 0
-	if ( P.y < frame.seaLevel + uwReach() ) {
+#if UNDERWATER_LIGHTING == 3
+	let dryDeck = N.y > 0.6;
+#else
+	let dryDeck = false;
+#endif
+	if ( ! dryDeck && P.y < frame.seaLevel + uwReach() ) {
 		// the ambient term only needs the mean water level (no shore evaluation)
 		let d = max( uwMapLookup( P.xz, false ).mean - P.y, 0.0 );
 		let under = smoothstep( 0.0, 0.1, d );
@@ -307,6 +319,9 @@ fn hookShadowPosition( P: vec3f, N: vec3f, pixel: vec2f ) -> vec3f {
 	return P;
 #else
 	if ( P.y >= frame.seaLevel + uwReach() ) { return P; }
+#if UNDERWATER_LIGHTING == 3
+	if ( N.y > 0.6 ) { return P; }
+#endif
 #if UNDERWATER_LIGHTING == 2
 	let m = uwMapLookup( P.xz, true );
 	let h = m.height;

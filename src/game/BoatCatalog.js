@@ -71,7 +71,7 @@ export const BOATS = {
 		name: 'WaveCutter speedboat', price: 800000, model: 'wavecutter',
 		blurb: 'A sleek bowrider speedboat. The fastest thing on the water by a mile: outrun anything, reach the Deadwater first, be gone before the coast guard gets close.',
 		hullMul: 1.1, speedMul: 2.4, holdKg: 40, fuelMul: 1.5, rudderMul: 0.85,
-		up: 'y', fwd: '-z', length: 8.5, beam: 2.46, draft: 0.67,
+		up: 'y', fwd: '-z', length: 8.5, beam: 2.46, draft: 0.45, // 1.12.2: 0.22 m higher than its own water plane (more freeboard)
 		paint: [ [ 0.05, [ 0.015, 0.025, 0.06 ] ], [ 0.2, [ 0.5, 0.02, 0.02 ] ], [ 99, [ 0.85, 0.85, 0.83 ] ] ],
 		deckColor: [ 0.5, 0.51, 0.5 ], deckMaxY: 1.1, // light grey non-skid
 		gun: [ 0, 1.2, - 0.7 ], cannon: [ 0, 1.0, 3.5 ], hitHalf: [ 1.25, 1.1, 4.3 ],
@@ -85,6 +85,8 @@ export const BOATS = {
 		up: 'y', fwd: 'z', length: 13, beam: 4.6, draft: 1.7, floorMin: - 0.6, rudderMul: 1.5,
 		// the hull material is plain white in the source: antifouling, boot stripe, topsides, white house
 		paint: [ [ 0.1, [ 0.32, 0.035, 0.025 ] ], [ 0.32, [ 0.85, 0.84, 0.8 ] ], [ 2.0, [ 0.025, 0.07, 0.16 ] ], [ 99, [ 0.78, 0.78, 0.75 ] ] ],
+		// its working deck sits below the waterline: wooden decking, not the red antifouling of the bottom
+		deckColor: [ 0.3, 0.22, 0.14 ], deckMinY: - 0.55, deckMaxY: 2.5,
 		gun: [ 0, 4.5, 1.6 ], cannon: [ 0, 2.6, 5.4 ], hitHalf: [ 2.5, 2.6, 6.8 ],
 	},
 };
