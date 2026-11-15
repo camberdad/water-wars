@@ -669,6 +669,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		if ( this.vegetation ) this.vegetation.update( dt, this.camera );
 		if ( this.whale ) this.whale.update( dt, this.camera );
 		this.boat.update( dt );
+		if ( this.game && this.game.lateUpdate ) this.game.lateUpdate();
 		this.wildlife.update( dt, this.camera, this.freeCam ? null : this.player );
 		this.localLights.update( this.camera, dt );
 

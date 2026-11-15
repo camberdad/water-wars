@@ -13,8 +13,9 @@ import { dangerZoneAt } from './DangerZones.js';
 // stern rod's fish is on your rod for the usual fight. Miss it and the fish shakes the hook.
 
 export const BITE_WINDOW = 9; // seconds to grab a bent stern rod
-export const STERN_SLOW = 1.2; // stern rods bite this many times slower than a rod in your hands
+export const STERN_SLOW = 4.5; // stern rods bite this many times slower than a rod in your hands (1.8.3: was 1.2)
 const MAX_SPEED = 2.6; // m/s: faster than this and the stern lines come in
+const SET_SPEED = 2.0; // m/s: slower than this for SET_DELAY and they go back out (no flicker in between)
 const SET_DELAY = 2; // s slow before the lines go back out
 const LINE_LEN = 18; // m of line astern
 const ROD_LEN = 2.1;
@@ -165,7 +166,10 @@ export class SternRods {
 		const app = this.app, game = this.game, p = app.player, b = app.boatCtl;
 		const aboard = ( p.mode === 'boat' || p.mode === 'deck' ) && ! ( game.combat && game.combat.dead );
 		const speed = Math.hypot( b.velocity.x, b.velocity.z );
-		this.slowT = aboard && speed < MAX_SPEED ? this.slowT + dt : 0;
+		// out after SET_DELAY below SET_SPEED, in again only above MAX_SPEED (a drifting boat that hovers
+		// near one speed doesn't flick the lines in and out)
+		if ( ! aboard || speed > MAX_SPEED ) this.slowT = 0;
+		else if ( speed < SET_SPEED || this.out ) this.slowT += dt;
 		const out = this.slowT > SET_DELAY;
 		if ( out !== this.out ) {
 
@@ -180,37 +184,48 @@ export class SternRods {
 		}
 
 		this.place();
-		const boat = app.boat.group;
-		boat.updateWorldMatrix( true, true );
-		const back = _w.set( 0, 0, - 1 ).transformDirection( boat.matrixWorld ).setY( 0 ).normalize();
-		const right = _v.set( - back.z, 0, back.x );
-
 		for ( const h of this.holders ) {
 
-			// where the line meets the water astern, spread out to the sides
-			const tip = h.group.localToWorld( h.tipW || ( h.tipW = new Vector3() ).copy( _tip ) );
-			h.water.set( tip.x + back.x * LINE_LEN + right.x * h.side * 3.5, - 0.15, tip.z + back.z * LINE_LEN + right.z * h.side * 3.5 );
-
 			if ( out ) this.fish( h, dt );
-
 			// a bent rod nods hard; an idle one sways with the boat
 			h.nod += dt * ( h.bite ? 9 : 1.3 );
 			const bend = h.bite ? 0.28 + Math.sin( h.nod ) * 0.12 : Math.sin( h.nod ) * 0.02;
 			h.group.rotation.set( h.baseRx - bend, 0, h.baseRz );
 
-			// the line: a sagging curve from the tip to the water (taut when a fish is on)
+		}
+
+		this.layLines();
+
+		const ph = this.pending;
+		if ( ph && aboard && app.input.hit( 'KeyB' ) ) this.grab( ph );
+
+	}
+
+	// the lines from the rod tips to the water astern, from the boat's pose as it will be drawn this
+	// frame (App calls this again after the boat model has moved: Game.lateUpdate), so they stay on the
+	// rod tips instead of trailing a frame behind as the boat rolls and pitches
+	layLines() {
+
+		if ( ! this.count ) return;
+		const boat = this.app.boat.group;
+		boat.updateWorldMatrix( true, true );
+		const back = _w.set( 0, 0, - 1 ).transformDirection( boat.matrixWorld ).setY( 0 ).normalize();
+		const right = _v.set( - back.z, 0, back.x );
+		for ( const h of this.holders ) {
+
+			// (fresh from the rod-local tip every frame: transforming last frame's world point again sent the
+			// line's far end off to the horizon, the old "glitching line")
+			const tip = h.group.localToWorld( ( h.tipW || ( h.tipW = new Vector3() ) ).copy( _tip ) );
+			// where the line meets the water astern, spread out to the sides
+			h.water.set( tip.x + back.x * LINE_LEN + right.x * h.side * 3.5, - 0.15, tip.z + back.z * LINE_LEN + right.z * h.side * 3.5 );
 			const L = h.lineMat.uniforms;
-			h.group.localToWorld( tip.copy( _tip ) );
 			L.lineA.value.copy( tip );
 			L.lineB.value.copy( h.water );
 			L.lineCtl.value.copy( tip ).lerp( h.water, 0.5 ).y -= h.bite ? 0.1 : 1.2;
 			L.lineShow.value = 1;
-			h.line.visible = out;
+			h.line.visible = this.out;
 
 		}
-
-		const ph = this.pending;
-		if ( ph && aboard && app.input.hit( 'KeyB' ) ) this.grab( ph );
 
 	}
 

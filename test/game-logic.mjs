@@ -3,7 +3,7 @@ import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE,
 import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances, TIER_ODDS } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
-import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE } from '../src/game/Gear.js';
+import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn } from '../src/game/Gear.js';
 import { BOATS } from '../src/game/BoatCatalog.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
@@ -298,6 +298,14 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
 	const big = st.addFish( 'leviathan', 20000 );
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
+
+}
+// ---- Water Wars 1.8.3: fuel burns a little faster, in proportion to engine power
+{
+
+	ok( fuelBurn( 1 ) > 0.0265 * 1.15 && fuelBurn( 0.15 ) > 0.003, 'diesel burns about 20% faster than before' );
+	ok( Math.abs( fuelBurn( 1, 2 ) - 2 * fuelBurn( 1 ) ) < 1e-12, 'twice the engine power burns twice the fuel' );
+	ok( 40 / fuelBurn( 1 ) / 60 > 18 && 40 / fuelBurn( 1 ) / 60 < 23, 'the starting tank lasts about 20 minutes flat out' );
 
 }
 // ---- Water Wars 1.8.2: boats touch only where their hulls do

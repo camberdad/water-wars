@@ -175,10 +175,12 @@ export const CATEGORIES = [
 
 export const FUEL_PRICE = 20; // $ per litre of diesel (Water Wars 1.6: was $1.50)
 export const REPAIR_PRICE = 2; // $ per hull point
-// litres per second at the helm: idle plus a lot more at full rpm (40 L lasts ~25 min flat out)
-export function fuelBurn( rpm ) {
+// litres per second at the helm: idle plus a lot more at full rpm, times the engine's power (more
+// power burns more: engine upgrades and faster boats). Water Wars 1.8.3: ~20% thirstier; the starting
+// 40 L tank lasts ~20 min flat out
+export function fuelBurn( rpm, power = 1 ) {
 
-	return 0.0025 + 0.024 * rpm * rpm;
+	return ( 0.003 + 0.029 * rpm * rpm ) * power;
 
 }
 

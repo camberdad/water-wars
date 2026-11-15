@@ -90,6 +90,13 @@ export class Game {
 
 	}
 
+	// after the boat model has moved this frame (App): things drawn from the boat's final pose
+	lateUpdate() {
+
+		this.sternRods.layLines();
+
+	}
+
 	// a Space press waiting for a card or panel (true once)
 	takeSpace() {
 
@@ -109,6 +116,7 @@ export class Game {
 			// the hull's physics is tuned for a work boat: past about 2x power it capsizes at speed, so the
 			// combined engine x boat multiplier eases toward 2 (every upgrade still adds, never past the edge)
 			const sm = 1 + Math.tanh( g.speedMul - 1 ); // eases toward 2 (the stabiliser keeps it upright)
+			this._power = sm; // the engine's power (fuel burn follows it)
 			b.maxThrust = this._engineBase.maxThrust * sm * sm;
 			b.pitchSpeed = this._engineBase.pitchSpeed * sm;
 
@@ -383,7 +391,15 @@ export class Game {
 		const app = this.app, b = app.boatCtl, p = app.player, s = this.state;
 		if ( b.driven ) {
 
-			const left = s.burn( fuelBurn( b.rpm ) * dt );
+			const left = s.burn( fuelBurn( b.rpm, this._power || 1 ) * dt );
+			// saved as you go (a reload or the update return mid-trip doesn't give the fuel back)
+			this._fuelSaveT = ( this._fuelSaveT || 0 ) + dt;
+			if ( this._fuelSaveT > 4 ) {
+
+				this._fuelSaveT = 0;
+				s.save();
+
+			}
 			if ( left <= 0 ) {
 
 				b.throttle = 0;
