@@ -828,8 +828,10 @@ export class Player {
 			this.orbitYaw -= look.x * 0.003;
 			this.orbitPitch = THREE.MathUtils.clamp( this.orbitPitch + look.y * 0.003, - 0.05, 1.2 );
 			this.orbitDist = THREE.MathUtils.clamp( this.orbitDist * ( 1 + wheel * 0.08 ), 6, 40 );
-			// gently swing behind the boat when moving (not while aiming the guns: Water Wars)
-			if ( b.speed > 2 && Math.abs( look.x ) < 0.5 && ! this.holdOrbit ) {
+			// gently swing behind the boat, only while the throttle is applied (W / S held; Water Wars 1.13.1:
+			// it used to whenever the boat moved, so coasting or drifting pulled the view away from where you
+			// put it), and not while aiming the guns
+			if ( throttle !== 0 && Math.abs( look.x ) < 0.5 && ! this.holdOrbit ) {
 
 				const behind = b.getYaw() + Math.PI;
 				let d = behind - this.orbitYaw;
