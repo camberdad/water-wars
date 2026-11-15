@@ -4,8 +4,8 @@
 //   - on the loading screen or the home screen ("Click to set sail"), a new release installs itself:
 //     an "Updating Water Wars" card fills its bar, says "Update complete", and reloads into the new
 //     version (?v= makes the browser fetch the page afresh instead of the cached copy)
-//   - while playing, a notice says an update is ready: return to the home screen to install it. Its
-//     button saves your progress and installs it right away
+//   - while playing, a notice: "There has been a new update published. Finish what you are doing and click
+//     here to return to the main menu." Clicking it saves your progress and installs the update
 // Checks run at start-up, every 30 seconds and whenever the tab comes back into view.
 //
 //   await reloadIfStale( VERSION )   start-up: true while the page is being replaced
@@ -61,6 +61,7 @@ const CSS = /* css */`
 	color: #fff; font: bold 14px Arial, sans-serif; vertical-align: -3px; }
 .ww-update.is-pending { top: 14px; transform: translateX(-50%); width: auto; max-width: calc(100vw - 36px); padding: 10px 12px 10px 16px; border-radius: 10px;
 	display: flex; align-items: center; gap: 12px; text-align: left; }
+.ww-update-link { color: #6fd6c6; font-weight: 700; text-decoration: underline; }
 .ww-update.is-pending button { flex: none; font: 600 13px Inter, system-ui, sans-serif; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer;
 	background: #6fd6c6; color: #08221e; }
 `;
@@ -137,9 +138,16 @@ function showPending( version, onGoHome ) {
 	n.id = 'ww-update';
 	n.className = 'ww-update is-pending';
 	n.setAttribute( 'role', 'status' );
-	n.innerHTML = `<span>A game update (v${ version }) is ready. Please return to the home screen to install it automatically.</span>
-		<button type="button">Return to home screen</button>`;
-	n.querySelector( 'button' ).onclick = onGoHome;
+	n.innerHTML = `<span>There has been a new update published (v${ version }). Finish what you are doing and <a href="#" class="ww-update-link">click here</a> to return to the main menu.</span>
+		<button type="button">Return to main menu</button>`;
+	// the button, the link, or anywhere on the notice
+	n.style.cursor = 'pointer';
+	n.onclick = ( e ) => {
+
+		e.preventDefault();
+		onGoHome();
+
+	};
 	// clicks on the notice don't reach the game
 	for ( const ev of [ 'mousedown', 'pointerdown', 'click', 'wheel' ] ) n.addEventListener( ev, ( e ) => e.stopPropagation() );
 	document.body.append( n );
