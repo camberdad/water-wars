@@ -7,6 +7,7 @@ import { CombatSFX } from './CombatSFX.js';
 import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPCBoats.js';
 import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
+import { hullOutline, placeOutline, hullContact } from './HullContact.js';
 import { BOATS } from '../BoatCatalog.js';
 import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
@@ -495,14 +496,28 @@ export class Combat {
 	collideBoats( dt ) {
 
 		const bc = this.app.boatCtl;
+		// the hull outlines (yours follows the boat in use; theirs are all the lobster-boat hull)
+		const def = BOATS[ this._skinId ] || BOATS.lobster;
+		const w = def.beam ? def.beam / 2 : BOAT_HALF.x, l = def.length ? def.length / 2 : BOAT_HALF.z;
+		if ( ! this._myShape || this._myShapeKey !== this._skinId ) {
+
+			this._myShape = hullOutline( w, l );
+			this._myShapeKey = this._skinId;
+			this._npcShape = this._npcShape || hullOutline( BOAT_HALF.x, BOAT_HALF.z );
+
+		}
+
+		const mine = placeOutline( this._myShape, bc.position.x, bc.position.z, bc.getYaw(), this._myPoly || ( this._myPoly = [] ) );
+		const reach = Math.hypot( w, l ) + Math.hypot( BOAT_HALF.x, BOAT_HALF.z );
 		for ( const b of this.fleet.boats ) {
 
 			if ( ! b.active || b.state === 'sinking' ) continue;
 			const dx = bc.position.x - b.pos.x, dz = bc.position.z - b.pos.z;
-			const d = Math.hypot( dx, dz );
-			const R = this.hitHalf.z + 3.05;
-			if ( d > R || d < 1e-3 ) continue;
-			const nx = dx / d, nz = dz / d, over = R - d;
+			if ( dx * dx + dz * dz > reach * reach ) continue; // too far apart to touch
+			// only where the hulls really meet
+			const hit = hullContact( mine, placeOutline( this._npcShape, b.pos.x, b.pos.z, b.yaw, this._npcPoly || ( this._npcPoly = [] ) ) );
+			if ( ! hit ) continue;
+			const nx = hit.nx, nz = hit.nz, over = hit.depth;
 			bc.position.x += nx * over * 0.5; bc.position.z += nz * over * 0.5;
 			b.pos.x -= nx * over * 0.5; b.pos.z -= nz * over * 0.5;
 			const rel = ( bc.velocity.x - b.vel.x ) * nx + ( bc.velocity.z - b.vel.z ) * nz;
@@ -513,7 +528,7 @@ export class Combat {
 
 					this._ramT = this.time + 0.8;
 					const dmg = ( - rel - 2 ) * 6;
-					const at = _a.set( b.pos.x + nx * 3, 1.2, b.pos.z + nz * 3 );
+					const at = _a.set( bc.position.x - nx * w, 1.2, bc.position.z - nz * w );
 					this.fx.hit( at, _w.set( nx, 0, nz ), 0.8 );
 					this.sfx.shot( at, 'hit', 1.2 );
 					b.damage( dmg, true, this._ctx );

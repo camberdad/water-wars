@@ -6,6 +6,7 @@ import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE } from '../src/game/Gear.js';
 import { BOATS } from '../src/game/BoatCatalog.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
+import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
 
 let fails = 0;
@@ -297,6 +298,19 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
 	const big = st.addFish( 'leviathan', 20000 );
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
+
+}
+// ---- Water Wars 1.8.2: boats touch only where their hulls do
+{
+
+	const hull = hullOutline( 1.55, 4.15 ); // the lobster boat: 3.1 m beam, 8.3 m long
+	const at = ( x, z, yaw ) => placeOutline( hull, x, z, yaw, [] );
+	ok( hullContact( at( 0, 0, 0 ), at( 3.6, 0, 0 ) ) === null, 'side by side half a metre apart: no contact' );
+	const side = hullContact( at( 0, 0, 0 ), at( 2.9, 0, 0 ) );
+	ok( side && side.nx < - 0.95 && side.depth > 0.1 && side.depth <= 0.2 + 1e-6, 'overlapping beams touch, pushed apart sideways by the overlap' );
+	ok( hullContact( at( 0, 0, 0 ), at( 0, 8.5, Math.PI ) ) === null && hullContact( at( 0, 0, 0 ), at( 0, 8.1, Math.PI ) ) !== null, 'bow to bow: contact only when the stems meet' );
+	ok( hullContact( at( 0, 0, 0 ), at( 3.0, 7.9, 0 ) ) === null, 'a boat off the bow quarter, inside the old box, but clear of the tapered bow' );
+	ok( hullContact( at( 0, 0, 0 ), at( 6.5, 0, 0 ) ) === null, 'what the old 7 m circle called a collision is open water' );
 
 }
 // ---- Water Wars 1.8: stern rod holders
