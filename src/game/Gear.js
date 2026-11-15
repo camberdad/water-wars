@@ -46,6 +46,14 @@ export const UPGRADES = {
 		{ cost: 60000, label: 'Custom trolling lures', luck: 1.6 },
 		{ cost: 150000, label: 'Legendary lure spread', luck: 2 },
 	] },
+	// rod holders on the stern (Water Wars 1.8): extra rods that fish astern while the boat is stopped;
+	// press B when one bends over to take the fish onto your rod (src/game/SternRods.js)
+	rodHolders: { cat: 'fishing', name: 'Stern rod holders', levels: [
+		{ cost: 0, label: 'None', sternRods: 0 },
+		{ cost: 8000, label: 'Stern rod holder', sternRods: 1 },
+		{ cost: 35000, label: 'Twin stern rod holders', sternRods: 2 },
+		{ cost: 90000, label: 'Three-rod trolling spread', sternRods: 3 },
+	] },
 	// chum in the water: fish bite sooner
 	chum: { cat: 'fishing', name: 'Chum', levels: [
 		{ cost: 0, label: 'None', biteMul: 1 },

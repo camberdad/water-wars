@@ -92,6 +92,7 @@ const CARDS = [
 			${ row( k( 'RMB' ), 'Fire the <b>bow cannon</b> (buy one at Marta or the harbour; unlimited shells)' ) }
 			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash and fish' ) }
 			${ row( k( 'Q' ), '<b>Harpoon</b> a giant fish when one surfaces, then tow it into a harbour to sell' ) }
+			${ row( k( 'B' ), '<b>Grab a stern rod</b> when one bends over (the stern rod holder upgrade: extra rods fish astern while the boat is stopped)' ) }
 			${ row( k( 'K' ), '<b>High scores</b>: the live board of every captain, ranked by lifetime earnings' ) }
 			${ row( k( 'U' ), '<b>Harbour services</b> by the pier or at the eight sea stations and outposts: repairs, upgrades, boats, sell your catch. All are <b>safe zones</b>' ) }
 		</div>

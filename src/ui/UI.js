@@ -2155,6 +2155,8 @@ export class UI {
 						${ row( k( 'RMB' ), 'Reel in an empty line' ) }
 						${ row( k( 'I' ), 'Cooler and fish log' ) }
 						${ row( k( 'K' ), 'High scores (live board)' ) }
+						${ row( k( 'B' ), 'Grab a bent stern rod' ) }
+						${ row( k( 'Space' ), 'Pass a catch card · close a panel' ) }
 					</section>
 					<section>
 						<h3>Combat (at the helm)</h3>
@@ -2378,6 +2380,15 @@ export class UI {
 
 			if ( this._menu ) this._closeMenu( true );
 			else if ( this._help ) this.toggleHelp( false );
+			return;
+
+		}
+
+		// Space closes the controls sheet too (Water Wars)
+		if ( e.code === 'Space' && this._help ) {
+
+			e.preventDefault();
+			this.toggleHelp( false );
 			return;
 
 		}

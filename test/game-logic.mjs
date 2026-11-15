@@ -299,6 +299,20 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
 
 }
+// ---- Water Wars 1.8: stern rod holders
+{
+
+	const t = UPGRADES.rodHolders;
+	ok( t && t.cat === 'fishing' && t.levels.length === 4 && t.levels.every( ( l, i ) => l.sternRods === i ), 'the rod holder track: none, then 1, 2 and 3 stern rods' );
+	ok( gearStats( defaultUpgrades() ).sternRods === 0 && gearStats( { ...defaultUpgrades(), rodHolders: 2 } ).sternRods === 2, 'stern rods come from the upgrade' );
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	st.money = 5000;
+	ok( st.buy( 'rodHolders' ) === null, 'the rod holder costs real money' );
+	st.money = t.levels[ 1 ].cost;
+	ok( st.buy( 'rodHolders' ) && st.stats.sternRods === 1 && st.money === 0, 'buying the holder gives a stern rod' );
+
+}
 // ---- Water Wars 1.7: lifetime earnings and the shared high-score board (a fake jsonbin)
 {
 

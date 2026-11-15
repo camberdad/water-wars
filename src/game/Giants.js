@@ -658,7 +658,7 @@ export class Giants {
 
 	}
 
-	// the landed giant's catch card: click, E, Esc or 12 s close it (the rod's own cards are handled in
+	// the landed giant's catch card: click, E, Space, Esc or 12 s close it (the rod's own cards are handled in
 	// Game.update; this one is ours)
 	updateCard( dt ) {
 
@@ -676,7 +676,8 @@ export class Giants {
 		const down = inp.mouseDown;
 		const click = down && ! c.mouse;
 		c.mouse = down;
-		if ( t > 0.4 && ( click || inp.hit( 'KeyE' ) || inp.hit( 'Escape' ) ) || t > 12 ) {
+		const space = this.game.takeSpace();
+		if ( t > 0.4 && ( click || space || inp.hit( 'KeyE' ) || inp.hit( 'Escape' ) ) || t > 12 ) {
 
 			hud.hideCatch();
 			this.card = null;

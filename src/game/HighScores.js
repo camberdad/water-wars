@@ -450,7 +450,7 @@ export class HighScores {
 	_onKey( e ) {
 
 		if ( ! this.isOpen ) return;
-		if ( e.code === 'Escape' || e.code === 'KeyK' ) {
+		if ( e.code === 'Escape' || e.code === 'KeyK' || e.code === 'Space' ) {
 
 			e.preventDefault();
 			this.close();
@@ -585,7 +585,7 @@ export class HighScores {
 		el.className = 'ww-hs';
 		el.hidden = true;
 		el.innerHTML = `<div class="ww-hs-panel" role="dialog" aria-label="High scores">
-			<div class="ww-hs-head"><span class="ww-hs-title">🏆 HIGH SCORES</span><span class="ww-hs-status">Live</span><button type="button" class="ww-hs-close">Close (Esc)</button></div>
+			<div class="ww-hs-head"><span class="ww-hs-title">🏆 HIGH SCORES</span><span class="ww-hs-status">Live</span><button type="button" class="ww-hs-close">Close (Esc / Space)</button></div>
 			<div class="ww-hs-body"></div>
 			<div class="ww-hs-foot">Press K in game to open this board.</div>
 		</div>`;

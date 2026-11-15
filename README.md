@@ -43,6 +43,11 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   legendary is about 1 bite in 75 in the harbour, 1 in 55 in the Coastal Waters, 1 in 30 in the Open Sea and
   1 in 22 in the Deadwater, where about half of all bites are rare or better. Deep water helps too. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
   hold are strapped on deck.
+- **Stern rods.** The **stern rod holder** upgrade (fishing tab: 1, 2 or 3 extra rods, $8,000 / $35,000 /
+  $90,000) puts rods in holders on the back of the boat. While you are aboard and the boat is stopped or
+  barely moving, their lines are out astern and fish for you, a little slower than a rod in your hands. When
+  one bends over you have 9 seconds to press **`B`**: you step away from the helm, your own line comes in and
+  the stern rod's fish is on your rod for the usual fight.
 - **Giant fish.** Whale-sized fish (Leviathan grouper, Titan bluefin, Giant oarfish, Colossal tarpon, 23–52 ft)
   surface out in deep water now and then; the minimap marks them in pink. Fit a **harpoon** (Weapons tab), aim
   at a surfaced giant from the helm and press **`Q`** to spear it from the stern. It is tethered to your boat
@@ -106,6 +111,8 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | U | Harbour services (by the pier or at a sea station) |
 | V | Boat camera, 1st / 3rd person |
 | R | Fishing rod |
+| B | Grab a bent stern rod (rod holder upgrade) |
+| Space | Also passes the catch cards and closes the cooler, shop and help panels |
 | I / Tab | Cooler and fish log |
 | K | High scores (the live board) |
 | F1 | All controls and the guide |

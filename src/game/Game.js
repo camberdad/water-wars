@@ -16,6 +16,7 @@ import { Combat } from './combat/Combat.js';
 import { Giants } from './Giants.js';
 import { Multiplayer } from './Multiplayer.js';
 import { HighScores } from './HighScores.js';
+import { SternRods } from './SternRods.js';
 import { dangerZoneAt } from './DangerZones.js';
 import * as U from './Units.js';
 
@@ -69,6 +70,32 @@ export class Game {
 		this.multiplayer = new Multiplayer( this );
 		// the shared high-score board (jsonbin.io): K, or the start screen button
 		this.highScores = new HighScores( this );
+		// extra rods in holders on the stern (the rod holder upgrade): B grabs a bent one
+		this.sternRods = new SternRods( this );
+		// Space passes the catch cards and closes the cooler and shop panels (as E / Esc / a click do).
+		// Caught here, before the player sees it, so the same press doesn't also jump.
+		this._space = false;
+		if ( typeof window !== 'undefined' ) window.addEventListener( 'keydown', ( e ) => {
+
+			if ( e.code !== 'Space' || ! this.hud ) return;
+			const t = e.target;
+			if ( t && ( t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable ) ) return;
+			const h = this.hud;
+			if ( ! ( h.catchOpen || h.invOpen || h.standOpen ) ) return;
+			e.preventDefault();
+			e.stopPropagation();
+			if ( ! e.repeat ) this._space = true;
+
+		}, true );
+
+	}
+
+	// a Space press waiting for a card or panel (true once)
+	takeSpace() {
+
+		const s = this._space;
+		this._space = false;
+		return s;
 
 	}
 
@@ -172,6 +199,9 @@ export class Game {
 
 		}
 
+		// the stern rods first: grabbing one may take you from the helm to the deck with a fish on
+		this.sternRods.update( dt );
+
 		const can = this.canFish;
 		if ( inp.hit( 'KeyR' ) && can && ! this.fight ) {
 
@@ -251,7 +281,7 @@ export class Game {
 					// a slow turn so both flanks show
 					L.cardT += dt;
 					yaw += Math.sin( L.cardT * 0.7 ) * 0.55;
-					if ( lDown || inp.hit( 'KeyE' ) || inp.hit( 'Escape' ) || L.cardT > CATCH_CARD_MS / 1000 ) {
+					if ( lDown || inp.hit( 'KeyE' ) || inp.hit( 'Escape' ) || this.takeSpace() || L.cardT > CATCH_CARD_MS / 1000 ) {
 
 						this._cardDismissed = true; // this frame's E / click belong to the card
 						this.endLanding();
@@ -288,6 +318,7 @@ export class Game {
 
 		// prompts when the player has nothing to say
 		if ( ! p.prompt && can ) p.prompt = this.prompt();
+		this.sternRods.prompt();
 
 		const aboard = p.mode === 'boat' || p.mode === 'deck';
 		// the catch card's live fish portrait (or one queued thumbnail)
@@ -303,6 +334,14 @@ export class Game {
 		} );
 		if ( this.minimap ) this.minimap.update( dt );
 		if ( this.guide ) this.guide.update( dt );
+
+		// Space with no card up: close the cooler / shop panel
+		if ( this.hud && ! this.hud.catchOpen && this.takeSpace() ) {
+
+			this.hud.toggleInventory( false );
+			this.hud.closeStand();
+
+		}
 
 	}
 
