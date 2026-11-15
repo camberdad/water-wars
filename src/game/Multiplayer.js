@@ -339,8 +339,7 @@ export class Multiplayer {
 
 		} catch ( e ) { /* ignore */ }
 
-		const lonely = ! n && performance.now() - ( this.joinedAt || 0 ) > 45000;
-		this.setStatus( `🌐 Online · ${ this.name } · ${ n ? `${ n } other player${ n > 1 ? 's' : '' }` : 'waiting for players' } · relays ${ relays }/${ total }${ relays === 0 ? ' · offline: your network blocks the relays' : lonely ? ' · no one found yet: friends must click Multiplayer on v1.6.1+' : '' }` );
+		this.setStatus( `🌐 Online · ${ this.name } · ${ n ? `${ n } other player${ n > 1 ? 's' : '' }` : 'waiting for players' } · relays ${ relays }/${ total }${ relays === 0 ? ' · offline: your network blocks the relays' : '' }` );
 
 	}
 
