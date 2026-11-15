@@ -303,6 +303,19 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
 
 }
+// ---- Water Wars 1.12.1: a bought boat's water mask follows its real waterline
+{
+
+	const { BoxGeometry } = await import( '../src/engine/index.js' );
+	const { hullVolumeFor } = await import( '../src/game/Boats.js' );
+	const hull = new BoxGeometry( 2, 2, 6 ); // a 2 m wide, 6 m long box hull, half under the water
+	const vol = hullVolumeFor( hull );
+	const p = vol.attributes.position.array;
+	let w = 0;
+	for ( let i = 0; i < p.length; i += 3 ) w = Math.max( w, Math.abs( p[ i ] ) );
+	ok( w > 0.9 && w < 1.0, 'the water mask sits just inside the hull at the waterline (' + w.toFixed( 2 ) + ' m of 1 m)' );
+
+}
 // ---- Water Wars 1.12: eight more fish, six of them cheap commons; the odds lean common
 {
 

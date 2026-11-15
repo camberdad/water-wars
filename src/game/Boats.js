@@ -159,27 +159,59 @@ export { Group, Vector3, Matrix4, Quaternion };
 // bottom of the hull up to a lid `top` m above the water (above the waves, below a standing eye).
 export function hullVolumeFor( geo, top = 0.55 ) {
 
-	const P = geo.attributes.position.array, n = P.length / 3;
+	const P = geo.attributes.position.array, n = P.length / 3, I = geo.index.array;
 	geo.computeBoundingBox();
 	const z0 = geo.boundingBox.min.z, z1 = geo.boundingBox.max.z;
-	const S = 28, dz = ( z1 - z0 ) / S;
-	const xs = Array.from( { length: S + 1 }, () => [] ), bottom = new Array( S + 1 ).fill( 0 );
+	const S = Math.max( 28, Math.ceil( ( z1 - z0 ) / 0.2 ) ), dz = ( z1 - z0 ) / S;
+	const bottom = new Array( S + 1 ).fill( 0 );
 	for ( let i = 0; i < n; i ++ ) {
 
 		const y = P[ i * 3 + 1 ];
 		const k = Math.round( ( P[ i * 3 + 2 ] - z0 ) / dz );
 		if ( y < bottom[ k ] ) bottom[ k ] = y;
-		if ( y > - 0.45 && y < 0.35 ) xs[ k ].push( Math.abs( P[ i * 3 ] ) );
 
 	}
 
-	const half = xs.map( ( a ) => {
+	// Water Wars 1.12.1: the hull's exact waterline. Every triangle crossing the water level (y = 0) gives a
+	// segment of it; each segment is laid into the slices it spans and the widest |x| at each slice's centre
+	// is the hull's half-width there. (The old estimate from vertices near the waterline came out up to
+	// 0.75 m wider than the hull, more on some boats: the mask then cut the sea away beside the hull.)
+	const half = new Array( S + 1 ).fill( 0 );
+	const cross = ( a, b, out ) => {
 
-		if ( a.length < 4 ) return 0;
-		a.sort( ( p, q ) => p - q );
-		return a[ Math.floor( a.length * 0.92 ) ];
+		const ya = P[ a * 3 + 1 ], yb = P[ b * 3 + 1 ];
+		if ( ( ya > 0 ) === ( yb > 0 ) ) return false;
+		const s = ya / ( ya - yb );
+		out[ 0 ] = Math.abs( P[ a * 3 ] + ( P[ b * 3 ] - P[ a * 3 ] ) * s );
+		out[ 1 ] = P[ a * 3 + 2 ] + ( P[ b * 3 + 2 ] - P[ a * 3 + 2 ] ) * s;
+		return true;
 
-	} );
+	};
+
+	const A = [ 0, 0 ], Bp = [ 0, 0 ], C = [ 0, 0 ];
+	for ( let t = 0; t < I.length; t += 3 ) {
+
+		const a = I[ t ], b = I[ t + 1 ], c = I[ t + 2 ];
+		const pts = [];
+		if ( cross( a, b, A ) ) pts.push( [ A[ 0 ], A[ 1 ] ] );
+		if ( cross( b, c, Bp ) ) pts.push( [ Bp[ 0 ], Bp[ 1 ] ] );
+		if ( cross( c, a, C ) ) pts.push( [ C[ 0 ], C[ 1 ] ] );
+		if ( pts.length < 2 ) continue;
+		let [ [ xa, za ], [ xb, zb ] ] = pts;
+		if ( za > zb ) [ xa, za, xb, zb ] = [ xb, zb, xa, za ];
+		const k0 = Math.max( 0, Math.ceil( ( za - z0 ) / dz ) ), k1 = Math.min( S, Math.floor( ( zb - z0 ) / dz ) );
+		for ( let k = k0; k <= k1; k ++ ) {
+
+			const zc = z0 + k * dz;
+			const x = zb - za > 1e-6 ? xa + ( xb - xa ) * ( zc - za ) / ( zb - za ) : Math.max( xa, xb );
+			if ( x > half[ k ] ) half[ k ] = x;
+
+		}
+
+	}
+
+	// a hair inside the hull, so no sea is cut away beside it
+	for ( let k = 0; k <= S; k ++ ) half[ k ] = Math.max( 0, half[ k ] - 0.03 );
 	// a ring of 4 vertices per slice (bottom-left, top-left, top-right, bottom-right), capped at the ends
 	const pos = [], idx = [];
 	for ( let k = 0; k <= S; k ++ ) {
