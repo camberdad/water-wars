@@ -42,6 +42,12 @@ const BOATS = {
 	// name prefix (the workboat's parts are all '(null)' material but named for what they are). Linear
 	// rgb + roughness; the old boat's hull is left pure white and painted by height in the game.
 	oldboat: { file: 'Old_boat_Mesh.obj', colors: { Ship_Mat: [ 1, 1, 1, 0.7 ], Windows_Mat: [ 0.03, 0.05, 0.07, 0.08 ], Rope_mat: [ 0.45, 0.33, 0.18, 0.9 ] } },
+	// Water Wars 1.10: the WaveCutter speedboat (no .mtl either; its scene has a 150 m water plane, skipped).
+	// The hull ('Brushed__Dark_Metal') is left white and painted by height in the game.
+	wavecutter: { file: 'BoatModelWaveCutter.obj', skip: [ 'Plane' ], colors: {
+		Brushed__Dark_Metal: [ 1, 1, 1, 0.3 ], Glass: [ 0.03, 0.05, 0.07, 0.05 ], Fabric: [ 0.72, 0.68, 0.6, 0.8 ],
+		Wood: [ 0.3, 0.18, 0.09, 0.7 ], Metal_Semirough_01: [ 0.6, 0.6, 0.62, 0.25 ], 'Metal_scratched.001': [ 0.45, 0.45, 0.47, 0.4 ], None: [ 0.02, 0.02, 0.02, 0.6 ],
+	} },
 	workboat: { file: 'boat (2).obj', objectColors: [
 		[ 'hull_fiberglass', [ 0.8, 0.8, 0.78, 0.4 ] ],
 		[ 'border_painted_metal', [ 0.03, 0.12, 0.3, 0.45 ] ],
@@ -121,7 +127,7 @@ function load( id, cfg ) {
 
 }
 
-function bake( group, colorOf ) {
+function bake( group, colorOf, skip = [] ) {
 
 	group.updateMatrixWorld( true );
 	const parts = [];
@@ -129,6 +135,8 @@ function bake( group, colorOf ) {
 	group.traverse( ( o ) => {
 
 		if ( ! o.isMesh || o.isLineSegments || o.isPoints || ! o.geometry || ! o.geometry.attributes.position ) return;
+		// objects that aren't the boat (a water plane in the source scene, ...)
+		if ( skip.some( ( s ) => o.name === s || o.name.startsWith( s + '_' ) ) ) return;
 		let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
 		g.applyMatrix4( o.matrixWorld );
 		// a mirrored transform flips the winding
@@ -239,7 +247,7 @@ for ( const [ id, cfg ] of Object.entries( BOATS ) ) {
 		return c ? { rgb: c.slice( 0, 3 ), rough: c[ 3 ] } : base( m );
 
 	};
-	const { geo, materials } = bake( group, colorOf );
+	const { geo, materials } = bake( group, colorOf, cfg.skip || [] );
 	write( id, geo, materials );
 
 }

@@ -1,0 +1,25 @@
+{
+	"vertexCount": 34977,
+	"indexCount": 155346,
+	"bbox": {
+		"min": [
+			-0.700875997543335,
+			-0.4227139949798584,
+			-2.3087120056152344
+		],
+		"max": [
+			0.6262680292129517,
+			0.6281620264053345,
+			2.2881031036376953
+		]
+	},
+	"materials": [
+		"Brushed__Dark_Metal",
+		"Glass",
+		"Metal_scratched.001",
+		"Wood",
+		"Fabric",
+		"Metal_Semirough_01",
+		"None"
+	]
+}

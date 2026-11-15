@@ -8,12 +8,14 @@ import { dangerZoneAt } from './DangerZones.js';
 
 // Stern rods (Water Wars 1.8): the rod holder upgrade puts 1-3 extra rods in holders on the back of the
 // boat. Whenever you are aboard and the boat is nearly stopped (drifting or crawling) their lines are
-// out astern and fish for you, at a slower pace than a rod in your hands. When one bends over, press B
+// out astern and fish for you, at a slower pace than a rod in your hands, and (1.10) only out in the Open
+// Sea and the Deadwater (danger tiers 2 and 3). When one bends over, press B
 // within BITE_WINDOW seconds: you leave the helm if you are at it, your own line comes in, and the
 // stern rod's fish is on your rod for the usual fight. Miss it and the fish shakes the hook.
 
 export const BITE_WINDOW = 9; // seconds to grab a bent stern rod
-export const STERN_SLOW = 4.5; // stern rods bite this many times slower than a rod in your hands (1.8.3: was 1.2)
+export const STERN_SLOW = 7; // stern rods bite this many times slower than a rod in your hands (1.8.3: 4.5, 1.10: 7)
+export const STERN_MIN_TIER = 2; // they only get bites out in the Open Sea and the Deadwater (1.10)
 const MAX_SPEED = 2.6; // m/s: faster than this and the stern lines come in
 const SET_SPEED = 2.0; // m/s: slower than this for SET_DELAY and they go back out (no flicker in between)
 const SET_DELAY = 2; // s slow before the lines go back out
@@ -248,6 +250,21 @@ export class SternRods {
 				game.toast( `The fish on stern rod ${ h.i + 1 } shook the hook`, 2000 );
 				h.bite = null;
 				h.wait = this.newWait();
+
+			}
+
+			return;
+
+		}
+
+		// only out in the Open Sea and the Deadwater (danger tiers 2 and 3): close in, nothing takes them
+		const here = dangerZoneAt( h.water.x, h.water.z );
+		if ( ! here || here.tier < STERN_MIN_TIER ) {
+
+			if ( ! this._closeTold ) {
+
+				this._closeTold = true;
+				game.toast( 'Stern lines are out · they only get bites in the Open Sea (tier 2) and the Deadwater (tier 3)', 3600 );
 
 			}
 

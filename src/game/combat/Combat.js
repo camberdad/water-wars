@@ -199,6 +199,9 @@ export class Combat {
 		// walk on the model's own deck (see Boats.buildDeckMap), at its real height
 		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry, def.floorMin ?? 0.05, def.deckPlanes || null ) : null;
 		app.player.deckLift = 0;
+		// taking the helm: at the boat's own wheel (when known), or around the middle of a bought boat
+		app.player.helmAt = mesh && def.helm ? { x: def.helm[ 0 ], z: def.helm[ 1 ] } : null;
+		app.player.helmMidR = mesh ? Math.min( 1.6, ( def.beam || 3 ) * 0.3 ) : 0;
 		// the camera stands back to suit the boat's size; bigger boats get a more responsive rudder
 		app.player.orbitDist = mesh ? Math.max( app.player.orbitDist, 13 * ( def.length || 8.2 ) / 8.2 ) : app.player.orbitDist;
 		if ( this._rudderBase === undefined ) this._rudderBase = app.boatCtl.rudderLift;

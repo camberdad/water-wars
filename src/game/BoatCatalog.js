@@ -10,6 +10,7 @@
 //   draft: how deep the keel sits below the waterline (bigger = lower in the water)
 //   deckPlanes: [ [ x0, z0, x1, z1, y ] ] extra walkable floor, e.g. over a grating deck
 //   floorMin: the lowest walkable deck (m from the waterline) when the deck sits below it
+//   helm: [ x, z ] where you stand to take the wheel (else the walkable spot nearest the lobster boat's)
 //   fixedMounts: gun / cannon heights are used as given (not found on the model)
 //   stern: [ x, y, z ] the harpoon mount (and the stern rod holders); found on the model when absent
 //   cut: boxes { min, max, dark } in the boat frame: triangles inside one are removed (dark: only
@@ -32,6 +33,7 @@ export const BOATS = {
 		gun: [ 0, 1.62, - 0.9 ], cannon: [ 0, 1.62, 3.7 ], fixedMounts: true, hitHalf: [ 1.7, 1.6, 4.7 ],
 		// the open well between the engine box and the foredeck is a steel grating: walk on it
 		deckPlanes: [ [ - 1.25, - 0.3, 1.25, 2.7, 0.12 ], [ - 1.25, - 3.1, 1.25, - 2.1, 0.17 ] ],
+		helm: [ 0, - 2.5 ],
 	},
 	trawler: {
 		name: 'Harbour trawler', price: 60000, model: 'trawler',
@@ -61,6 +63,19 @@ export const BOATS = {
 		stern: [ 0, 1.3, - 6.0 ],
 		// the two doors in the back of the cabin
 		cut: [ { min: [ - 1.3, 0.45, - 3.62 ], max: [ 1.3, 2.5, - 3.46 ], dark: true } ],
+	},
+	// Water Wars 1.10: the WaveCutter, a sleek bowrider speedboat and the fastest thing on the water (bow on
+	// -z in the source, which is 4.6 units long and floats at its own water plane, y -0.06). The hull is
+	// left white in the source and painted by height: a navy bottom, a red racing stripe, white topsides
+	wavecutter: {
+		name: 'WaveCutter speedboat', price: 800000, model: 'wavecutter',
+		blurb: 'A sleek bowrider speedboat. The fastest thing on the water by a mile: outrun anything, reach the Deadwater first, be gone before the coast guard gets close.',
+		hullMul: 1.1, speedMul: 2.4, holdKg: 40, fuelMul: 1.5, rudderMul: 0.85,
+		up: 'y', fwd: '-z', length: 8.5, beam: 2.46, draft: 0.67,
+		paint: [ [ 0.05, [ 0.015, 0.025, 0.06 ] ], [ 0.2, [ 0.5, 0.02, 0.02 ] ], [ 99, [ 0.85, 0.85, 0.83 ] ] ],
+		deckColor: [ 0.5, 0.51, 0.5 ], deckMaxY: 1.1, // light grey non-skid
+		gun: [ 0, 1.2, - 0.7 ], cannon: [ 0, 1.0, 3.5 ], hitHalf: [ 1.25, 1.1, 4.3 ],
+		helm: [ - 0.45, 0.1 ], // behind the wheel (starboard of the windshield)
 	},
 	ship: {
 		name: 'Deep-sea fishing ship', price: 400000, model: 'ship',

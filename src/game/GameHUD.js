@@ -475,7 +475,7 @@ function describe( key, lv ) {
 		case 'reel': return `${ lv.reelSpeed }× retrieve`;
 		case 'rod': return `casts ${ U.ft( lv.castM ) }`;
 		case 'bait': return lv.luck > 1 ? `rare fish ×${ lv.luck.toFixed( 2 ).replace( /0$/, '' ) }` : 'no bonus';
-		case 'rodHolders': return lv.sternRods ? `${ lv.sternRods } extra rod${ lv.sternRods > 1 ? 's' : '' } fishing astern (B to grab a bite)` : 'no stern rods';
+		case 'rodHolders': return lv.sternRods ? `${ lv.sternRods } extra rod${ lv.sternRods > 1 ? 's' : '' } fishing astern in tiers 2-3 (B to grab a bite)` : 'no stern rods';
 		case 'chum': return lv.biteMul < 1 ? `bites ${ Math.round( ( 1 / lv.biteMul - 1 ) * 100 ) }% sooner` : 'no chum';
 		case 'targeting': return lv.aimMul < 1 ? `${ Math.round( ( 1 - lv.aimMul ) * 100 ) }% tighter spread` : 'no aid';
 		case 'harpoon': return lv.harpoon ? `${ U.ft( lv.harpRange ) } · tires a giant ${ lv.harpPower }× as fast` : 'no harpoon';

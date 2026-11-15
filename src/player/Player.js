@@ -24,7 +24,7 @@ const _wish = new THREE.Vector3();
 // walking on the boat
 const DECK_RADIUS = 0.24;
 const DECK_STEP = 0.36; // highest ledge you step up onto
-const HELM_REACH = 0.75; // m from the helm seat to take the wheel
+const HELM_REACH = 1.5; // m from the helm seat to take the wheel (Water Wars 1.10: was 0.75)
 
 // First-person walker / swimmer / boat captain.
 //   walk : capsule on terrain + walkable colliders, wading slows you down
@@ -452,6 +452,14 @@ export class Player {
 		b.throttle = 0;
 		this.mode = 'deck';
 		this.deckPos.set( HOUSE_HELM.x + 0.45, b.model.lines.deckY, HOUSE_HELM.z - 0.1 );
+		// a bought boat: beside its own wheel, on its own deck
+		if ( this.deckMap ) {
+
+			const h = this.helmAt || HOUSE_HELM;
+			const s = this.deckMap.nearest( h.x + 0.5, h.z );
+			if ( s ) this.deckPos.set( s.x, s.y, s.z );
+
+		}
 		this.deckVel.set( 0, 0, 0 );
 		this.deckYaw = this.helmYaw;
 		this.pitch = this.helmPitch;
@@ -707,9 +715,11 @@ export class Player {
 
 		// prompts: take the helm, or step ashore
 		// (a bought boat: the helm is the walkable spot nearest the lobster boat's helm seat)
-		const helmSpot = DM ? ( DM.helm || ( DM.helm = DM.nearest( HOUSE_HELM.x, HOUSE_HELM.z ) ) ) : HOUSE_HELM;
+		// (Water Wars 1.10: easier: within reach of the wheel (the boat's own helm spot when the catalogue
+		// gives one), or anywhere around the middle of the boat)
+		const helmSpot = this.helmAt || ( DM ? ( DM.helm || ( DM.helm = DM.nearest( HOUSE_HELM.x, HOUSE_HELM.z ) ) ) : HOUSE_HELM );
 		const hx = helmSpot.x, hz = helmSpot.z;
-		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < ( DM ? 1.1 : HELM_REACH ) && ! this.busy;
+		const nearHelm = ( Math.hypot( p.x - hx, p.z - hz ) < ( DM ? 1.6 : HELM_REACH ) || Math.hypot( p.x, p.z ) < ( this.helmMidR || 0 ) ) && ! this.busy;
 		this._ashoreT -= dt;
 		if ( this._ashoreT <= 0 ) {
 
