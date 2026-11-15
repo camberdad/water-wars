@@ -476,6 +476,7 @@ function describe( key, lv ) {
 		case 'bait': return lv.luck > 1 ? `rare fish ×${ lv.luck.toFixed( 2 ).replace( /0$/, '' ) }` : 'no bonus';
 		case 'chum': return lv.biteMul < 1 ? `bites ${ Math.round( ( 1 / lv.biteMul - 1 ) * 100 ) }% sooner` : 'no chum';
 		case 'targeting': return lv.aimMul < 1 ? `${ Math.round( ( 1 - lv.aimMul ) * 100 ) }% tighter spread` : 'no aid';
+		case 'harpoon': return lv.harpoon ? `${ lv.harpRange } m · tires a giant ${ lv.harpPower }× as fast` : 'no harpoon';
 		case 'salvage': return lv.lootMul > 1 ? `+${ Math.round( ( lv.lootMul - 1 ) * 100 ) }% plunder` : 'no bonus';
 		default: return '';
 

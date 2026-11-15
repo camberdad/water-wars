@@ -13,6 +13,7 @@ import { GameHUD } from './GameHUD.js';
 import { Minimap } from './Minimap.js';
 import { Guide } from './Guide.js';
 import { Combat } from './combat/Combat.js';
+import { Giants } from './Giants.js';
 import { dangerZoneAt } from './DangerZones.js';
 
 // how long the catch card stays up unless dismissed (ms)
@@ -59,6 +60,8 @@ export class Game {
 		this.state.onChange( () => this.applyGear() );
 		// Water Wars: the other boats, guns, plunder and the wanted level
 		this.combat = new Combat( this );
+		// giant fish out at sea, harpooned from the stern and towed into a harbour
+		this.giants = new Giants( this );
 
 	}
 
@@ -267,6 +270,7 @@ export class Game {
 
 		this.updateBoat( dt );
 		this.combat.update( dt );
+		this.giants.update( dt );
 
 		// the traders
 		for ( const v of this.vendors ) v.update( dt, p.mode === 'walk' ? p.position : null );

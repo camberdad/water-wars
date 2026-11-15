@@ -24,6 +24,8 @@ export const TIERS = {
 	rare: { name: 'Rare', chance: 0.22, color: '#5cb8ff', min: 7500, max: 36000 },
 	epic: { name: 'Epic', chance: 0.10, color: '#c38bff', min: 36000, max: 180000 },
 	legendary: { name: 'Legendary', chance: 0.02, color: '#ffc845', min: 180000, max: 240000 },
+	// whale-sized fish that surface out at sea: never on a rod, only with a harpoon (src/game/Giants.js)
+	giant: { name: 'Giant', chance: 0, color: '#ff7ae0', min: 250000, max: 520000 },
 };
 export const TIER_IDS = Object.keys( TIERS );
 
@@ -76,6 +78,12 @@ export const FISH = {
 	// ---- legendary ($60,000 - $80,000)
 	tilefish: { name: 'Golden tilefish', sci: 'Lopholatilus chamaeleonticeps', lw: [ 0.0085, 3.1 ], model: 'redSnapper', habitat: { deep: 1 }, kg: [ 5, 25 ], tier: 'legendary', value: [ 180000, 210000 ], fight: 0.7, stamina: 18, time: 'any', rarity: 1 },
 	bluefin: { name: 'Atlantic bluefin tuna', sci: 'Thunnus thynnus', lw: [ 0.0177, 3.0 ], model: 'tuna', habitat: { deep: 1 }, kg: [ 60, 180 ], tier: 'legendary', value: [ 192000, 240000 ], fight: 1, stamina: 34, time: 'dawnDusk', rarity: 0.9 },
+	// ---- giants: harpooned from the stern and towed into a harbour ($250,000 - $520,000). Length-weight
+	// relations from the species' adults, carried up to whale size; giantL = their length range (m)
+	leviathan: { name: 'Leviathan grouper', sci: 'Epinephelus itajara (giant)', lw: [ 0.0139, 3.04 ], model: 'grouper', habitat: {}, kg: [ 13300, 32000 ], giantL: [ 9, 12 ], tier: 'giant', value: [ 260000, 420000 ], fight: 1, stamina: 30, time: 'any', rarity: 1 },
+	titanTuna: { name: 'Titan bluefin', sci: 'Thunnus thynnus (giant)', lw: [ 0.0177, 3.0 ], model: 'tuna', habitat: {}, kg: [ 9060, 17700 ], giantL: [ 8, 10 ], tier: 'giant', value: [ 300000, 480000 ], fight: 1, stamina: 34, time: 'any', rarity: 1 },
+	oarfish: { name: 'Giant oarfish', sci: 'Regalecus glesne', lw: [ 0.00053, 3.0 ], model: 'needlefish', habitat: {}, kg: [ 705, 2170 ], giantL: [ 11, 16 ], tier: 'giant', value: [ 320000, 520000 ], fight: 1, stamina: 26, time: 'any', rarity: 1 },
+	colossalTarpon: { name: 'Colossal tarpon', sci: 'Megalops atlanticus (giant)', lw: [ 0.0077, 3.02 ], model: 'tarpon', habitat: {}, kg: [ 3000, 6400 ], giantL: [ 7, 9 ], tier: 'giant', value: [ 250000, 400000 ], fight: 1, stamina: 28, time: 'any', rarity: 1 },
 	marlin: { name: 'Blue marlin', sci: 'Makaira nigricans', lw: [ 0.0012, 3.24 ], model: 'needlefish', habitat: { deep: 1 }, kg: [ 60, 200 ], tier: 'legendary', value: [ 198000, 240000 ], fight: 1, stamina: 36, time: 'day', rarity: 0.8 },
 };
 

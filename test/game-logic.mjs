@@ -136,11 +136,12 @@ ok( s2.addFish( 'grunt', 0.5 ).id > b.id, 'ids keep counting after a load' );
 
 		const f = FISH[ id ];
 		const lo = fishLengthCm( id, f.kg[ 0 ] ), hi = fishLengthCm( id, f.kg[ 1 ] );
-		if ( ! ( lo > 5 && hi < 450 && hi > lo && typeof f.sci === 'string' ) ) sane = false;
+		const maxCm = f.tier === 'giant' ? 1700 : 450;
+		if ( ! ( lo > 5 && hi < maxCm && hi > lo && typeof f.sci === 'string' ) ) sane = false;
 
 	}
 
-	ok( sane, 'every species has a scientific name and a plausible, increasing length (5–450 cm)' );
+	ok( sane, 'every species has a scientific name and a plausible, increasing length (5–450 cm, giants to 17 m)' );
 	ok( Math.abs( fishLengthCm( 'mahi', 10 ) - 108 ) < 3 && Math.abs( fishLengthCm( 'grunt', 0.84 ) - 36 ) < 2, 'length-weight: a 10 kg mahi ~108 cm, a 0.84 kg grunt ~36 cm' );
 	const m = new Map();
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
@@ -261,6 +262,28 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( lucky.legendary > base.legendary * 1.6 && lucky.rare > base.rare && lucky.common < base.common, 'better bait brings rarer fish' );
 	const g = gearStats( { ...defaultUpgrades(), bait: 4, chum: 3, targeting: 3, salvage: 3 } );
 	ok( g.luck === 2 && g.biteMul === 0.5 && g.aimMul === 0.3 && g.lootMul === 2, 'the new tracks feed the stats' );
+
+}
+// ---- Water Wars 1.5: giant fish
+{
+
+	const giants = FISH_IDS.filter( ( id ) => FISH[ id ].tier === 'giant' );
+	ok( giants.length >= 4 && giants.every( ( id ) => FISH[ id ].value[ 0 ] >= 250000 && FISH[ id ].giantL ), 'four or more giant species worth $250,000+' );
+	ok( giants.every( ( id ) => Math.abs( fishLengthCm( id, FISH[ id ].kg[ 1 ] ) / 100 - FISH[ id ].giantL[ 1 ] ) < 0.3 ), 'giant weights match their lengths' );
+	let rodGiant = 0;
+	for ( const spot of Object.values( spots ) ) for ( let i = 0; i < 3000; i ++ ) {
+
+		const id = pickSpecies( habitatAt( spot ), 12, rng, { danger: true, luck: 2 } );
+		if ( id && FISH[ id ].tier === 'giant' ) rodGiant ++;
+
+	}
+
+	ok( rodGiant === 0, 'giants never bite on a rod' );
+	ok( UPGRADES.harpoon && UPGRADES.harpoon.levels.length >= 3 && ! gearStats( defaultUpgrades() ).harpoon && gearStats( { ...defaultUpgrades(), harpoon: 2 } ).harpRange > 50, 'the harpoon is an upgrade' );
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	const big = st.addFish( 'leviathan', 20000 );
+	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 250000, 'a landed giant sells like any other fish' );
 
 }
 console.log( `value check ${ value }` );

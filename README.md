@@ -31,6 +31,11 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   Bigger fish of a species are worth more. Deep water and the danger waters bring epic and legendary fish up
   more often. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
   hold are strapped on deck.
+- **Giant fish.** Whale-sized fish (Leviathan grouper, Titan bluefin, Giant oarfish, Colossal tarpon, 7–16 m)
+  surface out in deep water now and then; the minimap marks them in pink. Fit a **harpoon** (Weapons tab), aim
+  at a surfaced giant from the helm and press **`Q`** to spear it from the stern. It is tethered to your boat
+  and fights, dragging you, until it tires; then tow it into a harbour (the pier or a sea station), where it is
+  landed and sold like any other fish, for $250,000 to $520,000. Hold `Q` to cut it loose.
 - **Turn pirate.** Take the helm (`E` at the wheel). **Left mouse** fires the deck gun at the crosshair (it
   overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one. Ammo is
   unlimited. Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash and fish. Ramming
@@ -75,6 +80,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | Left mouse | At the helm: fire the deck gun · on foot/deck: cast, strike, reel |
 | Right mouse | At the helm: fire the bow cannon · on foot/deck: reel in |
 | G | Loot a wreck alongside |
+| Q | At the helm: fire the harpoon at a giant fish · hold to cut the tether |
 | U | Harbour services (by the pier or at a sea station) |
 | V | Boat camera, 1st / 3rd person |
 | R | Fishing rod |
@@ -101,6 +107,7 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/BoatCatalog.js`, `Boats.js` | The boats you can buy (stats, model fitting) and their loader |
 | `src/game/DangerZones.js` | The danger waters, their buoys and rewards |
 | `src/game/Harbours.js` | Safe zones and the four sea stations |
+| `src/game/Giants.js` | Giant fish: surfacing, the stern harpoon, the tether, towing and landing |
 | `src/game/FishTable.js`, `Bites.js` | The 40 species, rarity tiers, values and bite odds |
 | `src/version.js` | The version shown on the start screen |
 | `tools/boats/convert.mjs` | Converts the boat models (OBJ/FBX) into `public/models/boats/` (`node tools/boats/convert.mjs`) |

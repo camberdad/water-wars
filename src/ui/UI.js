@@ -2160,6 +2160,7 @@ export class UI {
 						${ row( k( 'LMB' ), 'Deck gun<small>Hold to fire, watch the heat</small>' ) }
 						${ row( k( 'RMB' ), 'Bow cannon<small>Lobs a shell at the crosshair, unlimited ammo</small>' ) }
 						${ row( k( 'G' ), 'Loot a wreck alongside' ) }
+						${ row( k( 'Q' ), 'Harpoon a giant fish<small>Hold Q to cut the tether</small>' ) }
 						${ row( k( 'U' ), 'Harbour services<small>Pier or sea station: repair, upgrades, boats</small>' ) }
 						${ row( k( 'F' ), 'Free camera' ) }
 						${ row( k( 'T' ), 'Pause time' ) }

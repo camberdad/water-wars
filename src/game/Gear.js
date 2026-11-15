@@ -139,6 +139,14 @@ export const UPGRADES = {
 		{ cost: 20000, label: 'Heavy naval gun', cannon: true, canDmg: 200, canRate: 0.8, canRange: 380, canSplash: 11 },
 		{ cost: 80000, label: 'Rail cannon', cannon: true, canDmg: 320, canRate: 0.9, canRange: 450, canSplash: 14 },
 	] },
+	// a harpoon gun on the stern (Q at the helm): for the giant fish that surface out at sea. Hit one
+	// and it is tethered to the boat: let it tire, then tow it into a harbour to sell
+	harpoon: { cat: 'weapons', name: 'Harpoon', levels: [
+		{ cost: 0, label: 'None', harpoon: false, harpRange: 0, harpPower: 0 },
+		{ cost: 15000, label: 'Hand harpoon', harpoon: true, harpRange: 45, harpPower: 1 },
+		{ cost: 60000, label: 'Harpoon gun', harpoon: true, harpRange: 75, harpPower: 1.7 },
+		{ cost: 180000, label: 'Explosive harpoon', harpoon: true, harpRange: 110, harpPower: 3 },
+	] },
 	// the cannon never runs out of shells once it is fitted: this track speeds up the reload
 	// (key kept as 'locker' so old saves keep their level)
 	locker: { cat: 'weapons', name: 'Cannon loader', levels: [

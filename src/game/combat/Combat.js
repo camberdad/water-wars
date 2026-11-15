@@ -71,7 +71,8 @@ export class Combat {
 		const L = app.boat.lines;
 		this.foredeckY = L.sheerY( L.tAtSheerZ( 3.0 ) ) + 0.05;
 		// the boat in use: the lobster boat or a bought model (look, gun mounts, hit box)
-		this.mounts = { gun: new Vector3( 0, roofTopY( 0 ) - 0.02, - 0.4 ), cannon: new Vector3( 0, this.foredeckY, 3.0 ) };
+		this.mounts = { gun: new Vector3( 0, roofTopY( 0 ) - 0.02, - 0.4 ), cannon: new Vector3( 0, this.foredeckY, 3.0 ), stern: new Vector3( 0, L.sheerY( 0 ) + 0.05, L.zAft + 0.45 ) };
+		this._sternLobster = this.mounts.stern.clone();
 		this.hitHalf = BOAT_HALF.clone();
 		this.skinMesh = null;
 		this._skinId = 'lobster';
@@ -148,6 +149,7 @@ export class Combat {
 		for ( const m of Object.values( boat.meshes ) ) m.visible = ! mesh;
 		this.mounts.gun.set( 0, roofTopY( 0 ) - 0.02, - 0.4 );
 		this.mounts.cannon.set( 0, this.foredeckY, 3.0 );
+		this.mounts.stern.copy( this._sternLobster );
 		this.hitHalf.copy( BOAT_HALF );
 		if ( mesh ) {
 
@@ -161,11 +163,16 @@ export class Combat {
 
 			}
 			if ( def.hitHalf ) this.hitHalf.fromArray( def.hitHalf );
+			// the harpoon sits on the stern: the deck just inside the transom
+			const sz = - ( def.length || 8 ) / 2 + 1.1;
+			const sy = surfaceY( mesh.geometry, 0, sz );
+			this.mounts.stern.set( 0, ( sy ?? 1.2 ) + 0.02, sz );
 
 		}
 
 		if ( this.gun ) this.gun.root.position.copy( this.mounts.gun );
 		if ( this.cannon ) this.cannon.root.position.copy( this.mounts.cannon );
+		if ( this.game.giants ) this.game.giants.placeMount();
 		app.player.forceThird = !! mesh;
 		// walk on the model's own deck (see Boats.buildDeckMap), at its real height
 		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry ) : null;

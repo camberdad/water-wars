@@ -370,10 +370,13 @@ export { iceGeometry, leafGeometry, lobsterGeometry };
 
 export class FishProps {
 
-	constructor() {
+	// drawRange / shadowRange (m): Water Wars' giant fish are seen and cast shadows from much farther
+	constructor( { drawRange = DRAW_RANGE, shadowRange = SHADOW_RANGE } = {} ) {
 
 		this.items = [];
 		this.mesh = null;
+		this.drawRange = drawRange;
+		this.shadowRange = shadowRange;
 
 	}
 
@@ -518,15 +521,15 @@ export class FishProps {
 			const dx = P[ i * 4 ] - c.x, dy = P[ i * 4 + 1 ] - c.y, dz = P[ i * 4 + 2 ] - c.z;
 			const L = P[ i * 4 + 3 ];
 			const d = Math.sqrt( dx * dx + dy * dy + dz * dz );
-			if ( d > DRAW_RANGE ) continue;
+			if ( d > this.drawRange ) continue;
 			const k = this.kind0[ i ];
-			if ( d < SHADOW_RANGE ) batch.add( k + 2, i );
+			if ( d < this.shadowRange ) batch.add( k + 2, i );
 			_sphere.center.set( P[ i * 4 ], P[ i * 4 + 1 ], P[ i * 4 + 2 ] );
 			_sphere.radius = L * 0.8;
 			if ( ! _frustum.intersectsSphere( _sphere ) ) continue;
 			// level of detail by distance, cross-faded over a band; faded out near the draw range
-			const s = L * 28, far = DRAW_RANGE * 0.9;
-			if ( d > far ) batch.addFade( k + ( d < s ? 0 : 1 ), i, 1 - bandFade( d, far, DRAW_RANGE ), false );
+			const s = L * 28, far = this.drawRange * 0.9;
+			if ( d > far ) batch.addFade( k + ( d < s ? 0 : 1 ), i, 1 - bandFade( d, far, this.drawRange ), false );
 			else if ( d > s * 0.88 && d < s ) {
 
 				const f = bandFade( d, s * 0.88, s );
