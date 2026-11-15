@@ -48,7 +48,7 @@ export const BOATS = {
 		name: 'Old fishing launch', price: 95000, model: 'oldboat',
 		blurb: 'A weathered old fishing launch with tyre fenders and a cavernous hold. Slow and thirsty, but she carries a mountain of fish and takes a beating.',
 		hullMul: 1.9, speedMul: 0.95, holdKg: 320, fuelMul: 2.0,
-		up: 'y', fwd: 'z', length: 14.4, beam: 5.7, draft: 0.9, rudderMul: 1.4,
+		up: 'y', fwd: 'z', length: 14.4, beam: 5.7, draft: 0.75, rudderMul: 1.4, // 1.12.4: 0.15 m higher out of the water
 		paint: [ [ 0.1, [ 0.3, 0.05, 0.03 ] ], [ 0.3, [ 0.75, 0.73, 0.68 ] ], [ 1.15, [ 0.03, 0.09, 0.06 ] ], [ 99, [ 0.62, 0.58, 0.48 ] ] ],
 		deckColor: [ 0.26, 0.17, 0.09 ], // weathered wooden decks
 		gun: [ 0, 4.0, - 2.0 ], cannon: [ 0, 2.2, 5.0 ], hitHalf: [ 2.85, 2.5, 7.2 ],
