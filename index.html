@@ -3,6 +3,10 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<!-- always revalidate the page itself (the scripts and assets are content-hashed); the game also checks
+	     version.json and reloads into a new release by itself (src/core/UpdateCheck.js) -->
+	<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
 	<title>Water Wars</title>
 	<link rel="preload" as="image" href="ui/keyart-720.jpg" imagesrcset="ui/keyart-720.jpg 1280w, ui/keyart.jpg 2560w" imagesizes="100vw" />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />

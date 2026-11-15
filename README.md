@@ -81,6 +81,13 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | I / Tab | Cooler and fish log |
 | F1 | All controls and the guide |
 
+## Live updates
+
+The game keeps itself up to date. Every build publishes `version.json`; the game checks it at start-up, every
+30 seconds and when you come back to the tab. On the loading or home screen a new release installs itself (an
+"Updating Water Wars" card, then a reload into the new version); while you play, a notice asks you to return
+to the home screen, with a button that saves your progress and installs it. The version is in `package.json`.
+
 ## What's new on top of Tidewater
 
 | File | What it does |

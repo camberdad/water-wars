@@ -2,6 +2,12 @@ import './core/BenchSeed.js';
 import { App } from './App.js';
 import { UI } from './ui/UI.js';
 import { AppUI } from './ui/AppUI.js';
+import { VERSION } from './version.js';
+import { reloadIfStale, startUpdateWatch } from './core/UpdateCheck.js';
+
+// live updates: an old cached copy of the page reloads itself into the newest release before loading
+// (not for the ?bench automation)
+if ( ! /[?&]bench\b/.test( location.search ) && await reloadIfStale( VERSION ) ) await new Promise( () => {} );
 
 // ?bench runs in background tabs too (automation): rAF does not fire in a hidden page
 if ( /[?&]bench\b/.test( location.search ) ) {
@@ -32,7 +38,14 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 		if ( app.qs.has( 'wdbg' ) && app.waterMaterial ) app.waterMaterial.debugMode.value = Number( app.qs.get( 'wdbg' ) );
 		if ( app.qs.has( 'shots' ) ) window.__job = window.__bench.shots( app.qs.get( 'shots' ).split( ',' ), { tag: app.qs.get( 'tag' ) || 'shot', dt: Number( app.qs.get( 'dt' ) ) || 0, seq: Number( app.qs.get( 'seq' ) ) || 1, every: Number( app.qs.get( 'every' ) ) || 1 } );
 
-	} else app.start();
+	} else {
+
+		app.start();
+		// while playing: check for a new release now and then, and offer to return to the home screen
+		// (the home screen is the "Click to set sail" overlay: an update installs itself there)
+		startUpdateWatch( VERSION, { isHomeScreen: () => !! ui._start, onBeforeReload: () => app.game && app.game.state.save() } );
+
+	}
 	ui.showStartOverlay( () => {
 
 		app.input.requestLock();
