@@ -46,12 +46,22 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 		startUpdateWatch( VERSION, { isHomeScreen: () => !! ui._start, onBeforeReload: () => app.game && app.game.state.save() } );
 
 	}
+	// the start screen's High Scores button opens the shared board (src/game/HighScores.js)
+	const hsBtn = ui.startEl && ui.startEl.querySelector( '.tw-start-hs-btn' );
+	if ( hsBtn ) hsBtn.addEventListener( 'click', ( e ) => {
+
+		e.stopPropagation();
+		if ( app.game && app.game.highScores ) app.game.highScores.open();
+
+	} );
 	ui.showStartOverlay( () => {
 
 		app.input.requestLock();
 		if ( app.audio ) app.audio.resume();
 		// "Multiplayer": join the open sea with everyone else online (src/game/Multiplayer.js)
 		if ( ui.startMode === 'multi' && app.game && app.game.multiplayer ) app.game.multiplayer.start( ui.startName );
+		// the high-score board: from now on this captain's time at sea counts and their row syncs
+		if ( app.game && app.game.highScores ) app.game.highScores.start( ui.startName );
 
 	} );
 

@@ -15,6 +15,7 @@ import { Guide } from './Guide.js';
 import { Combat } from './combat/Combat.js';
 import { Giants } from './Giants.js';
 import { Multiplayer } from './Multiplayer.js';
+import { HighScores } from './HighScores.js';
 import { dangerZoneAt } from './DangerZones.js';
 import * as U from './Units.js';
 
@@ -66,6 +67,8 @@ export class Game {
 		this.giants = new Giants( this );
 		// open-world multiplayer (joined from the start screen)
 		this.multiplayer = new Multiplayer( this );
+		// the shared high-score board (jsonbin.io): K, or the start screen button
+		this.highScores = new HighScores( this );
 
 	}
 
@@ -187,6 +190,7 @@ export class Game {
 		}
 
 		if ( this.hud && ( inp.hit( 'KeyI' ) || inp.hit( 'Tab' ) ) ) this.hud.toggleInventory();
+		if ( inp.hit( 'KeyK' ) ) this.highScores.open();
 		if ( this.hud && inp.hit( 'Escape' ) ) {
 
 			this.hud.toggleInventory( false );
@@ -276,6 +280,7 @@ export class Game {
 		this.combat.update( dt );
 		this.giants.update( dt );
 		this.multiplayer.update( dt );
+		this.highScores.update( dt );
 
 		// the traders
 		for ( const v of this.vendors ) v.update( dt, p.mode === 'walk' ? p.position : null );
@@ -465,7 +470,7 @@ export class Game {
 
 			const h = this.habitat();
 			// the danger waters tilt the odds toward epic and legendary fish
-			const species = pickSpecies( h, this.hour, Math.random, { danger: !! dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ), luck: this.state.stats.luck || 1 } );
+			const species = pickSpecies( h, this.hour, Math.random, { danger: ( dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ) || { fishMul: 1 } ).fishMul, luck: this.state.stats.luck || 1 } );
 			if ( ! species ) {
 
 				b.t = 8;

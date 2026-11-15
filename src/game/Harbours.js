@@ -15,6 +15,11 @@ export const STATIONS = [
 	{ id: 'east', name: 'Eastwind Station', x: 500, z: 30 },
 	{ id: 'southwest', name: 'Southreach Barge', x: - 200, z: 430 },
 	{ id: 'southeast', name: 'Coral Light Rig', x: 220, z: 430 },
+	// out in the Open Sea and the Deadwater: safe havens to refuel and repair far from home
+	{ id: 'midway', name: 'Midway Station', x: 40, z: 1050 },
+	{ id: 'south', name: 'Southern Cross Outpost', x: 40, z: 1780 },
+	{ id: 'far-east', name: 'Eastmost Outpost', x: 1360, z: 920 },
+	{ id: 'far-west', name: 'Westmost Outpost', x: - 1260, z: 960 },
 ];
 
 export const STATION_RADIUS = 80; // the safe water around a station

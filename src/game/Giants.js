@@ -3,6 +3,7 @@ import { standard } from '../materials/Materials.js';
 import { FishProps } from '../world/fish/FishProps.js';
 import { FISH, FISH_IDS, fishValue, fishLengthCm } from './FishTable.js';
 import { safeZoneAt } from './Harbours.js';
+import { dangerZoneAt, DANGER_TIERS, randomInZone, harbourDistance, WORLD_RADIUS } from './DangerZones.js';
 import { compassWord } from './Guide.js';
 import { buildCannon } from './combat/WeaponModels.js';
 import * as U from './Units.js';
@@ -313,7 +314,8 @@ export class Giants {
 		if ( this.spawnT > 0 ) return;
 		this.spawnT = rand( 30, 70 );
 		const active = this.giants.filter( ( g ) => g.active ).length;
-		if ( active >= MAX_GIANTS ) return;
+		const deep = dangerZoneAt( ref.x, ref.z );
+		if ( active >= ( deep && deep.tier === 3 ? MAX_GIANTS + 1 : MAX_GIANTS ) ) return;
 		const idle = this.giants.filter( ( g ) => ! g.active );
 		if ( ! idle.length ) return;
 		const g = idle[ Math.floor( Math.random() * idle.length ) ];
@@ -322,15 +324,26 @@ export class Giants {
 
 	}
 
-	// deep open water 220-520 m from the player, outside the safe zones
+	// deep open water 220-520 m from the player, outside the safe zones; giants live out in the Open Sea
+	// and the Deadwater (danger tiers 2 and 3), more of them in the Deadwater
 	openWater( ref ) {
 
 		const T = this.app.terrainData;
+		const here = dangerZoneAt( ref.x, ref.z );
+		if ( ! here || here.tier < 2 ) {
+
+			// the player is close in: one may surface out in the open sea (seen from afar)
+			return Math.random() < 0.35 ? randomInZone( DANGER_TIERS[ 1 ], T, ref, 20 ) : null;
+
+		}
+
 		for ( let i = 0; i < 50; i ++ ) {
 
 			const a = Math.random() * Math.PI * 2, r = rand( 220, 520 );
 			const x = ref.x + Math.cos( a ) * r, z = ref.z + Math.sin( a ) * r;
-			if ( Math.hypot( x, z - 150 ) > 780 ) continue;
+			if ( harbourDistance( x, z ) > WORLD_RADIUS - 80 ) continue;
+			const t = dangerZoneAt( x, z );
+			if ( ! t || t.tier < 2 ) continue;
 			if ( - T.heightAt( x, z ) < 14 ) continue;
 			if ( safeZoneAt( x, z ) ) continue;
 			return new Vector3( x, 0, z );

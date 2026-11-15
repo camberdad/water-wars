@@ -92,9 +92,10 @@ const CARDS = [
 			${ row( k( 'RMB' ), 'Fire the <b>bow cannon</b> (buy one at Marta or the harbour; unlimited shells)' ) }
 			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash and fish' ) }
 			${ row( k( 'Q' ), '<b>Harpoon</b> a giant fish when one surfaces, then tow it into a harbour to sell' ) }
-			${ row( k( 'U' ), '<b>Harbour services</b> by the pier or at the four sea stations: repairs, upgrades, boats, sell your catch. All are <b>safe zones</b>' ) }
+			${ row( k( 'K' ), '<b>High scores</b>: the live board of every captain, ranked by lifetime earnings' ) }
+			${ row( k( 'U' ), '<b>Harbour services</b> by the pier or at the eight sea stations and outposts: repairs, upgrades, boats, sell your catch. All are <b>safe zones</b>' ) }
 		</div>
-		<p style="margin:var(--tw-2) 0 0;color:var(--tw-ink-3);font-size:var(--tw-fs-sm)"><b style="color:#ff7a6a">Danger Waters</b> (red on the map, ringed by red buoys) are pirate country: they attack on sight there, but fish fetch more and pirates carry more plunder. Elsewhere pirates leave you alone unless you shoot first. Save up for a whole new boat in the <b>Boats</b> tab. Attacking fishing boats and traders makes you <b>wanted</b>. From two stars the <b>coast guard</b> hunts you. Lie low, or pay your fines at the harbour. Sinking pirates is legal and pays a bounty.</p>`,
+		<p style="margin:var(--tw-2) 0 0;color:var(--tw-ink-3);font-size:var(--tw-fs-sm)">The sea has <b>three danger tiers</b>, rings around the harbour marked on the map and by buoys: <b style="color:#e8d24a">1 Coastal Waters</b> (a few weak pirates, they only attack up close), <b style="color:#ff9a3a">2 Open Sea</b> past the amber buoys (tougher pirates, rarer fish, giants surface) and <b style="color:#ff4a3a">3 Deadwater</b> past the red buoys (pirate warlords with cannons, the rarest fish, the most giants and plunder). Outposts out there are safe havens to repair and refuel. Save up for a whole new boat in the <b>Boats</b> tab. Attacking fishing boats and traders makes you <b>wanted</b>. From two stars the <b>coast guard</b> hunts you. Lie low, or pay your fines at the harbour. Sinking pirates is legal and pays a bounty.</p>`,
 	},
 	{
 		eyebrow: 'Getting around',

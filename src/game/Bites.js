@@ -41,7 +41,8 @@ export function activity( pref, hour ) {
 export function tierChances( habitat, { danger = false, luck = 1 } = {} ) {
 
 	const deep = habitat.deep || 0;
-	const boost = ( 1 + 0.4 * deep ) * ( danger ? 1.6 : 1 ) * luck;
+	// danger: true (an old danger zone, x1.6) or the danger tier's multiplier (1 / 1.4 / 2)
+	const boost = ( 1 + 0.4 * deep ) * ( danger === true ? 1.6 : ( Number( danger ) || 1 ) ) * luck;
 	const c = {};
 	let total = 0;
 	for ( const t of TIER_IDS ) {

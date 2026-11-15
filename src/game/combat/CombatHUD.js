@@ -201,13 +201,14 @@ export class CombatHUD {
 		const c = this.combat, s = c.state, st = s.stats, app = c.app;
 		const aboard = c.aboard;
 		this.status.style.opacity = aboard || s.wanted > 0 ? '1' : '0.0';
-		const zoneText = c.zone ? `⚠ Danger waters · ${ c.zone.name }` : c.safe ? `✓ Safe zone · ${ c.safe.name }` : '';
+		// a station's safe water sits inside a danger tier: the safe zone wins
+		const zoneText = c.safe ? `✓ Safe zone · ${ c.safe.name }` : c.zone ? `⚠ Danger tier ${ c.zone.tier } · ${ c.zone.name }` : '';
 		if ( this._zoneText !== zoneText ) {
 
 			this._zoneText = zoneText;
 			this.zoneEl.textContent = zoneText;
 			this.zoneEl.classList.toggle( 'is-on', !! zoneText );
-			this.zoneEl.classList.toggle( 'is-safe', ! c.zone && !! c.safe );
+			this.zoneEl.classList.toggle( 'is-safe', !! c.safe );
 
 		}
 

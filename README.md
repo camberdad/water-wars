@@ -55,15 +55,23 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **The other boats:**
   - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
   - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
-  - *Pirates* (black, with a skull flag) live in the **Danger Waters**, the red zones on the map ringed by red
-    buoys. They attack on sight in there, and only fight back elsewhere if you shoot first. Sinking them is
-    legal and pays a bounty. Epic and legendary fish bite more often in danger waters.
+  - *Pirates* (black, with a skull flag) roam the **danger tiers** outside the harbour. They attack on sight
+    when you come near, and get tougher, richer and keener the further out you sail. Sinking them is legal and
+    pays a bounty.
+- **Three danger tiers** ring the harbour, marked on the map and by buoys at the borders:
+  1. **Coastal Waters** (220-700 m out): a few weak pirates that only attack up close.
+  2. **Open Sea** (700-1,400 m, past the amber buoys): tougher pirates, rarer fish (x1.4), plunder x1.5,
+     and the giant fish surface here.
+  3. **Deadwater** (1,400-2,400 m, past the red buoys): pirate warlords with cannons, the rarest fish (x2),
+     plunder x2.5 and the most giants.
+  Past 2,400 m is the edge of the charted sea: the current turns you back.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
   hunts you, but never in a safe zone: it turns back and stays away until you sail out. Lie low for a while to let it cool off, or pay your fines at the harbour.
 - **Getting sunk** loses your catch and a quarter of your money, and you're towed back to the pier.
-- **Safe zones** (green on the map): the harbour (the bay, the pier, the beach and the reef) and the four
-  **sea stations** (Westpoint Station, Eastwind Station, Southreach Barge, Coral Light Rig). Nobody fires on
+- **Safe zones** (green on the map): the harbour (the bay, the pier, the beach and the reef) and the eight
+  **sea stations** (Westpoint Station, Eastwind Station, Southreach Barge, Coral Light Rig, and out in the far
+  tiers Midway Station, Southern Cross, Eastmost and Westmost Outposts). Nobody fires on
   you there and your guns stay holstered. Press **`U`** alongside a station for full harbour services.
 - **New boats** are the big savings goal (Boats tab): a *Harbour trawler* ($60,000, tough, big hold), a
   *Sport-fishing yacht* ($160,000, fastest), and a *Deep-sea fishing ship* ($400,000, a fortress with a
@@ -94,7 +102,19 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | V | Boat camera, 1st / 3rd person |
 | R | Fishing rod |
 | I / Tab | Cooler and fish log |
+| K | High scores (the live board) |
 | F1 | All controls and the guide |
+
+## High scores
+
+A shared, live high-score board, the same set-up as Castle Rangers: one [jsonbin.io](https://jsonbin.io) bin
+read and written straight from the page. Captains are ranked by **lifetime earnings** (fish sold, bounties
+and plunder; spending doesn't lower it), with their fish caught, pirates sunk, giants landed, the furthest
+danger tier they reached, their boat and their total time at sea. While you play, your row syncs about every
+10 seconds and is marked active, so the board shows who is at sea right now (green rows). Open it with the
+**High Scores** button on the start screen or **K** in game; it refreshes every 15 seconds while open. If the
+bin can't be reached the board shows this device's scores. The bin ID and key are at the top of
+`src/game/HighScores.js`.
 
 ## Live updates
 
@@ -114,10 +134,11 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/combat/CombatHUD.js` | Hull, gun heat, shells, wanted stars, crosshair, boat labels, minimap dots, the "Sunk!" screen |
 | `src/game/combat/CombatSFX.js` | Synthesised gunfire and explosions |
 | `src/game/BoatCatalog.js`, `Boats.js` | The boats you can buy (stats, model fitting) and their loader |
-| `src/game/DangerZones.js` | The danger waters, their buoys and rewards |
-| `src/game/Harbours.js` | Safe zones and the four sea stations |
+| `src/game/DangerZones.js` | The three danger tiers, their buoys and rewards |
+| `src/game/Harbours.js` | Safe zones and the eight sea stations |
 | `src/game/Giants.js` | Giant fish: surfacing, the stern harpoon, the tether, towing and landing |
 | `src/game/FishTable.js`, `Bites.js` | The 40 species, rarity tiers, values and bite odds |
+| `src/game/HighScores.js` | The shared high-score board (jsonbin.io) and its screen |
 | `src/game/Multiplayer.js` | Open-world multiplayer: joining, sending your boat, drawing other players |
 | `src/version.js` | The version shown on the start screen |
 | `tools/boats/convert.mjs` | Converts the boat models (OBJ/FBX) into `public/models/boats/` (`node tools/boats/convert.mjs`) |

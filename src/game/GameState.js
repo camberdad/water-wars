@@ -14,6 +14,8 @@ export class GameState {
 
 		this.storage = storage;
 		this.money = 0;
+		this.earned = 0; // lifetime money made (fish sold, bounties, plunder): the high-score
+		this.furthest = 0; // the most dangerous tier sailed into (0 = the harbour only)
 		this.inventory = []; // { id, species, kg, cm, value, caughtAt (game hours), record }
 		this.log = {}; // species -> { count, bestKg, bestCm }
 		// the last addFish: { species, kg, cm, value, newSpecies, record, prevBestKg, prevBestCm, kept } (the catch card)
@@ -133,6 +135,7 @@ export class GameState {
 		for ( const f of sold ) total += f.value;
 		this.inventory = keep;
 		this.money += total;
+		this.earned += total;
 		this.save();
 		this.emit();
 		return { total, count: sold.length };
@@ -255,6 +258,7 @@ export class GameState {
 	earn( amount ) {
 
 		this.money += Math.round( amount );
+		this.earned += Math.max( 0, Math.round( amount ) );
 		this.save();
 		this.emit();
 
@@ -275,7 +279,7 @@ export class GameState {
 
 	toJSON() {
 
-		return { v: 1, money: this.money, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats };
+		return { v: 1, money: this.money, earned: this.earned, furthest: this.furthest, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats };
 
 	}
 
@@ -283,6 +287,9 @@ export class GameState {
 
 		if ( ! d || d.v !== 1 ) return false;
 		this.money = Number.isFinite( d.money ) ? d.money : 0;
+		// saves from before 1.7 start the lifetime total at the cash in hand
+		this.earned = Number.isFinite( d.earned ) ? Math.max( d.earned, this.money ) : Math.max( 0, this.money );
+		this.furthest = Number.isFinite( d.furthest ) ? d.furthest : 0;
 		this.inventory = Array.isArray( d.inventory ) ? d.inventory.filter( ( f ) => f && FISH[ f.species ] && Number.isFinite( f.kg ) ) : [];
 		// saves from before lengths were recorded
 		for ( const f of this.inventory ) if ( ! Number.isFinite( f.cm ) ) f.cm = Math.round( fishLengthCm( f.species, f.kg ) );
@@ -331,6 +338,8 @@ export class GameState {
 	reset() {
 
 		this.money = 0;
+		this.earned = 0;
+		this.furthest = 0;
 		this.inventory = [];
 		this.log = {};
 		this.upgrades = defaultUpgrades();

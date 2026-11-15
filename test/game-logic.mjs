@@ -6,6 +6,7 @@ import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE } from '../src/game/Gear.js';
 import { BOATS } from '../src/game/BoatCatalog.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
+import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -219,7 +220,10 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
 	ok( st2.load() && st2.boat === 'trawler' && st2.boats.length === 2, 'owned boats survive a save' );
 	ok( Object.values( BOATS ).every( ( b ) => b.price === 0 || b.price >= 20000 ), 'new boats are big purchases' );
-	ok( DANGER_ZONES.every( ( z ) => dangerZoneAt( z.x, z.z ) === z ) && dangerZoneAt( 55, 0 ) === null && dangerZoneAt( 64.5, 36.5 ) === null, 'danger zones: the harbour is safe' );
+	ok( dangerZoneAt( 55, 0 ) === null && dangerZoneAt( 64.5, 36.5 ) === null && dangerZoneAt( 40, 20 ) === null, 'danger zones: the harbour is safe' );
+	ok( DANGER_ZONES.length === 3 && DANGER_ZONES.every( ( t ) => dangerZoneAt( 40 + ( t.r0 + t.r1 ) / 2, 20 ) === t ), 'three danger tiers, outward from the harbour' );
+	ok( dangerZoneAt( 40, 20 + 500 ).tier === 1 && dangerZoneAt( 40, 20 + 1000 ).tier === 2 && dangerZoneAt( 40, 20 + 2000 ).tier === 3, 'the tiers get harder further out' );
+	ok( DANGER_ZONES[ 0 ].fishMul < DANGER_ZONES[ 2 ].fishMul && DANGER_ZONES[ 0 ].loot < DANGER_ZONES[ 2 ].loot && DANGER_ZONES[ 0 ].aggro < DANGER_ZONES[ 2 ].aggro, 'harder tiers pay better and bite sooner' );
 
 }
 // ---- Water Wars: 30+ species, $75 - $80,000 by rarity
@@ -286,6 +290,58 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
 	const big = st.addFish( 'leviathan', 20000 );
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 250000, 'a landed giant sells like any other fish' );
+
+}
+// ---- Water Wars 1.7: lifetime earnings and the shared high-score board (a fake jsonbin)
+{
+
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	st.addFish( 'leviathan', 20000 );
+	const sold = st.sell().total;
+	st.earn( 500 );
+	st.spend( 300 );
+	ok( st.earned === sold + 500 && st.money === sold + 200, 'lifetime earnings count income, not spending' );
+	st.furthest = 2;
+	st.save();
+	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
+	ok( st2.load() && st2.earned === st.earned && st2.furthest === 2, 'earnings and the furthest tier survive a save' );
+	const snap = snapshotOf( st );
+	ok( snap.score === st.earned && snap.giants === 1 && snap.fish === 1 && snap.furthest === 2, 'the high-score row reads the save' );
+
+	const clean = sanitize( { name: '   a very very long captain name   ', score: 1e15, fish: - 5, furthest: 9, active: true, t: Date.now() - 60000 } );
+	ok( clean.name.length <= 18 && clean.score === LEADERBOARD_CONFIG.MAX_MONEY && clean.fish === 0 && clean.furthest === 3 && clean.active === false, 'rows are sanitised; stale rows are not active' );
+	const merged = oneRunPerPlayer( [ sanitize( { name: 'Ahab', score: 100, fish: 9, t: 1 } ), sanitize( { name: 'ahab', score: 50, fish: 20, t: 2, active: true } ), sanitize( { name: 'Ishmael', score: 70 } ) ] );
+	ok( merged.length === 2 && merged[ 0 ].name === 'Ahab' && merged[ 0 ].score === 100 && merged[ 0 ].fish === 20, 'one row per captain with their best stats' );
+
+	// a fake jsonbin.io: GET returns the record, PUT stores it
+	let bin = { scores: [ { name: 'Ishmael', score: 70, t: Date.now() } ] }, puts = 0;
+	const fakeFetch = async ( url, opt = {} ) => {
+
+		if ( opt.method === 'PUT' ) {
+
+			puts ++;
+			bin = JSON.parse( opt.body );
+			return { ok: true, json: async () => ( {} ) };
+
+		}
+
+		return { ok: true, json: async () => JSON.parse( JSON.stringify( bin ) ) };
+
+	};
+	const store = new Map();
+	const lb = new Leaderboard( { fetch: fakeFetch, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: ( k, v ) => store.set( k, v ) }, config: { ...LEADERBOARD_CONFIG, BIN_ID: 'test', MASTER_KEY: 'k' } } );
+	for ( let i = 0; i < 9; i ++ ) lb.trackTime( 'Ahab', 1, () => ( { score: 1234 } ) );
+	ok( puts === 0, 'no sync before SYNC_SECONDS of play' );
+	lb.trackTime( 'Ahab', 1.5, () => ( { score: 1234, fish: 3 } ) );
+	await new Promise( ( r ) => setTimeout( r, 20 ) );
+	const row = bin.scores.find( ( r ) => r.name === 'Ahab' );
+	ok( puts === 1 && row && row.score === 1234 && row.active && row.timePlayed === 10, 'a sync writes the captain\'s row to the bin, active' );
+	const board = await lb.fetchBoard();
+	ok( board.online && board.scores[ 0 ].name === 'Ahab' && board.scores.length === 2 && board.scores[ 0 ].active, 'the board reads back live, ranked' );
+	const offline = new Leaderboard( { fetch: async () => { throw new Error( 'down' ); }, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: () => {} }, config: { ...LEADERBOARD_CONFIG, BIN_ID: 'test', MASTER_KEY: 'k' } } );
+	const ob = await offline.fetchBoard();
+	ok( ! ob.online && ob.scores.some( ( r ) => r.name === 'Ahab' ), 'offline, the board falls back to this device\'s copy' );
 
 }
 console.log( `value check ${ value }` );

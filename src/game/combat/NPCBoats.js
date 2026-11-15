@@ -6,7 +6,7 @@ import { SPRAY } from '../../fx/Spray.js';
 import { FISH } from '../FishTable.js';
 import { rollWeight, pickSpecies } from '../Bites.js';
 import { buildGunTurret, buildCannon, buildFlag, buildLightBar } from './WeaponModels.js';
-import { DANGER_ZONES, DANGER_LOOT_BONUS, randomInZone } from '../DangerZones.js';
+import { DANGER_TIERS, dangerZoneAt, randomInZone, HARBOUR, WORLD_RADIUS } from '../DangerZones.js';
 
 // The other boats on the water. They reuse the player's lobster-boat geometry (shared buffers and
 // materials, so a boat costs draw calls but no memory), with their own hull paint per faction and a
@@ -184,9 +184,11 @@ export class NPCBoat {
 		this.gun = T.gun && Math.random() < T.armedChance ? { ...T.gun, dmg: T.gun.dmg * ( 1 + 0.25 * ( tier - 1 ) ) } : null;
 		this.cannonDef = T.cannon || ( type === 'pirate' && tier >= 3 ? { dmg: 12, rate: 0.1, range: 180, splash: 4 } : null );
 		this.name = pick( T.names ) + ( type === 'pirate' && tier > 1 ? [ '', '', ' (raider)', ' (warlord)' ][ tier ] : '' );
-		this.cash = Math.round( rand( T.cash[ 0 ], T.cash[ 1 ] ) * ( type === 'pirate' ? tier * DANGER_LOOT_BONUS : 1 ) );
+		this.cash = Math.round( rand( T.cash[ 0 ], T.cash[ 1 ] ) * ( type === 'pirate' ? tier : 1 ) );
 		// pirates keep to one stretch of danger water
-		this.home = type === 'pirate' ? DANGER_ZONES.reduce( ( a, z ) => ( ( z.x - at.x ) ** 2 + ( z.z - at.z ) ** 2 < ( a.x - at.x ) ** 2 + ( a.z - at.z ) ** 2 ? z : a ) ) : null;
+		this.home = type === 'pirate' ? ( dangerZoneAt( at.x, at.z ) || DANGER_TIERS[ 0 ] ) : null;
+		// the further out, the richer the pickings
+		if ( this.home ) this.cash = Math.round( this.cash * this.home.loot );
 		this.fishCargo = [];
 		const nf = Math.round( rand( T.fish[ 0 ], T.fish[ 1 ] ) );
 		// their catch follows the same odds as yours (open water)
@@ -246,7 +248,7 @@ export class NPCBoat {
 	pickWaypoint() {
 
 		const f = this.fleet;
-		if ( this.type === 'pirate' && this.home ) this.waypoint = randomInZone( this.home, f.terrain );
+		if ( this.type === 'pirate' && this.home ) this.waypoint = randomInZone( this.home, f.terrain, this.pos );
 		else if ( this.type === 'fisher' ) this.waypoint = f.randomWater( 6, 30, this.pos, 120, 420 );
 		else this.waypoint = f.randomWater( 10, 200, this.pos, 250, 700 );
 
@@ -269,8 +271,8 @@ export class NPCBoat {
 		}
 
 		// stay inside the play area
-		const R = Math.hypot( this.pos.x, this.pos.z - 150 );
-		if ( R > 820 ) wantYaw = Math.atan2( - this.pos.x, 150 - this.pos.z );
+		const R = Math.hypot( this.pos.x - HARBOUR.x, this.pos.z - HARBOUR.z );
+		if ( R > WORLD_RADIUS - 30 ) wantYaw = Math.atan2( HARBOUR.x - this.pos.x, HARBOUR.z - this.pos.z );
 
 		const d = wrap( wantYaw - this.yaw );
 		const turn = 0.42 * Math.min( 1, Math.max( 0.35, this.speed / 4 ) );
@@ -298,7 +300,7 @@ export class NPCBoat {
 		// you have fired on them; the coast guard: whenever you are wanted
 		if ( this.provoked && this.type === 'pirate' && dist > 320 ) this.provoked = false;
 		// nobody hunts you in a safe zone (the harbour, the sea stations) or ashore
-		const hunting = ! ctx.playerSafe && ( ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < 220 ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 ) );
+		const hunting = ! ctx.playerSafe && ( ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < ( this.home ? this.home.aggro : 200 ) ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 ) );
 
 		switch ( this.state ) {
 
@@ -700,7 +702,7 @@ export class NPCFleet {
 		this.beaconBlue = standard( { color: 0x000000, emissive: 0x2a5aff, emissiveIntensity: 70 } );
 
 		this.boats = [];
-		const POOL = 9;
+		const POOL = 11;
 		for ( let i = 0; i < POOL; i ++ ) this.boats.push( new NPCBoat( this, i ) );
 
 	}
@@ -727,7 +729,7 @@ export class NPCFleet {
 
 			const a = Math.random() * Math.PI * 2, r = rand( rMin, rMax );
 			const x = near.x + Math.cos( a ) * r, z = near.z + Math.sin( a ) * r;
-			if ( Math.hypot( x, z - 150 ) > 800 ) continue;
+			if ( Math.hypot( x - HARBOUR.x, z - HARBOUR.z ) > WORLD_RADIUS - 60 ) continue;
 			const d = - this.terrain.heightAt( x, z );
 			if ( d >= minD && d <= maxD ) return new Vector3( x, 0, z );
 

@@ -2154,6 +2154,7 @@ export class UI {
 						${ row( k( 'LMB' ), 'Cast, strike, reel<small>Hold to wind up / reel</small>' ) }
 						${ row( k( 'RMB' ), 'Reel in an empty line' ) }
 						${ row( k( 'I' ), 'Cooler and fish log' ) }
+						${ row( k( 'K' ), 'High scores (live board)' ) }
 					</section>
 					<section>
 						<h3>Combat (at the helm)</h3>
@@ -2203,6 +2204,7 @@ export class UI {
 					<input class="tw-start-name" maxlength="18" placeholder="Your captain name" aria-label="Your captain name (required)" required style="width:150px;height:36px;box-sizing:border-box;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.3);background:rgba(8,18,26,0.55);color:#eef6fb;font:500 14px Inter,system-ui,sans-serif;outline:none" />
 					<button type="button" class="tw-start-mp-btn" style="height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(111,214,198,0.7);background:rgba(8,18,26,0.55);color:#9be8dc;font:600 14px Inter,system-ui,sans-serif;cursor:pointer">🌐 Multiplayer</button>
 				</div>
+				<button type="button" class="tw-start-hs-btn" style="display:block;margin:10px auto 0;height:32px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,214,106,0.6);background:rgba(8,18,26,0.55);color:#ffd66a;font:600 13px Inter,system-ui,sans-serif;cursor:pointer">🏆 High Scores</button>
 				<div class="tw-start-name-hint" style="min-height:18px;margin-top:6px;font:600 13px Inter,system-ui,sans-serif;color:#ff9a8a;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,0.8)"></div>
 				<div class="tw-start-keys">
 					<span><span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Move</span>
@@ -3197,6 +3199,8 @@ export class UI {
 			const go = ( e ) => {
 
 				// Water Wars multiplayer: typing a name doesn't start the game (Enter in it starts multiplayer)
+				// the High Scores button opens the board (wired in main.js), it doesn't set sail
+				if ( e.target && e.target.closest && e.target.closest( '.tw-start-hs-btn, .ww-hs' ) ) return;
 				const inName = e.target && e.target.classList && e.target.classList.contains( 'tw-start-name' );
 				if ( inName && ( e.type === 'click' || e.key !== 'Enter' ) ) return;
 				this.startMode = inName || ( e.target && e.target.closest && e.target.closest( '.tw-start-mp-btn' ) ) ? 'multi' : 'single';

@@ -1,7 +1,7 @@
 import { WORLD } from '../world/WorldLayout.js';
 import { STAND } from './FishStand.js';
 import { CHANDLERY } from './Chandlery.js';
-import { DANGER_ZONES } from './DangerZones.js';
+import { DANGER_TIERS, HARBOUR, WORLD_RADIUS } from './DangerZones.js';
 import { SAFE_ZONES } from './Harbours.js';
 
 // Minimap, lower right: the island baked once from the terrain data into a 2D canvas (depth-tinted
@@ -14,9 +14,9 @@ import { SAFE_ZONES } from './Harbours.js';
 // Per frame it only writes a few CSS transforms. The bake runs in row chunks over the first frames.
 //   const map = new Minimap( hudEl, game );  map.update( dt );  map.highlight( [ 'joe', 'marta' ] )
 
-const N = 640; // baked canvas size (px)
-const EXT = 1280; // metres covered by the bake
-const X0 = - EXT / 2, Z0 = - 180 - EXT / 2; // world at canvas (0, 0): the island sits north of the bay
+const N = 1280; // baked canvas size (px)
+const EXT = 2 * WORLD_RADIUS + 400; // metres covered by the bake: the whole charted sea (Water Wars 1.7)
+const X0 = HARBOUR.x - EXT / 2, Z0 = HARBOUR.z - EXT / 2; // world at canvas (0, 0): centred on the harbour
 const PPM = N / EXT; // canvas px per metre
 const ROWS_PER_FRAME = 48;
 
@@ -330,42 +330,38 @@ export class Minimap {
 
 		}
 
-		// Water Wars: the danger waters, hatched red with a dashed rim and their names
-		for ( const d of DANGER_ZONES ) {
+		// Water Wars: the danger tiers, rings around the harbour tinted yellow / amber / red, a dashed line on
+		// each border and the tier's name, plus the edge of the charted sea
+		const [ hx, hy ] = P( HARBOUR.x, HARBOUR.z );
+		const tint = [ 'rgba(232, 210, 74, 0.10)', 'rgba(255, 154, 58, 0.13)', 'rgba(255, 74, 58, 0.17)' ];
+		DANGER_TIERS.forEach( ( t, i ) => {
 
-			const [ cx, cy ] = P( d.x, d.z );
-			const r = d.r * PPM;
-			ctx.save();
 			ctx.beginPath();
-			ctx.arc( cx, cy, r, 0, Math.PI * 2 );
-			ctx.fillStyle = 'rgba(214, 38, 26, 0.32)';
-			ctx.fill();
-			ctx.clip();
-			ctx.strokeStyle = 'rgba(255, 70, 50, 0.35)';
-			ctx.lineWidth = 1;
-			for ( let k = - 2 * r; k < 2 * r; k += 5 ) {
-
-				ctx.beginPath();
-				ctx.moveTo( cx + k - r, cy - r );
-				ctx.lineTo( cx + k + r, cy + r );
-				ctx.stroke();
-
-			}
-
-			ctx.restore();
+			ctx.arc( hx, hy, t.r1 * PPM, 0, Math.PI * 2 );
+			ctx.arc( hx, hy, t.r0 * PPM, 0, Math.PI * 2, true );
+			ctx.fillStyle = tint[ i ];
+			ctx.fill( 'evenodd' );
 			ctx.beginPath();
-			ctx.arc( cx, cy, r, 0, Math.PI * 2 );
-			ctx.setLineDash( [ 4, 3 ] );
-			ctx.strokeStyle = 'rgba(255, 90, 70, 0.95)';
-			ctx.lineWidth = 1.6;
+			ctx.arc( hx, hy, t.r0 * PPM, 0, Math.PI * 2 );
+			ctx.setLineDash( [ 5, 4 ] );
+			ctx.strokeStyle = t.color;
+			ctx.globalAlpha = 0.85;
+			ctx.lineWidth = 1.4;
 			ctx.stroke();
 			ctx.setLineDash( [] );
-			ctx.font = '600 9px Inter, sans-serif';
+			ctx.globalAlpha = 1;
+			ctx.font = '700 10px Inter, sans-serif';
 			ctx.textAlign = 'center';
-			ctx.fillStyle = '#ffd0c8';
-			ctx.fillText( d.name.toUpperCase(), cx, cy + 3 );
+			ctx.fillStyle = t.color;
+			const label = `TIER ${ t.tier } · ${ t.name.toUpperCase() }`;
+			for ( const a of [ - Math.PI / 2, Math.PI / 2 ] ) ctx.fillText( label, hx + Math.cos( a ) * ( t.r0 + ( t.r1 - t.r0 ) * 0.5 ) * PPM, hy + Math.sin( a ) * ( t.r0 + ( t.r1 - t.r0 ) * 0.5 ) * PPM + 3 );
 
-		}
+		} );
+		ctx.beginPath();
+		ctx.arc( hx, hy, WORLD_RADIUS * PPM, 0, Math.PI * 2 );
+		ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+		ctx.lineWidth = 2;
+		ctx.stroke();
 
 		B.done = true;
 		B.img = null;
@@ -400,7 +396,7 @@ export class Minimap {
 		const x = cam.position.x, z = cam.position.z;
 
 		// zoom: close on foot, wider at sea
-		const want = p.mode === 'boat' || p.mode === 'deck' || p.mode === 'swim' ? 240 : 110;
+		const want = p.mode === 'boat' || p.mode === 'deck' || p.mode === 'swim' ? 320 : 110;
 		this.radiusM += ( want - this.radiusM ) * ( 1 - Math.exp( - dt * 1.5 ) );
 		const kpm = R / this.radiusM; // css px per metre
 

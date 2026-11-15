@@ -9,7 +9,7 @@ import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
 import { BOATS } from '../BoatCatalog.js';
 import { createBoatMesh, surfaceY, buildDeckMap } from '../Boats.js';
-import { DANGER_ZONES, dangerZoneAt, randomInZone, buildDangerBuoys } from '../DangerZones.js';
+import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
 import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations } from '../Harbours.js';
 
 // Water Wars' combat layer on top of the fishing game:
@@ -266,6 +266,7 @@ export class Combat {
 		this.manageSpawns( dt, ctx.playerPos );
 		this.fleet.update( dt, ctx );
 		if ( aboard ) this.collideBoats( dt );
+		if ( aboard ) this.worldEdge( dt );
 
 		// ---- the player's guns
 		this.gunT -= dt;
@@ -390,8 +391,10 @@ export class Combat {
 		if ( z === this.zone ) return;
 		const was = this.zone;
 		this.zone = z;
-		if ( z ) this.game.toast( `⚠ Entering ${ z.name }: danger waters. Pirates attack on sight; fish here fetch more.`, 4000 );
-		else if ( was && aboard ) this.game.toast( `Leaving ${ was.name } · safe waters`, 2400 );
+		if ( ! aboard ) return;
+		const blurb = [ '', 'a few pirates about, keep your distance', 'tougher pirates, rarer fish, giants surface out here', 'pirate warlords with cannons · the rarest fish, the most giants and plunder' ];
+		if ( z && ( ! was || z.tier > was.tier ) ) this.game.toast( `⚠ Danger tier ${ z.tier }: ${ z.name } · ${ blurb[ z.tier ] }`, 4200 );
+		else if ( z ) this.game.toast( `Back in ${ z.name } (danger tier ${ z.tier })`, 2400 );
 
 	}
 
@@ -400,7 +403,9 @@ export class Combat {
 		const counts = { fisher: 0, trader: 0, pirate: 0, coastguard: 0 };
 		for ( const b of this.fleet.boats ) if ( b.active ) counts[ b.type ] ++;
 		// no coast guard sets out after you while you are in a safe zone (or ashore)
-		const want = { ...POPULATION, coastguard: this.state.wanted >= 2 && ! ( this._ctx && this._ctx.playerSafe ) ? Math.min( 3, this.state.wanted - 1 ) : 0 };
+		// more pirates the further out you sail
+		const here = dangerZoneAt( near.x, near.z );
+		const want = { ...POPULATION, pirate: here ? 1 + here.tier : 2, coastguard: this.state.wanted >= 2 && ! ( this._ctx && this._ctx.playerSafe ) ? Math.min( 3, this.state.wanted - 1 ) : 0 };
 		for ( const b of this.fleet.boats ) {
 
 			if ( b.active ) continue;
@@ -426,10 +431,9 @@ export class Combat {
 			let at;
 			if ( type === 'pirate' ) {
 
-				// in a danger zone, out of sight of the player if possible
-				const zones = DANGER_ZONES.slice().sort( () => Math.random() - 0.5 );
-				const far = zones.find( ( z ) => Math.hypot( z.x - near.x, z.z - near.z ) > z.r + 150 ) || zones[ 0 ];
-				at = randomInZone( far, this.app.terrainData );
+				// in the danger tier the player is sailing in (coastal waters from the harbour), a way off
+				const band = dangerZoneAt( near.x, near.z ) || DANGER_TIERS[ 0 ];
+				at = randomInZone( band, this.app.terrainData, near );
 
 			} else at = type === 'coastguard'
 				? this.fleet.randomWater( 8, 400, near, 260, 420 )
@@ -437,9 +441,31 @@ export class Combat {
 			// pirates get tougher as you do
 			const u = this.state.upgrades;
 			const prog = ( u.armor | 0 ) + ( u.gun | 0 ) + ( u.cannon | 0 ) + ( u.engine | 0 );
-			const tier = type === 'pirate' ? Math.max( 1, Math.min( 3, 1 + Math.floor( prog / 4 + Math.random() * 1.3 ) ) ) : 1;
+			// pirates are as tough as the waters they sail (a notch more for a well-armed player)
+			const band = type === 'pirate' ? ( dangerZoneAt( at.x, at.z ) || DANGER_TIERS[ 0 ] ) : null;
+			const tier = band ? Math.min( 3, band.pirateTier + ( prog >= 14 && Math.random() < 0.3 ? 1 : 0 ) ) : 1;
 			b.spawn( type, at, { tier } );
 			counts[ type ] ++;
+
+		}
+
+	}
+
+	// the charted sea ends WORLD_RADIUS from the harbour: past it the current turns you back
+	worldEdge( dt ) {
+
+		const bc = this.app.boatCtl;
+		const d = harbourDistance( bc.position.x, bc.position.z );
+		if ( d < WORLD_RADIUS ) return;
+		const nx = ( HARBOUR.x - bc.position.x ) / d, nz = ( HARBOUR.z - bc.position.z ) / d;
+		const out = - ( bc.velocity.x * nx + bc.velocity.z * nz );
+		const push = 4 + ( d - WORLD_RADIUS ) * 0.2;
+		bc.velocity.x += nx * ( push + Math.max( 0, out ) * 2 ) * dt;
+		bc.velocity.z += nz * ( push + Math.max( 0, out ) * 2 ) * dt;
+		if ( ( this._edgeT || 0 ) < this.time ) {
+
+			this._edgeT = this.time + 6;
+			this.game.toast( 'The edge of the charted sea · the current turns you back', 2600 );
 
 		}
 
@@ -852,6 +878,7 @@ export class Combat {
 		}
 
 		s.money += cash;
+		s.earned += cash;
 		s.pirate.looted ++;
 		s.pirate.plunder += cash + fishV;
 		s.save();
