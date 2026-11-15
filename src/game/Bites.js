@@ -37,15 +37,16 @@ export function activity( pref, hour ) {
 
 // The chance of each rarity tier for a bite. Deep water and the danger waters (opts.danger) tilt it
 // toward the epic and legendary fish.
-export function tierChances( habitat, { danger = false } = {} ) {
+// opts.luck (the bait upgrade) scales the rare fish too.
+export function tierChances( habitat, { danger = false, luck = 1 } = {} ) {
 
 	const deep = habitat.deep || 0;
-	const boost = ( 1 + 0.4 * deep ) * ( danger ? 1.6 : 1 );
+	const boost = ( 1 + 0.4 * deep ) * ( danger ? 1.6 : 1 ) * luck;
 	const c = {};
 	let total = 0;
 	for ( const t of TIER_IDS ) {
 
-		c[ t ] = TIERS[ t ].chance * ( t === 'epic' || t === 'legendary' ? boost : 1 );
+		c[ t ] = TIERS[ t ].chance * ( t === 'epic' || t === 'legendary' ? boost : t === 'rare' ? Math.sqrt( luck ) : 1 );
 		total += c[ t ];
 
 	}

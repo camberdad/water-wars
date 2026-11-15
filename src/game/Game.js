@@ -69,8 +69,11 @@ export class Game {
 		const b = this.app.boatCtl;
 		if ( b && this._engineBase ) {
 
-			b.maxThrust = this._engineBase.maxThrust * g.speedMul * g.speedMul;
-			b.pitchSpeed = this._engineBase.pitchSpeed * g.speedMul;
+			// the hull's physics is tuned for a work boat: past about 2x power it capsizes at speed, so the
+			// combined engine x boat multiplier eases toward 2 (every upgrade still adds, never past the edge)
+			const sm = 1 + Math.tanh( g.speedMul - 1 ); // eases toward 2 (the stabiliser keeps it upright)
+			b.maxThrust = this._engineBase.maxThrust * sm * sm;
+			b.pitchSpeed = this._engineBase.pitchSpeed * sm;
 
 		}
 
@@ -432,7 +435,7 @@ export class Game {
 
 		}
 
-		this.bite = { phase: 'wait', t: biteDelay( this.habitat(), this.hour ) };
+		this.bite = { phase: 'wait', t: biteDelay( this.habitat(), this.hour ) * ( this.state.stats.biteMul || 1 ) };
 
 	}
 
@@ -453,7 +456,7 @@ export class Game {
 
 			const h = this.habitat();
 			// the danger waters tilt the odds toward epic and legendary fish
-			const species = pickSpecies( h, this.hour, Math.random, { danger: !! dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ) } );
+			const species = pickSpecies( h, this.hour, Math.random, { danger: !! dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ), luck: this.state.stats.luck || 1 } );
 			if ( ! species ) {
 
 				b.t = 8;
@@ -485,7 +488,7 @@ export class Game {
 		} else if ( b.phase === 'take' ) {
 
 			this.toast( 'It took the bait and ran', 1800 );
-			this.bite = { phase: 'wait', t: biteDelay( this.habitat(), this.hour ) };
+			this.bite = { phase: 'wait', t: biteDelay( this.habitat(), this.hour ) * ( this.state.stats.biteMul || 1 ) };
 
 		}
 

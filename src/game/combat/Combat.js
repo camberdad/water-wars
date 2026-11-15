@@ -302,6 +302,7 @@ export class Combat {
 		if ( hp < 0.5 && ! this.dead ) this.fx.smoulder( app.boat.group.localToWorld( _a.set( 0.2, 2.3, - 1.2 ) ), ( 0.5 - hp ) * 2, dt );
 		if ( hp < 0.2 && ! this.dead ) this.fx.burn( app.boat.group.localToWorld( _a.set( - 0.3, 1.0, - 2.2 ) ), 0.5, dt );
 		if ( this.dead ) this.updateDeath( dt );
+		this.updateRighting( dt, aboard, p, inp );
 
 		// ---- wanted level cools off when you lie low
 		if ( s.wanted > 0 ) {
@@ -325,6 +326,30 @@ export class Combat {
 		this.updateDock( inp, p, aboard );
 
 		if ( this.hud ) this.hud.update( dt );
+
+	}
+
+	// a capsized boat rights itself after a moment; X rights a boat that is heeled far over
+	updateRighting( dt, aboard, p, inp ) {
+
+		const bc = this.app.boatCtl;
+		const upY = _v.set( 0, 1, 0 ).applyQuaternion( bc.quaternion ).y;
+		this._capT = upY < 0.3 ? ( this._capT || 0 ) + dt : 0;
+		const heeled = upY < 0.8;
+		if ( aboard && heeled && ! this.dead ) {
+
+			p.prompt = { key: 'X', text: 'Right the boat' };
+			if ( inp.hit( 'KeyX' ) ) this._capT = 99;
+
+		}
+
+		if ( this._capT > 1.5 ) {
+
+			this._capT = 0;
+			bc.rightBoat();
+			this.game.toast( 'Boat righted', 1600 );
+
+		}
 
 	}
 
@@ -472,7 +497,7 @@ export class Combat {
 		const muzzleL = g.muzzles[ this.barrel ++ % g.muzzles.length ];
 		const muzzle = g.pitch.localToWorld( _w.copy( muzzleL ) );
 		const dir = _v.copy( this.aim ).sub( muzzle ).normalize();
-		const sp = st.gunSpread * ( this.heat > 0.7 ? 1.6 : 1 );
+		const sp = st.gunSpread * ( st.aimMul || 1 ) * ( this.heat > 0.7 ? 1.6 : 1 );
 		dir.x += ( Math.random() - 0.5 ) * 2 * sp;
 		dir.y += ( Math.random() - 0.5 ) * 2 * sp;
 		dir.z += ( Math.random() - 0.5 ) * 2 * sp;
@@ -786,7 +811,7 @@ export class Combat {
 		const s = this.state, game = this.game;
 		b.looted = true;
 		b.lootT = Math.min( b.lootT, 10 );
-		let cash = b.cash;
+		const cash = Math.round( b.cash * ( s.stats.lootMul || 1 ) );
 		let fishN = 0, lostN = 0, fishV = 0;
 		for ( const f of b.fishCargo ) {
 

@@ -35,7 +35,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one. Ammo is
   unlimited. Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash and fish. Ramming
   at speed damages the other boat; bumping into boats never damages yours. The aim is steady: the
-  helm camera and your shots ignore the waves, so the crosshair stays where you put it.
+  helm camera and your shots ignore the waves, so the crosshair stays where you put it. Boats can't capsize:
+  a stabiliser keeps them within ~30° of level, and the bow no longer rears up under full throttle (if a
+  boat is ever heeled far over, press **`X`** to right it).
 - **The other boats:**
   - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
   - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
@@ -53,10 +55,15 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   *Sport-fishing yacht* ($160,000, fastest), and a *Deep-sea fishing ship* ($400,000, a fortress with a
   huge hold). Each multiplies your upgrades; switch between owned boats at the harbour or Marta's.
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
-  - **Boat:** hull armour, engine, fish hold, fuel tank, damage control (self-repair)
-  - **Weapons:** deck gun (rifle → carbine → MG → twin MG → rotary autocannon), gun cooling, bow cannon
-    (swivel gun → deck cannon → naval gun), cannon loader (faster reloads)
-  - **Fishing:** line, reel, rod, fish finder, deck lights
+  - **Boat:** hull armour (up to battleship plating, 1,600 hp), engine (up to a hydrofoil jet drive), fish
+    hold (up to 1,200 kg), fuel tank (up to 1,200 L), damage control (up to a self-sealing nano hull), and
+    **salvage gear** (up to +100% cash from every wreck you plunder)
+  - **Weapons:** deck gun (rifle → carbine → MG → twin MG → rotary → twin 20 mm → twin 30 mm autocannon),
+    gun cooling (up to cryogenic), bow cannon (swivel gun → deck cannon → naval gun → heavy naval gun → rail
+    cannon), cannon loader (up to quad-feed), and **targeting** (up to a fire-control computer: 70% tighter spread)
+  - **Fishing:** line (up to 400 lb titanium), reel (up to a hydraulic winch), rod (up to a pro offshore
+    rod), fish finder, deck lights, **bait & lures** (up to twice the epic and legendary bites) and **chum**
+    (fish bite up to twice as soon)
   - **Services:** diesel, hull repairs, paying off fines; every service point also buys your catch
 
 | Key | Action |

@@ -250,6 +250,19 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( d.legendary > c.legendary && d.legendary < 0.06, 'deep and danger water tilt the odds, within reason' );
 
 }
+// ---- Water Wars 1.4: more tiers and new upgrade tracks
+{
+
+	const longer = [ 'line', 'reel', 'rod', 'armor', 'engine', 'hold', 'fuel', 'pumps', 'gun', 'cooling', 'cannon', 'locker' ];
+	ok( longer.every( ( k ) => UPGRADES[ k ].levels.length >= 6 ), 'every main track goes to at least 6 levels' );
+	ok( [ 'bait', 'chum', 'targeting', 'salvage' ].every( ( k ) => UPGRADES[ k ] && UPGRADES[ k ].levels[ 0 ].cost === 0 ), 'new tracks: bait, chum, targeting, salvage' );
+	ok( Object.values( UPGRADES ).every( ( t ) => t.levels.every( ( l, i ) => i === 0 || l.cost > t.levels[ i - 1 ].cost ) ), 'every track gets dearer level by level' );
+	const base = tierChances( habitatAt( spots.deep ) ), lucky = tierChances( habitatAt( spots.deep ), { luck: 2 } );
+	ok( lucky.legendary > base.legendary * 1.6 && lucky.rare > base.rare && lucky.common < base.common, 'better bait brings rarer fish' );
+	const g = gearStats( { ...defaultUpgrades(), bait: 4, chum: 3, targeting: 3, salvage: 3 } );
+	ok( g.luck === 2 && g.biteMul === 0.5 && g.aimMul === 0.3 && g.lootMul === 2, 'the new tracks feed the stats' );
+
+}
 console.log( `value check ${ value }` );
 console.log( fails ? `${ fails } FAILED` : 'all passed' );
 process.exit( fails ? 1 : 0 );

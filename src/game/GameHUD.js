@@ -473,6 +473,10 @@ function describe( key, lv ) {
 		case 'line': return `${ lv.lineKg } kg breaking strain`;
 		case 'reel': return `${ lv.reelSpeed }× retrieve`;
 		case 'rod': return `casts ${ lv.castM } m`;
+		case 'bait': return lv.luck > 1 ? `rare fish ×${ lv.luck.toFixed( 2 ).replace( /0$/, '' ) }` : 'no bonus';
+		case 'chum': return lv.biteMul < 1 ? `bites ${ Math.round( ( 1 / lv.biteMul - 1 ) * 100 ) }% sooner` : 'no chum';
+		case 'targeting': return lv.aimMul < 1 ? `${ Math.round( ( 1 - lv.aimMul ) * 100 ) }% tighter spread` : 'no aid';
+		case 'salvage': return lv.lootMul > 1 ? `+${ Math.round( ( lv.lootMul - 1 ) * 100 ) }% plunder` : 'no bonus';
 		default: return '';
 
 	}

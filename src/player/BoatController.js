@@ -238,6 +238,7 @@ export class BoatController {
 		while ( this._acc >= h && steps < 12 ) {
 
 			this.step( h );
+			this.limitTilt();
 			this._acc -= h;
 			steps ++;
 
@@ -354,7 +355,10 @@ export class BoatController {
 		else if ( dir < 0 ) thrust = - this.reverseFactor * this.maxThrust * n * n * Math.max( 0, 1 - Math.max( - u, 0 ) / ( this.pitchSpeed * 0.6 * Math.max( n, 0.2 ) ) );
 		thrust *= propWet;
 		this.thrust = thrust;
-		addForceAt( _f.copy( fwd ).multiplyScalar( thrust ), propW );
+		// Water Wars: most of the push acts through the centre of mass; the low, aft propeller line would
+		// otherwise lever the bow up harder with every engine upgrade
+		F.addScaledVector( fwd, thrust * 0.85 );
+		addForceAt( _f.copy( fwd ).multiplyScalar( thrust * 0.15 ), propW );
 		if ( thrust < 0 ) addForceAt( _f.copy( side ).multiplyScalar( - thrust * 0.08 ), propW );
 
 		// ---- rudder: lifting surface in the propeller race (actuator-disc slipstream); the local
@@ -375,15 +379,26 @@ export class BoatController {
 
 		// ---- running trim and rise: the bow lifts over the hump, then the hull runs at a few degrees
 		// with some dynamic lift (only while the hull is in the water)
-		const trim = ( 2.8 * sstep( u, 2.5, 4.8 ) - 0.8 * sstep( u, 4.8, 7.5 ) - 0.4 * sstep( u, 7.5, 10.5 ) ) * DEG;
+		const trim = ( 2.0 * sstep( u, 2.5, 4.8 ) - 0.6 * sstep( u, 4.8, 7.5 ) - 0.4 * sstep( u, 7.5, 10.5 ) ) * DEG;
 		T.addScaledVector( side, this.pitchStiffness * trim * imm * - 1 );
-		F.addScaledVector( up, m * GRAV * 0.15 * sstep( u, 3.5, 9 ) * imm );
+		F.addScaledVector( up, m * GRAV * 0.08 * sstep( u, 3.5, 9 ) * imm );
 
 		// ---- small extra angular damping (appendages, bilge), scaled by wetness
 		const wd = 0.2 + wetD;
 		// the keel's lift resists roll in proportion to speed (a boat underway rolls much less)
 		_v.set( - aLoc.x * 25000, - aLoc.y * 2000, - aLoc.z * ( 4500 + 900 * au ) ).multiplyScalar( wd ).applyQuaternion( this.quaternion );
 		T.add( _v );
+
+		// ---- Water Wars stabiliser (gyro + ballast): a righting moment toward level that grows steeply
+		// past ~20 degrees of heel or trim, plus pitch / roll damping, so the boat can't be flipped by
+		// throttle, waves or a hard turn at speed. (The yaw is left alone: steering is unchanged.)
+		const tilt = Math.acos( clamp( up.y, - 1, 1 ) );
+		const kRight = m * GRAV * ( 0.6 + 6 * sstep( tilt, 0.3, 1.0 ) );
+		_v.set( - up.z, 0, up.x ); // up x worldUp: the axis that rotates the deck back toward level
+		const s = _v.length();
+		if ( s > 1e-6 ) T.addScaledVector( _v, kRight * Math.min( 1, tilt ) / s );
+		T.x -= this.angular.x * m * 1.2;
+		T.z -= this.angular.z * m * 1.2;
 
 		// ---- mooring lines when docked and not driven
 		if ( this.moored && ! this.driven ) {
@@ -432,6 +447,59 @@ export class BoatController {
 
 		const ok = ( v ) => Number.isFinite( v.x ) && Number.isFinite( v.y ) && Number.isFinite( v.z );
 		return ok( this.position ) && ok( this.velocity ) && ok( this.angular ) && Number.isFinite( this.quaternion.w );
+
+	}
+
+	// Water Wars: the boat never flips. Heel and trim are held within MAX_TILT of level: past it the
+	// orientation is turned back onto the limit (keeping the heading) and the roll / pitch rate that
+	// would tip it further is removed.
+	limitTilt() {
+
+		const MAX_TILT = 0.55; // rad (~31 degrees)
+		const up = _up.set( 0, 1, 0 ).applyQuaternion( this.quaternion );
+		const tilt = Math.acos( clamp( up.y, - 1, 1 ) );
+		if ( ! ( tilt > MAX_TILT ) ) return;
+		// rotate the hull about the horizontal axis (up x worldUp) by the excess
+		const axis = _v.set( - up.z, 0, up.x );
+		const len = axis.length();
+		if ( len < 1e-6 ) {
+
+			// exactly upside down: back on the keel, same heading
+			this.rightBoat( false );
+			return;
+
+		}
+
+		axis.divideScalar( len );
+		_dq.setFromAxisAngle( axis, tilt - MAX_TILT );
+		// rotate about the centre of mass so the hull doesn't jump
+		const comW = this.toWorld( this.com, _com );
+		this.quaternion.premultiply( _dq ).normalize();
+		const comW2 = this.toWorld( this.com, _c1 );
+		this.position.add( _c2.copy( comW ).sub( comW2 ) );
+		// remove the angular velocity that keeps tipping it over (the part about the tilt axis that
+		// increases the tilt)
+		const w = this.angular.dot( axis );
+		if ( w < 0 ) this.angular.addScaledVector( axis, - w );
+
+	}
+
+	// Water Wars: put a capsized (or badly tilted) boat back upright where it is, at rest
+	rightBoat( stop = true ) {
+
+		const yaw = this.getYaw();
+		this.quaternion.setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), Number.isFinite( yaw ) ? yaw : 0 );
+		this.position.y = 0;
+		this.angular.set( 0, 0, 0 );
+		if ( stop ) {
+
+			this.velocity.set( 0, 0, 0 );
+			this.throttle = 0;
+			this.rpm = 0;
+
+		}
+
+		this.apply();
 
 	}
 
