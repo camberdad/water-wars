@@ -25,11 +25,12 @@ const MAX_GIANTS = 2;
 // Water Wars 1.7.1: giant fish by the danger tier the player is in (0 = the harbour): the seconds
 // between tries, the chance a try brings one up, and how many can be about at once. Close in, one only
 // now and then surfaces far out in the Open Sea; out in the Deadwater they are common.
+// (1.12.6: about twice as many in the Open Sea and three times in the Deadwater, up to 3 and 4 at once)
 export const GIANT_ODDS = [
-	{ every: [ 70, 130 ], chance: 0.15, max: 1 },
-	{ every: [ 60, 110 ], chance: 0.25, max: 1 },
-	{ every: [ 40, 80 ], chance: 0.6, max: MAX_GIANTS },
-	{ every: [ 20, 45 ], chance: 1, max: MAX_GIANTS + 1 },
+	{ every: [ 60, 110 ], chance: 0.2, max: 1 },
+	{ every: [ 45, 90 ], chance: 0.35, max: 1 },
+	{ every: [ 20, 40 ], chance: 0.85, max: 3 },
+	{ every: [ 10, 22 ], chance: 1, max: 4 },
 ];
 const ROPE = 20; // m of tether from the stern to the fish
 const HARPOON_SPEED = 75;
@@ -73,7 +74,7 @@ class Giant {
 		this.surfaced = false;
 		this.cycle = rand( 4, 10 ); // s until it next comes up
 		this.up = false;
-		this.life = 420; // s before it moves on, unless hooked
+		this.life = 600; // s before it moves on, unless hooked
 		this.strength = 1;
 		this.roll = 0;
 		this.announced = false;
@@ -315,13 +316,16 @@ export class Giants {
 
 			if ( ! g.active || g === this.target ) continue;
 			g.life -= dt;
-			if ( g.life <= 0 || g.pos.distanceTo( ref ) > 1100 ) this.park( g );
+			if ( g.life <= 0 || g.pos.distanceTo( ref ) > 1400 ) this.park( g );
 
 		}
 
+		const zone = dangerZoneAt( ref.x, ref.z );
+		const tier = zone ? zone.tier : 0;
+		if ( tier > ( this._tier ?? tier ) ) this.spawnT = Math.min( this.spawnT, rand( 3, 8 ) );
+		this._tier = tier;
 		this.spawnT -= dt;
 		if ( this.spawnT > 0 ) return;
-		const zone = dangerZoneAt( ref.x, ref.z );
 		const odds = GIANT_ODDS[ zone ? zone.tier : 0 ];
 		this.spawnT = rand( odds.every[ 0 ], odds.every[ 1 ] );
 		const active = this.giants.filter( ( g ) => g.active ).length;
@@ -330,7 +334,12 @@ export class Giants {
 		if ( ! idle.length ) return;
 		const g = idle[ Math.floor( Math.random() * idle.length ) ];
 		const at = this.openWater( ref );
-		if ( at ) g.spawn( at );
+		if ( at ) {
+
+			g.spawn( at );
+			this.announce( g, true );
+
+		}
 
 	}
 
@@ -349,7 +358,7 @@ export class Giants {
 
 		for ( let i = 0; i < 50; i ++ ) {
 
-			const a = Math.random() * Math.PI * 2, r = rand( 220, 520 );
+			const a = Math.random() * Math.PI * 2, r = rand( 150, 380 );
 			const x = ref.x + Math.cos( a ) * r, z = ref.z + Math.sin( a ) * r;
 			if ( harbourDistance( x, z ) > WORLD_RADIUS - 80 ) continue;
 			const t = dangerZoneAt( x, z );
@@ -513,14 +522,20 @@ export class Giants {
 
 	}
 
-	announce( g ) {
+	// 1.12.6: a notice when a giant turns up nearby, and again each time it surfaces (at most every 45 s)
+	announce( g, arrived = false ) {
 
-		if ( g.announced ) return;
 		const ref = this.app.player.mode === 'walk' || this.app.player.mode === 'swim' ? this.app.player.position : this.app.boatCtl.position;
 		const d = g.pos.distanceTo( ref );
-		if ( d > 650 ) return;
+		if ( d > 700 || g === this.target ) return;
+		const now = performance.now();
+		if ( ! arrived && g.toldAt && now - g.toldAt < 45000 ) return;
+		g.toldAt = now;
 		g.announced = true;
-		this.game.toast( `A ${ g.name } is surfacing ${ U.ft( Math.round( d / 10 ) * 10 ) } to the ${ compassWord( ref.x, ref.z, g.pos.x, g.pos.z ) } · worth up to $${ FISH[ g.species ].value[ 1 ].toLocaleString() }`, 4500 );
+		const where = `${ U.ft( Math.round( d / 10 ) * 10 ) } to the ${ compassWord( ref.x, ref.z, g.pos.x, g.pos.z ) }`;
+		const worth = `worth up to $${ FISH[ g.species ].value[ 1 ].toLocaleString() }`;
+		const gun = this.state.stats.harpoon ? 'Q at the helm to harpoon it' : 'fit a harpoon (Weapons tab) to take it';
+		this.game.toast( arrived ? `🐋 A giant ${ g.name } is out here, ${ where } · ${ worth } · pink on the minimap` : `🐋 The ${ g.name } is surfacing ${ where } · ${ gun }`, 6000 );
 
 	}
 
@@ -725,7 +740,7 @@ export class Giants {
 			css.textContent = '.gm-mk.is-giant > i { background: #ff7ae0; color: #2a0624; width: calc(18 * var(--tw-u)); height: calc(18 * var(--tw-u)); margin: calc(-9 * var(--tw-u)) 0 0 calc(-9 * var(--tw-u)); }';
 			document.head.append( css );
 			const icon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 12c3-4 7-6 11-6 3 0 6 2 8 5l-2 1 2 1c-2 3-5 5-8 5-4 0-8-2-11-6Zm13-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>';
-			this.marks = this.giants.map( ( g ) => map.addMarker( { id: 'giant-' + g.slot, kind: 'giant', icon, pos: () => g.active && ( g.surfaced || g.state !== 'swim' ) ? g.pos : null } ) );
+			this.marks = this.giants.map( ( g ) => map.addMarker( { id: 'giant-' + g.slot, kind: 'giant', icon, pos: () => g.active ? g.pos : null } ) ); // (1.12.6: dived ones too, so you can find them)
 
 		}
 

@@ -54,8 +54,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   at a surfaced giant from the helm and press **`Q`** to spear it from the stern. It is tethered to your boat
   and fights, dragging you, until it tires; then tow it into a harbour (the pier or a sea station), where it is
   landed and sold like any other fish, for $150,000 to $312,000. Giants are rare close in (now and then one
-  surfaces far out in the Open Sea), more frequent in the Open Sea and common in the Deadwater, where up to
-  three can be about at once. Hold `Q` to cut it loose.
+  surfaces far out in the Open Sea), common in the Open Sea (up to three about at once) and everywhere in the
+  Deadwater (up to four). A notice tells you when one turns up and each time it surfaces, and the minimap
+  marks them in pink. Hold `Q` to cut it loose.
 - **Turn pirate.** Take the helm (`E` at the wheel). **Left mouse** fires the deck gun at the crosshair (it
   overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one. Ammo is
   unlimited. Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash and fish. Ramming
