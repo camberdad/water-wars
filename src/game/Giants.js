@@ -283,6 +283,7 @@ export class Giants {
 		// ---- landing it in a harbour (the pier or a sea station: where harbour services are)
 		if ( this.target && combat.service ) this.land( this.target );
 
+		this.updateCard( dt );
 		this.updateRope();
 		this.updateMarkers();
 		this.props.batch.upload();
@@ -621,10 +622,42 @@ export class Giants {
 		this.park( g );
 		const entry = s.addFish( g.species, g.kg, game.hour );
 		const info = s.lastCatch;
-		if ( game.hud ) game.hud.showCatch( info, 12000 );
+		if ( game.hud ) {
+
+			game.hud.showCatch( info, 12000 );
+			this.card = { t0: performance.now(), mouse: true }; // dismissed in updateCard (click, E, Esc or the timer)
+
+		}
 		if ( this.app.audio && this.app.audio.coin ) this.app.audio.coin();
 		game.toast( entry ? `Landed the ${ g.name }: $${ g.value.toLocaleString() } · sell it in the Sell catch tab (U) or to Joe` : `Landed the ${ g.name }`, 5000 );
 		this.spawnT = Math.min( this.spawnT, rand( 20, 40 ) );
+
+	}
+
+	// the landed giant's catch card: click, E, Esc or 12 s close it (the rod's own cards are handled in
+	// Game.update; this one is ours)
+	updateCard( dt ) {
+
+		const c = this.card, hud = this.game.hud, inp = this.app.input;
+		if ( ! c ) return;
+		if ( ! hud || ! hud.catchOpen ) {
+
+			this.card = null;
+			return;
+
+		}
+
+		const t = ( performance.now() - c.t0 ) / 1000; // real seconds since it came up
+		// a click: a fresh press of the button (not one still held from before the card came up)
+		const down = inp.mouseDown;
+		const click = down && ! c.mouse;
+		c.mouse = down;
+		if ( t > 0.4 && ( click || inp.hit( 'KeyE' ) || inp.hit( 'Escape' ) ) || t > 12 ) {
+
+			hud.hideCatch();
+			this.card = null;
+
+		}
 
 	}
 
