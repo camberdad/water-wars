@@ -89,6 +89,21 @@ export const FISH = {
 
 export const FISH_IDS = Object.keys( FISH );
 
+// Water Wars 1.7.1: fish worth more than $1,000 sell for 40% less. Prices are cut but never below
+// $1,000, so a bigger fish is never worth less than a smaller one. Applied once to every species'
+// value band and the tier bands (the catch card, the trophy line and the giants all follow).
+export const PRICE_CUT_FROM = 1000;
+export const PRICE_CUT = 0.6;
+export const cutPrice = ( v ) => v > PRICE_CUT_FROM ? Math.max( PRICE_CUT_FROM, Math.round( v * PRICE_CUT / 5 ) * 5 ) : v;
+for ( const t of Object.values( TIERS ) ) {
+
+	t.min = cutPrice( t.min );
+	t.max = cutPrice( t.max );
+
+}
+
+for ( const f of Object.values( FISH ) ) f.value = f.value.map( cutPrice );
+
 // $ value of a fish: from the species' smallest to its biggest along its value band, rounded to $5
 export function fishValue( id, kg ) {
 
@@ -100,7 +115,7 @@ export function fishValue( id, kg ) {
 }
 
 // fish worth this much (rare and up) are strapped on deck when the hold is full (never thrown back for space)
-export const TROPHY_VALUE = 7500;
+export const TROPHY_VALUE = TIERS.rare.min;
 
 // total length (cm) of a fish of `kg`, from its species' length-weight relation
 export function fishLengthCm( id, kg ) {

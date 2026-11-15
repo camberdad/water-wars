@@ -35,19 +35,31 @@ export function activity( pref, hour ) {
 
 }
 
+// Water Wars 1.7.1: how the danger tier changes the odds of the valuable fish, for the harbour (0) and
+// tiers 1-3: rare = the rare fish, top = epic and legendary. Scarce close in, plentiful in the Deadwater.
+export const TIER_ODDS = [
+	{ rare: 0.6, top: 0.4 },
+	{ rare: 0.8, top: 0.6 },
+	{ rare: 1.2, top: 1.4 },
+	{ rare: 1.5, top: 2.2 },
+];
+
 // The chance of each rarity tier for a bite. Deep water and the danger waters (opts.danger) tilt it
 // toward the epic and legendary fish.
 // opts.luck (the bait upgrade) scales the rare fish too.
-export function tierChances( habitat, { danger = false, luck = 1 } = {} ) {
+export function tierChances( habitat, { danger = false, luck = 1, tier = null } = {} ) {
 
 	const deep = habitat.deep || 0;
-	// danger: true (an old danger zone, x1.6) or the danger tier's multiplier (1 / 1.4 / 2)
-	const boost = ( 1 + 0.4 * deep ) * ( danger === true ? 1.6 : ( Number( danger ) || 1 ) ) * luck;
+	// tier: the danger tier the line is in (0 = the harbour); it sets the odds of the valuable fish.
+	// Without it, danger: true (x1.6) or a multiplier.
+	const odds = tier === null || tier === undefined ? null : TIER_ODDS[ Math.max( 0, Math.min( TIER_ODDS.length - 1, tier | 0 ) ) ];
+	const boost = ( 1 + 0.4 * deep ) * ( odds ? odds.top : danger === true ? 1.6 : ( Number( danger ) || 1 ) ) * luck;
+	const rareMul = Math.sqrt( luck ) * ( odds ? odds.rare : 1 );
 	const c = {};
 	let total = 0;
 	for ( const t of TIER_IDS ) {
 
-		c[ t ] = TIERS[ t ].chance * ( t === 'epic' || t === 'legendary' ? boost : t === 'rare' ? Math.sqrt( luck ) : 1 );
+		c[ t ] = TIERS[ t ].chance * ( t === 'epic' || t === 'legendary' ? boost : t === 'rare' ? rareMul : 1 );
 		total += c[ t ];
 
 	}

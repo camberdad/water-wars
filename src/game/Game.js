@@ -469,8 +469,8 @@ export class Game {
 		if ( b.phase === 'wait' ) {
 
 			const h = this.habitat();
-			// the danger waters tilt the odds toward epic and legendary fish
-			const species = pickSpecies( h, this.hour, Math.random, { danger: ( dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ) || { fishMul: 1 } ).fishMul, luck: this.state.stats.luck || 1 } );
+			// the danger tier sets the odds of the rare, epic and legendary fish (scarce close in)
+			const species = pickSpecies( h, this.hour, Math.random, { tier: ( dangerZoneAt( this.rod.bobber.x, this.rod.bobber.z ) || { tier: 0 } ).tier, luck: this.state.stats.luck || 1 } );
 			if ( ! species ) {
 
 				b.t = 8;

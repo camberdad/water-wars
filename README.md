@@ -31,20 +31,25 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 
   | Tier | Value | Share of catches | Examples |
   |---|---|---|---|
-  | Common | $225 – $1,200 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
-  | Uncommon | $1,200 – $7,500 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
-  | Rare | $7,500 – $36,000 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
-  | Epic | $36,000 – $180,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
-  | Legendary | $180,000 – $240,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
+  | Common | $225 – $1,000 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
+  | Uncommon | $1,000 – $4,500 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
+  | Rare | $4,500 – $21,600 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
+  | Epic | $21,600 – $108,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
+  | Legendary | $108,000 – $144,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
 
-  Bigger fish of a species are worth more. Deep water and the danger waters bring epic and legendary fish up
-  more often. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
+  (The shares are the base odds. Fish worth over $1,000 sell for 40% less than before 1.7.1, never under
+  $1,000.) Bigger fish of a species are worth more. **The danger tier sets the odds of the valuable fish:**
+  they are scarcest in the harbour and the Coastal Waters and far more common out at sea. In deep water a
+  legendary is about 1 bite in 75 in the harbour, 1 in 55 in the Coastal Waters, 1 in 30 in the Open Sea and
+  1 in 22 in the Deadwater, where about half of all bites are rare or better. Deep water helps too. The big ones need strong line and a good reel, and trophies (rare and up) that don't fit in the
   hold are strapped on deck.
 - **Giant fish.** Whale-sized fish (Leviathan grouper, Titan bluefin, Giant oarfish, Colossal tarpon, 23–52 ft)
   surface out in deep water now and then; the minimap marks them in pink. Fit a **harpoon** (Weapons tab), aim
   at a surfaced giant from the helm and press **`Q`** to spear it from the stern. It is tethered to your boat
   and fights, dragging you, until it tires; then tow it into a harbour (the pier or a sea station), where it is
-  landed and sold like any other fish, for $250,000 to $520,000. Hold `Q` to cut it loose.
+  landed and sold like any other fish, for $150,000 to $312,000. Giants are rare close in (now and then one
+  surfaces far out in the Open Sea), more frequent in the Open Sea and common in the Deadwater, where up to
+  three can be about at once. Hold `Q` to cut it loose.
 - **Turn pirate.** Take the helm (`E` at the wheel). **Left mouse** fires the deck gun at the crosshair (it
   overheats, so fire in bursts). **Right mouse** fires the bow cannon once you've bought one. Ammo is
   unlimited. Shoot a boat until it burns, pull alongside and press **`G`** to plunder its cash and fish. Ramming
@@ -60,9 +65,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
     pays a bounty.
 - **Three danger tiers** ring the harbour, marked on the map and by buoys at the borders:
   1. **Coastal Waters** (220-700 m out): a few weak pirates that only attack up close.
-  2. **Open Sea** (700-1,400 m, past the amber buoys): tougher pirates, rarer fish (x1.4), plunder x1.5,
+  2. **Open Sea** (700-1,400 m, past the amber buoys): tougher pirates, rarer fish, plunder x1.5,
      and the giant fish surface here.
-  3. **Deadwater** (1,400-2,400 m, past the red buoys): pirate warlords with cannons, the rarest fish (x2),
+  3. **Deadwater** (1,400-2,400 m, past the red buoys): pirate warlords with cannons, the rarest fish,
      plunder x2.5 and the most giants.
   Past 2,400 m is the edge of the charted sea: the current turns you back.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.

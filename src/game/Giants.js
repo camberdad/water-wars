@@ -22,6 +22,15 @@ import * as U from './Units.js';
 
 export const GIANT_IDS = FISH_IDS.filter( ( id ) => FISH[ id ].tier === 'giant' );
 const MAX_GIANTS = 2;
+// Water Wars 1.7.1: giant fish by the danger tier the player is in (0 = the harbour): the seconds
+// between tries, the chance a try brings one up, and how many can be about at once. Close in, one only
+// now and then surfaces far out in the Open Sea; out in the Deadwater they are common.
+export const GIANT_ODDS = [
+	{ every: [ 70, 130 ], chance: 0.15, max: 1 },
+	{ every: [ 60, 110 ], chance: 0.25, max: 1 },
+	{ every: [ 40, 80 ], chance: 0.6, max: MAX_GIANTS },
+	{ every: [ 20, 45 ], chance: 1, max: MAX_GIANTS + 1 },
+];
 const ROPE = 20; // m of tether from the stern to the fish
 const HARPOON_SPEED = 75;
 const PARK = new Vector3( 0, - 600, 0 );
@@ -312,10 +321,11 @@ export class Giants {
 
 		this.spawnT -= dt;
 		if ( this.spawnT > 0 ) return;
-		this.spawnT = rand( 30, 70 );
+		const zone = dangerZoneAt( ref.x, ref.z );
+		const odds = GIANT_ODDS[ zone ? zone.tier : 0 ];
+		this.spawnT = rand( odds.every[ 0 ], odds.every[ 1 ] );
 		const active = this.giants.filter( ( g ) => g.active ).length;
-		const deep = dangerZoneAt( ref.x, ref.z );
-		if ( active >= ( deep && deep.tier === 3 ? MAX_GIANTS + 1 : MAX_GIANTS ) ) return;
+		if ( active >= odds.max || Math.random() > odds.chance ) return;
 		const idle = this.giants.filter( ( g ) => ! g.active );
 		if ( ! idle.length ) return;
 		const g = idle[ Math.floor( Math.random() * idle.length ) ];
@@ -332,8 +342,8 @@ export class Giants {
 		const here = dangerZoneAt( ref.x, ref.z );
 		if ( ! here || here.tier < 2 ) {
 
-			// the player is close in: one may surface out in the open sea (seen from afar)
-			return Math.random() < 0.35 ? randomInZone( DANGER_TIERS[ 1 ], T, ref, 20 ) : null;
+			// the player is close in: one surfaces out in the open sea (seen from afar); GIANT_ODDS keeps it rare
+			return randomInZone( DANGER_TIERS[ 1 ], T, ref, 20 );
 
 		}
 

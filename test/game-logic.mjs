@@ -1,6 +1,6 @@
 // Plain-node tests of the fishing game logic (no GPU): bites, the catch fight, inventory, save.
-import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE } from '../src/game/FishTable.js';
-import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances } from '../src/game/Bites.js';
+import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE, cutPrice } from '../src/game/FishTable.js';
+import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances, TIER_ODDS } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE } from '../src/game/Gear.js';
@@ -239,22 +239,29 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	}
 
 	ok( inBand, 'every species sits in its tier\'s value band' );
-	ok( fishValue( 'silverside', 0.02 ) === 225 && fishValue( 'marlin', 200 ) === 240000, 'values run from $225 to $240,000' );
+	ok( fishValue( 'silverside', 0.02 ) === 225 && fishValue( 'marlin', 200 ) === 144000, 'values run from $225 to $144,000 (1.7.1: 40% off over $1,000)' );
+	ok( cutPrice( 800 ) === 800 && cutPrice( 1000 ) === 1000 && cutPrice( 1200 ) === 1000 && cutPrice( 10000 ) === 6000 && cutPrice( 240000 ) === 144000, 'fish over $1,000 sell for 40% less, never under $1,000' );
+	ok( TROPHY_VALUE === TIERS.rare.min, 'the trophy line follows the rare band' );
 	ok( TIER_IDS.every( ( t ) => FISH_IDS.some( ( id ) => FISH[ id ].tier === t ) ), 'every tier has fish' );
 	let over60 = 0, rare = 0;
 	const N = 20000, h = habitatAt( spots.pier );
 	for ( let i = 0; i < N; i ++ ) {
 
 		const id = pickSpecies( h, 12, rng );
-		if ( fishValue( id, rollWeight( id, rng ) ) > 180000 ) over60 ++;
+		if ( fishValue( id, rollWeight( id, rng ) ) > TIERS.legendary.min ) over60 ++;
 		if ( [ 'rare', 'epic', 'legendary' ].includes( FISH[ id ].tier ) ) rare ++;
 
 	}
 
 	ok( rare / N > 0.25 && rare / N < 0.45, `rare-or-better fish are common (${ ( rare / N * 100 ).toFixed( 1 ) }%)` );
-	ok( over60 / N > 0.005 && over60 / N < 0.04, `fish over $180,000 turn up now and then (${ ( over60 / N * 100 ).toFixed( 2 ) }%)` );
+	ok( over60 / N > 0.005 && over60 / N < 0.04, `legendary-priced fish turn up now and then (${ ( over60 / N * 100 ).toFixed( 2 ) }%)` );
 	const d = tierChances( habitatAt( spots.deep ), { danger: true } ), c = tierChances( habitatAt( spots.pier ) );
 	ok( d.legendary > c.legendary && d.legendary < 0.06, 'deep and danger water tilt the odds, within reason' );
+	// 1.7.1: the danger tier sets the odds of the valuable fish, the harbour lowest and the Deadwater highest
+	const byTier = [ 0, 1, 2, 3 ].map( ( t ) => tierChances( habitatAt( spots.deep ), { tier: t } ) );
+	ok( byTier.every( ( c, i ) => i === 0 || ( c.rare > byTier[ i - 1 ].rare && c.epic > byTier[ i - 1 ].epic && c.legendary > byTier[ i - 1 ].legendary ) ), 'rare, epic and legendary fish get likelier tier by tier' );
+	ok( byTier[ 3 ].legendary > byTier[ 1 ].legendary * 2 && byTier[ 3 ].legendary < 0.08 && byTier[ 0 ].legendary < c.legendary, 'the Deadwater brings far more legendaries than coastal waters, within reason' );
+	ok( TIER_ODDS.length === 4, 'odds for the harbour and the three tiers' );
 
 }
 // ---- Water Wars 1.4: more tiers and new upgrade tracks
@@ -274,7 +281,7 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 {
 
 	const giants = FISH_IDS.filter( ( id ) => FISH[ id ].tier === 'giant' );
-	ok( giants.length >= 4 && giants.every( ( id ) => FISH[ id ].value[ 0 ] >= 250000 && FISH[ id ].giantL ), 'four or more giant species worth $250,000+' );
+	ok( giants.length >= 4 && giants.every( ( id ) => FISH[ id ].value[ 0 ] >= 150000 && FISH[ id ].giantL ), 'four or more giant species worth $150,000+' );
 	ok( giants.every( ( id ) => Math.abs( fishLengthCm( id, FISH[ id ].kg[ 1 ] ) / 100 - FISH[ id ].giantL[ 1 ] ) < 0.3 ), 'giant weights match their lengths' );
 	let rodGiant = 0;
 	for ( const spot of Object.values( spots ) ) for ( let i = 0; i < 3000; i ++ ) {
@@ -289,7 +296,7 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const m = new Map();
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
 	const big = st.addFish( 'leviathan', 20000 );
-	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 250000, 'a landed giant sells like any other fish' );
+	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
 
 }
 // ---- Water Wars 1.7: lifetime earnings and the shared high-score board (a fake jsonbin)
