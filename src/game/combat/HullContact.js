@@ -13,6 +13,23 @@ export function hullOutline( w, l ) {
 
 }
 
+// the outline with extra points along each edge, at most `step` m apart (so a post or a corner of the
+// dock can't slip in between two of them)
+export function densify( shape, step = 0.7 ) {
+
+	const out = [];
+	for ( let i = 0; i < shape.length; i ++ ) {
+
+		const [ ax, az ] = shape[ i ], [ bx, bz ] = shape[ ( i + 1 ) % shape.length ];
+		const n = Math.max( 1, Math.ceil( Math.hypot( bx - ax, bz - az ) / step ) );
+		for ( let k = 0; k < n; k ++ ) out.push( [ ax + ( bx - ax ) * k / n, az + ( bz - az ) * k / n ] );
+
+	}
+
+	return out;
+
+}
+
 // the outline placed in the world: centre (x, z) and heading yaw (forward = (sin yaw, cos yaw))
 export function placeOutline( shape, x, z, yaw, out = [] ) {
 

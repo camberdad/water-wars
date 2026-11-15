@@ -257,7 +257,7 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 
 	}
 
-	ok( rare / N > 0.25 && rare / N < 0.45, `rare-or-better fish are common (${ ( rare / N * 100 ).toFixed( 1 ) }%)` );
+	ok( rare / N > 0.18 && rare / N < 0.33, `rare-or-better fish: about a quarter of bites, not a third (${ ( rare / N * 100 ).toFixed( 1 ) }%)` );
 	ok( over60 / N > 0.005 && over60 / N < 0.04, `legendary-priced fish turn up now and then (${ ( over60 / N * 100 ).toFixed( 2 ) }%)` );
 	const d = tierChances( habitatAt( spots.deep ), { danger: true } ), c = tierChances( habitatAt( spots.pier ) );
 	ok( d.legendary > c.legendary && d.legendary < 0.06, 'deep and danger water tilt the odds, within reason' );
@@ -301,6 +301,34 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
 	const big = st.addFish( 'leviathan', 20000 );
 	ok( big && st.lastCatch.onDeck && st.sell().total === big.value && big.value >= 150000, 'a landed giant sells like any other fish' );
+
+}
+// ---- Water Wars 1.12: eight more fish, six of them cheap commons; the odds lean common
+{
+
+	const added = [ 'sardine', 'damselfish', 'tomtate', 'ballyhoo', 'sandPerch', 'chub', 'grayTrigger', 'rainbowRunner' ];
+	ok( added.every( ( id ) => FISH[ id ] ) && FISH_IDS.length === 52, 'eight new species (52 in all)' );
+	const cheap = added.filter( ( id ) => FISH[ id ].tier === 'common' );
+	ok( cheap.length === 6 && cheap.every( ( id ) => FISH[ id ].value[ 1 ] <= 210 && FISH[ id ].value[ 1 ] < FISH.silverside.value[ 0 ] ), 'six of them are common, cheaper than any common fish before' );
+	ok( TIERS.common.chance === 0.46 && TIERS.rare.chance < 0.2 && Math.abs( TIER_IDS.reduce( ( a, t ) => a + TIERS[ t ].chance, 0 ) - 1 ) < 1e-9, 'common bites are likelier, rare ones less so (the odds still add up)' );
+	ok( fishValue( 'sardine', 0.03 ) === 60, 'the cheapest catch is $60' );
+
+}
+// ---- Water Wars 1.12: the dock is solid to boats, not to swimmers
+{
+
+	const { Colliders } = await import( '../src/world/Colliders.js' );
+	const { Vector3 } = await import( '../src/engine/index.js' );
+	const col = new Colliders();
+	col.addBox( new Vector3( 0, 0, 0 ), new Vector3( 1, 2, 5 ), 0, { boatOnly: true } );
+	const boat = new Vector3( 1.1, - 0.9, 0 ), swimmer = new Vector3( 1.1, - 0.9, 0 );
+	ok( col.resolveCapsule( boat, 0.25, 1.6, 0, true ) && boat.x >= 1.25 - 1e-9, 'a boat\'s hull is pushed off the fender line' );
+	ok( ! col.resolveCapsule( swimmer, 0.25, 1.6, 0 ) && swimmer.x === 1.1, 'a swimmer passes under the dock' );
+	const { densify, hullOutline } = await import( '../src/game/combat/HullContact.js' );
+	const pts = densify( hullOutline( 2.3, 6.5 ), 0.7 );
+	let gap = 0;
+	for ( let i = 0; i < pts.length; i ++ ) gap = Math.max( gap, Math.hypot( pts[ i ][ 0 ] - pts[ ( i + 1 ) % pts.length ][ 0 ], pts[ i ][ 1 ] - pts[ ( i + 1 ) % pts.length ][ 1 ] ) );
+	ok( gap <= 0.7 + 1e-9 && pts.length > 30, 'a big hull is checked at points no more than 0.7 m apart' );
 
 }
 // ---- Water Wars 1.11: each boat has its own engine, armour, weapons and fittings

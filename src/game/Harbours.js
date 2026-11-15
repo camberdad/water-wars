@@ -2,6 +2,7 @@ import { Mesh, Vector3 } from '../engine/index.js';
 import { prepare, mergePrepared, box, cylinder, sphere, torus, mat4 } from '../world/boat/GeoKit.js';
 import { standard } from '../materials/Materials.js';
 import { PAT, createPropMaterial } from './GameMaterials.js';
+import { WORLD } from '../world/WorldLayout.js';
 
 // Safe zones and the harbour stations out at sea.
 //
@@ -86,6 +87,75 @@ export function buildDockKiosk( scene, colliders = null ) {
 	scene.add( mesh, lamp );
 	if ( colliders ) colliders.addBox( new Vector3( K.x - 0.1 * n, PIER_DECK_Y + 1.2, K.z - 0.1 * c ), new Vector3( 1.35, 1.2, 1.0 ), K.yaw, { tag: 'dockKiosk' } );
 	return { mesh, lamp };
+
+}
+
+// The main dock's fender line (Water Wars 1.12): boats used to slip between the piles and under the deck.
+// Now the dock's footprint in the water is solid to boats (not to swimmers: you can still swim under it
+// and climb the ladder), and black rubber bumpers hang down its sides to the waterline every 1.6 m, with a
+// rubbing strake along them. The boat side of the T-head keeps its tyre fenders and the ladder.
+export function buildDockFenders( scene, colliders = null, terrain = null ) {
+
+	const P = WORLD.pier, X = P.x, hw = P.width / 2;
+	const head0 = P.zEnd - P.headDepth, hx0 = X - P.headWidth / 2, hx1 = X + P.headWidth / 2;
+	const wet = ( x, z ) => ! terrain || terrain.heightAt( x, z ) < - 0.25;
+	// where the walkway reaches the water
+	let zWet = P.zStart;
+	while ( zWet < head0 && ! wet( X, zWet ) ) zWet += 0.5;
+	const parts = [];
+	const RUBBER = { color: 0x111111, rough: 0.85 };
+	const bumper = ( x, z ) => {
+
+		parts.push( prepare( cylinder( 0.13, 0.13, 1.7, 12 ), { ...RUBBER, matrix: mat4( x, 0.75, z ) } ) );
+		parts.push( prepare( cylinder( 0.05, 0.05, 0.7, 6 ), { color: 0x8a7a5a, rough: 0.9, matrix: mat4( x, 1.95, z ) } ) ); // the line up to the deck
+
+	};
+
+	const strake = ( x0, z0, x1, z1 ) => {
+
+		const len = Math.hypot( x1 - x0, z1 - z0 );
+		if ( len < 0.5 ) return;
+		parts.push( prepare( box( 0.16, 0.22, len ), { ...RUBBER, matrix: mat4( ( x0 + x1 ) / 2, 1.25, ( z0 + z1 ) / 2, 0, Math.atan2( x1 - x0, z1 - z0 ), 0 ) } ) );
+
+	};
+
+	const off = 0.18; // out from the deck edge
+	// both sides of the walkway, in the water
+	for ( const s of [ - 1, 1 ] ) {
+
+		const x = X + s * ( hw + off );
+		for ( let z = zWet + 0.8; z < head0 - 0.3; z += 1.6 ) if ( wet( x, z ) ) bumper( x, z );
+		strake( x, zWet, x, head0 );
+
+	}
+
+	// the T-head: its landward face either side of the walkway, the seaward end and the west side
+	for ( let x = hx0 + 0.6; x < hx1 - 0.3; x += 1.6 ) if ( Math.abs( x - X ) > hw + 0.4 ) bumper( x, head0 - off );
+	strake( hx0, head0 - off, X - hw - 0.3, head0 - off );
+	strake( X + hw + 0.3, head0 - off, hx1, head0 - off );
+	for ( let x = hx0 + 0.6; x < hx1 - 0.3; x += 1.6 ) bumper( x, P.zEnd + off );
+	strake( hx0, P.zEnd + off, hx1, P.zEnd + off );
+	for ( let z = head0 + 0.6; z < P.zEnd - 0.3; z += 1.6 ) bumper( hx0 - off, z );
+	strake( hx0 - off, head0, hx0 - off, P.zEnd );
+
+	const mesh = new Mesh( mergePrepared( parts ), createPropMaterial( 'dockFenders' ) );
+	mesh.name = 'dock-fenders';
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	scene.add( mesh );
+
+	if ( colliders ) {
+
+		// solid to boats: the walkway (in the water and a little up the beach) and the T-head, out to the
+		// bumpers' faces, from below the keel to the deck
+		const pad = off + 0.13;
+		const z0 = zWet - 4;
+		colliders.addBox( new Vector3( X, - 0.2, ( z0 + head0 ) / 2 ), new Vector3( hw + pad, 2.4, ( head0 - z0 ) / 2 ), 0, { tag: 'dockFender', boatOnly: true } );
+		colliders.addBox( new Vector3( X, - 0.2, ( head0 + P.zEnd ) / 2 ), new Vector3( P.headWidth / 2 + pad, 2.4, P.headDepth / 2 + pad ), 0, { tag: 'dockFender', boatOnly: true } );
+
+	}
+
+	return { mesh, zWet };
 
 }
 

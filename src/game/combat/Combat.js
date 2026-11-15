@@ -7,11 +7,11 @@ import { CombatSFX } from './CombatSFX.js';
 import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPCBoats.js';
 import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
-import { hullOutline, placeOutline, hullContact } from './HullContact.js';
+import { hullOutline, placeOutline, hullContact, densify } from './HullContact.js';
 import { BOATS } from '../BoatCatalog.js';
 import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
-import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK } from '../Harbours.js';
+import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK, buildDockFenders } from '../Harbours.js';
 
 // Water Wars' combat layer on top of the fishing game:
 //   at the helm   left mouse fires the deck gun (it overheats), right mouse the bow cannon (unlimited shells)
@@ -84,6 +84,9 @@ export class Combat {
 		this.stations = buildStations( app.scene, app.colliders );
 		// a harbour services kiosk at the end of the main dock (U on foot)
 		this.kiosk = buildDockKiosk( app.scene, app.colliders );
+		// the dock is solid to boats: a fender line around it and rubber bumpers on its sides
+		this.fenders = buildDockFenders( app.scene, app.colliders, app.terrainData );
+		this.applyHullOutline( BOATS.lobster );
 		this.stationList = STATIONS;
 		this.safe = null;
 		this.stationVendors = new Map( STATIONS.map( ( s ) => [ s.id, { name: s.name, kind: 'dock', greeting: 'Safe harbour out here: repairs, fuel, upgrades, boats, and we buy your catch.' } ] ) );
@@ -195,6 +198,7 @@ export class Combat {
 
 		}
 
+		this.applyHullOutline( def );
 		app.player.forceThird = !! mesh;
 		// walk on the model's own deck (see Boats.buildDeckMap), at its real height
 		app.player.deckMap = mesh ? buildDeckMap( mesh.geometry, def.floorMin ?? 0.05, def.deckPlanes || null ) : null;
@@ -213,6 +217,15 @@ export class Combat {
 			if ( s ) app.player.deckPos.set( s.x, s.y, s.z );
 
 		}
+
+	}
+
+	// the hull outline the boat physics keeps out of the dock and the piles: the boat in use's own size
+	// (the lobster boat's when none is given), with points close enough together that nothing slips between
+	applyHullOutline( def ) {
+
+		const w = def && def.beam ? def.beam / 2 - 0.05 : 1.4, l = def && def.length ? def.length / 2 - 0.1 : 4.05;
+		this.app.boatCtl.outline = densify( hullOutline( w, l ), 0.7 ).map( ( [ x, z ] ) => new Vector3( x, 0.3, z ) );
 
 	}
 

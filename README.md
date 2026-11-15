@@ -27,15 +27,15 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **Units.** Everything is shown in US units: pounds, inches and feet, gallons, mph and knots.
 
 - **Fish.** Cast from the beach, the pier or the boat (`R` for the rod). Sell to Joe at the fish stand, or at any
-  harbour service point. There are 40 real Caribbean and Atlantic species in five rarity tiers:
+  harbour service point. There are 48 real Caribbean and Atlantic species in five rarity tiers:
 
   | Tier | Value | Share of catches | Examples |
   |---|---|---|---|
-  | Common | $225 – $1,000 | ~36% | silverside, pinfish, grunt, lane snapper, little tunny |
-  | Uncommon | $1,000 – $4,500 | ~30% | yellowtail snapper, queen triggerfish, crevalle jack, permit |
-  | Rare | $4,500 – $21,600 | ~22% | hogfish, bonefish, snook, cobia, wahoo, king mackerel |
-  | Epic | $21,600 – $108,000 | ~10% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
-  | Legendary | $108,000 – $144,000 | ~2% | golden tilefish, Atlantic bluefin tuna, blue marlin |
+  | Common | $60 – $1,000 | ~46% | scaled sardine, dusky damselfish, tomtate, ballyhoo, sand perch, Bermuda chub, silverside, pinfish, grunt, lane snapper, little tunny |
+  | Uncommon | $1,000 – $4,500 | ~28% | yellowtail snapper, queen and gray triggerfish, crevalle jack, permit |
+  | Rare | $4,500 – $21,600 | ~17% | hogfish, bonefish, snook, cobia, wahoo, king mackerel, rainbow runner |
+  | Epic | $21,600 – $108,000 | ~7.5% | mahi-mahi, tarpon, yellowfin tuna, sailfish, goliath grouper, swordfish |
+  | Legendary | $108,000 – $144,000 | ~1.5% | golden tilefish, Atlantic bluefin tuna, blue marlin |
 
   (The shares are the base odds. Fish worth over $1,000 sell for 40% less than before 1.7.1, never under
   $1,000.) Bigger fish of a species are worth more. **The danger tier sets the odds of the valuable fish:**

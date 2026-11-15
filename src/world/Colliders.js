@@ -13,12 +13,13 @@ export class Colliders {
 	}
 
 	// center: world center, half: half extents (x, y, z) in the box's local frame, rotY: yaw (radians)
-	addBox( center, half, rotY = 0, { walkable = false, solid = true, tag = '' } = {} ) {
+	// boatOnly: solid to boats only (people swim and climb past it), Water Wars 1.12
+	addBox( center, half, rotY = 0, { walkable = false, solid = true, tag = '', boatOnly = false } = {} ) {
 
 		const b = {
 			center: center.clone(), half: half.clone(), rotY,
 			cos: Math.cos( rotY ), sin: Math.sin( rotY ),
-			walkable, solid, tag,
+			walkable, solid, tag, boatOnly,
 			top: center.y + half.y, bottom: center.y - half.y,
 			radius: Math.hypot( half.x, half.z ),
 		};
@@ -66,12 +67,13 @@ export class Colliders {
 	}
 
 	// Push a vertical capsule (feet at pos.y) out of solid geometry. Returns true if collided.
-	resolveCapsule( pos, radius, height, stepHeight = 0.35 ) {
+	// boat: true for a boat's hull (boatOnly boxes count too)
+	resolveCapsule( pos, radius, height, stepHeight = 0.35, boat = false ) {
 
 		let hit = false;
 		for ( const b of this.boxes ) {
 
-			if ( ! b.solid ) continue;
+			if ( ! b.solid || ( b.boatOnly && ! boat ) ) continue;
 			if ( pos.y + height < b.bottom || pos.y + stepHeight > b.top ) continue;
 			if ( Math.abs( pos.x - b.center.x ) > b.radius + radius || Math.abs( pos.z - b.center.z ) > b.radius + radius ) continue;
 			const [ lx, lz ] = this._toLocal( b, pos.x, pos.z );
@@ -125,7 +127,7 @@ export class Colliders {
 		let best = maxDist;
 		for ( const b of this.boxes ) {
 
-			if ( ! b.solid ) continue;
+			if ( ! b.solid || b.boatOnly ) continue;
 			const ox = origin.x - b.center.x, oz = origin.z - b.center.z, oy = origin.y - b.center.y;
 			const lox = ox * b.cos - oz * b.sin, loz = ox * b.sin + oz * b.cos;
 			const ldx = dir.x * b.cos - dir.z * b.sin, ldz = dir.x * b.sin + dir.z * b.cos;

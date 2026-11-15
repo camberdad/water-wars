@@ -18,19 +18,28 @@
 // Rarity tiers: the chance a bite is of each tier (before the water and the danger waters shift it),
 // the value band and the catch card's colours. Rare fish are common enough; legendary ones, the only
 // fish worth more than $180,000, turn up now and then. (Water Wars 1.3: every value x10; 1.3.1: x0.3.)
+// 1.12: more common bites and fewer rare ones (common 36% -> 46%; rare 22% -> 17%, epic 10% -> 7.5%,
+// legendary 2% -> 1.5%), and the cheapest commons from $60.
 export const TIERS = {
-	common: { name: 'Common', chance: 0.36, color: '#cfd8dc', min: 225, max: 1200 },
-	uncommon: { name: 'Uncommon', chance: 0.30, color: '#7fdc8c', min: 1200, max: 7500 },
-	rare: { name: 'Rare', chance: 0.22, color: '#5cb8ff', min: 7500, max: 36000 },
-	epic: { name: 'Epic', chance: 0.10, color: '#c38bff', min: 36000, max: 180000 },
-	legendary: { name: 'Legendary', chance: 0.02, color: '#ffc845', min: 180000, max: 240000 },
+	common: { name: 'Common', chance: 0.46, color: '#cfd8dc', min: 60, max: 1200 },
+	uncommon: { name: 'Uncommon', chance: 0.28, color: '#7fdc8c', min: 1200, max: 7500 },
+	rare: { name: 'Rare', chance: 0.17, color: '#5cb8ff', min: 7500, max: 36000 },
+	epic: { name: 'Epic', chance: 0.075, color: '#c38bff', min: 36000, max: 180000 },
+	legendary: { name: 'Legendary', chance: 0.015, color: '#ffc845', min: 180000, max: 240000 },
 	// whale-sized fish that surface out at sea: never on a rod, only with a harpoon (src/game/Giants.js)
 	giant: { name: 'Giant', chance: 0, color: '#ff7ae0', min: 250000, max: 520000 },
 };
 export const TIER_IDS = Object.keys( TIERS );
 
 export const FISH = {
-	// ---- common ($75 - $400)
+	// ---- common ($60 - $1,200)
+	// Water Wars 1.12: six cheap little fish, the everyday catch ($60 - $210)
+	sardine: { name: 'Scaled sardine', sci: 'Harengula jaguana', lw: [ 0.0098, 3.1 ], model: 'silverside', habitat: { shallows: 1, bay: 0.6, pier: 0.5 }, kg: [ 0.03, 0.12 ], tier: 'common', value: [ 60, 110 ], fight: 0.05, stamina: 1.2, time: 'any', rarity: 1 },
+	damselfish: { name: 'Dusky damselfish', sci: 'Stegastes adustus', lw: [ 0.0219, 3.0 ], model: 'sergeant', habitat: { reef: 1, pier: 0.5 }, kg: [ 0.03, 0.12 ], tier: 'common', value: [ 60, 120 ], fight: 0.08, stamina: 1.5, time: 'day', rarity: 0.9 },
+	tomtate: { name: 'Tomtate', sci: 'Haemulon aurolineatum', lw: [ 0.0155, 3.0 ], model: 'grunt', habitat: { pier: 1, reef: 0.8, bay: 0.3 }, kg: [ 0.1, 0.4 ], tier: 'common', value: [ 70, 150 ], fight: 0.15, stamina: 2.5, time: 'any', rarity: 1 },
+	ballyhoo: { name: 'Ballyhoo', sci: 'Hemiramphus brasiliensis', lw: [ 0.0031, 3.05 ], model: 'needlefish', habitat: { shallows: 0.6, bay: 1, pier: 0.4, deep: 0.3 }, kg: [ 0.1, 0.4 ], tier: 'common', value: [ 75, 160 ], fight: 0.2, stamina: 2.5, time: 'any', rarity: 0.9 },
+	sandPerch: { name: 'Sand perch', sci: 'Diplectrum formosum', lw: [ 0.0118, 3.05 ], model: 'grouper', habitat: { shallows: 0.6, bay: 1, pier: 0.3 }, kg: [ 0.1, 0.5 ], tier: 'common', value: [ 80, 190 ], fight: 0.18, stamina: 3, time: 'day', rarity: 0.9 },
+	chub: { name: 'Bermuda chub', sci: 'Kyphosus sectatrix', lw: [ 0.0186, 3.0 ], model: 'grunt', habitat: { pier: 1, reef: 0.6, shallows: 0.3 }, kg: [ 0.2, 1.5 ], tier: 'common', value: [ 90, 210 ], fight: 0.3, stamina: 4, time: 'day', rarity: 0.9 },
 	silverside: { name: 'Hardhead silverside', sci: 'Atherinomorus stipes', lw: [ 0.0074, 3.1 ], model: 'silverside', habitat: { shallows: 1, pier: 0.6, bay: 0.2 }, kg: [ 0.02, 0.08 ], tier: 'common', value: [ 225, 330 ], fight: 0.05, stamina: 1.5, time: 'any', rarity: 0.6 },
 	pinfish: { name: 'Pinfish', sci: 'Lagodon rhomboides', lw: [ 0.0164, 3.0 ], model: 'grunt', habitat: { shallows: 1, pier: 0.8 }, kg: [ 0.08, 0.5 ], tier: 'common', value: [ 240, 420 ], fight: 0.12, stamina: 2, time: 'day', rarity: 1 },
 	sergeant: { name: 'Sergeant major', sci: 'Abudefduf saxatilis', lw: [ 0.0234, 3.0 ], model: 'sergeant', habitat: { pier: 1, reef: 0.8 }, kg: [ 0.1, 0.35 ], tier: 'common', value: [ 255, 480 ], fight: 0.15, stamina: 2.5, time: 'day', rarity: 1 },
@@ -44,6 +53,8 @@ export const FISH = {
 	littleTunny: { name: 'Little tunny', sci: 'Euthynnus alletteratus', lw: [ 0.0132, 3.05 ], model: 'tuna', habitat: { deep: 1, bay: 0.5 }, kg: [ 1, 6 ], tier: 'common', value: [ 480, 1200 ], fight: 0.6, stamina: 7, time: 'dawnDusk', rarity: 0.8 },
 
 	// ---- uncommon ($400 - $2,500)
+	// Water Wars 1.12
+	grayTrigger: { name: 'Gray triggerfish', sci: 'Balistes capriscus', lw: [ 0.0204, 2.95 ], model: 'angel', habitat: { reef: 0.8, bay: 0.5, pier: 0.3 }, kg: [ 0.5, 4 ], tier: 'uncommon', value: [ 1300, 4200 ], fight: 0.45, stamina: 6, time: 'day', rarity: 0.8 },
 	yellowtail: { name: 'Yellowtail snapper', sci: 'Ocyurus chrysurus', lw: [ 0.0137, 2.98 ], model: 'yellowtail', habitat: { reef: 1, pier: 0.4, bay: 0.4 }, kg: [ 0.4, 1.6 ], tier: 'uncommon', value: [ 1200, 3300 ], fight: 0.4, stamina: 5, time: 'dawnDusk', rarity: 1 },
 	tang: { name: 'Blue tang', sci: 'Acanthurus coeruleus', lw: [ 0.0282, 2.95 ], model: 'tang', habitat: { reef: 1 }, kg: [ 0.2, 0.6 ], tier: 'uncommon', value: [ 1350, 3000 ], fight: 0.2, stamina: 3, time: 'day', rarity: 0.8 },
 	triggerfish: { name: 'Queen triggerfish', sci: 'Balistes vetula', lw: [ 0.0281, 2.93 ], model: 'angel', habitat: { reef: 1, pier: 0.3 }, kg: [ 0.6, 2.5 ], tier: 'uncommon', value: [ 1500, 4500 ], fight: 0.35, stamina: 5, time: 'day', rarity: 0.8 },
@@ -54,6 +65,8 @@ export const FISH = {
 	permit: { name: 'Permit', sci: 'Trachinotus falcatus', lw: [ 0.0228, 2.95 ], model: 'jack', habitat: { shallows: 1, bay: 0.5, pier: 0.3 }, kg: [ 3, 15 ], tier: 'uncommon', value: [ 3000, 7500 ], fight: 0.8, stamina: 14, time: 'day', rarity: 0.6 },
 
 	// ---- rare ($2,500 - $12,000)
+	// Water Wars 1.12
+	rainbowRunner: { name: 'Rainbow runner', sci: 'Elagatis bipinnulata', lw: [ 0.0107, 2.96 ], model: 'jack', habitat: { deep: 1, bay: 0.3 }, kg: [ 2, 12 ], tier: 'rare', value: [ 8000, 22000 ], fight: 0.7, stamina: 10, time: 'day', rarity: 0.7 },
 	wrasse: { name: 'Hogfish', sci: 'Lachnolaimus maximus', lw: [ 0.0151, 3.07 ], model: 'wrasse', habitat: { reef: 0.8, bay: 0.3 }, kg: [ 0.5, 4 ], tier: 'rare', value: [ 7500, 18000 ], fight: 0.35, stamina: 6, time: 'day', rarity: 1 },
 	angel: { name: 'Queen angelfish', sci: 'Holacanthus ciliaris', lw: [ 0.0302, 2.94 ], model: 'angel', habitat: { reef: 1 }, kg: [ 0.4, 1.6 ], tier: 'rare', value: [ 9000, 21000 ], fight: 0.25, stamina: 4, time: 'day', rarity: 0.8 },
 	barracuda: { name: 'Great barracuda', sci: 'Sphyraena barracuda', lw: [ 0.0051, 3.08 ], model: 'barracuda', habitat: { reef: 0.5, bay: 0.8, deep: 0.5 }, kg: [ 2, 16 ], tier: 'rare', value: [ 7800, 24000 ], fight: 0.7, stamina: 11, time: 'any', rarity: 1 },
