@@ -352,7 +352,8 @@ export class Multiplayer {
 	}
 
 	// our own shots, so others see them (Combat calls this)
-	shot( kind, from, vel, splash = 0 ) {
+	// extra: { gravity, life } of a shell (1.13.3: straight cannon shells)
+	shot( kind, from, vel, splash = 0, extra = null ) {
 
 		if ( ! this.active || ! this.sendShotFn || ! this.peers.size ) return;
 		// machine guns fire 10-25 times a second: send at most ~12 shots a second
@@ -361,7 +362,7 @@ export class Multiplayer {
 		this._shotT = now;
 		try {
 
-			this.sendShotFn( { k: kind, f: from.toArray().map( ( v ) => +v.toFixed( 2 ) ), v: vel.toArray().map( ( v ) => +v.toFixed( 2 ) ), s: splash } );
+			this.sendShotFn( { k: kind, f: from.toArray().map( ( v ) => +v.toFixed( 2 ) ), v: vel.toArray().map( ( v ) => +v.toFixed( 2 ) ), s: splash, ...( extra ? { g: extra.gravity, l: +( extra.life || 0 ).toFixed( 2 ) } : {} ) } );
 
 		} catch ( e ) { /* ignore */ }
 
@@ -375,7 +376,10 @@ export class Multiplayer {
 		const from = new Vector3().fromArray( d.f ), vel = new Vector3().fromArray( d.v );
 		if ( ! [ ...d.f, ...d.v ].every( Number.isFinite ) || from.distanceTo( this.app.camera.position ) > 900 ) return;
 		const shell = d.k === 'shell';
-		combat.fx.fire( { from, vel, dmg: 0, owner: 'remote', kind: shell ? 'shell' : 'bullet', splash: 0, life: shell ? 10 : 1.4 } );
+		// (a shell from 1.13.3 on says it flies straight: g 0, and how long it flies before it bursts)
+		const g = Number.isFinite( d.g ) ? Math.max( 0, Math.min( 20, d.g ) ) : undefined;
+		const life = shell && Number.isFinite( d.l ) && d.l > 0 ? Math.min( 10, d.l ) : shell ? 10 : 1.4;
+		combat.fx.fire( { from, vel, dmg: 0, owner: 'remote', kind: shell ? 'shell' : 'bullet', splash: 0, life, gravity: g } );
 		combat.fx.muzzle( from, vel.clone().normalize(), shell );
 		combat.sfx.shot( from, shell ? 'cannon' : 'mg', 0.7 );
 

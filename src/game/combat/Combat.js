@@ -626,20 +626,17 @@ export class Combat {
 
 		const c = this.cannon;
 		const muzzle = c.pitch.localToWorld( _w.copy( c.muzzles[ 0 ] ) );
-		// land the shell on the aim point, within the gun's reach
-		const tgt = _a.copy( this.aim );
-		const dx = tgt.x - muzzle.x, dz = tgt.z - muzzle.z, d = Math.hypot( dx, dz );
-		if ( d > st.canRange ) {
-
-			tgt.x = muzzle.x + dx / d * st.canRange;
-			tgt.z = muzzle.z + dz / d * st.canRange;
-			tgt.y = 0;
-
-		}
-
-		const vel = this.ballistic( muzzle, tgt, SHELL_SPEED ); // (the boat's own motion is not added)
-		this.fx.fire( { from: muzzle, vel, dmg: st.canDmg, owner: 'player', kind: 'shell', splash: st.canSplash, life: 10 } );
-		if ( this.game.multiplayer ) this.game.multiplayer.shot( 'shell', muzzle, vel );
+		// Water Wars 1.13.3: straight at the crosshair, no arc. The shell flies the line from the muzzle to
+		// the aim point (what the crosshair is on: a boat, the water, or the far end of the sight line) and
+		// bursts at the gun's reach if it hasn't hit anything by then. (It used to be lobbed on a gravity
+		// arc to land on the aim point, clamped to the water at the gun's range: it visibly rose and fell,
+		// and aimed past its reach it dropped short of the crosshair.)
+		const vel = _a.copy( this.aim ).sub( muzzle );
+		if ( vel.lengthSq() < 1e-6 ) vel.set( 0, 0, 1 );
+		vel.normalize().multiplyScalar( SHELL_SPEED ); // (the boat's own motion is not added)
+		const life = st.canRange / SHELL_SPEED + 0.05;
+		this.fx.fire( { from: muzzle, vel: vel.clone(), dmg: st.canDmg, owner: 'player', kind: 'shell', splash: st.canSplash, life, gravity: 0 } );
+		if ( this.game.multiplayer ) this.game.multiplayer.shot( 'shell', muzzle, vel, 0, { gravity: 0, life } );
 		this.fx.muzzle( muzzle, vel.clone().normalize(), true );
 		this.sfx.shot( muzzle, 'cannon' );
 		this.cannonT = 1 / ( st.canRate * ( st.canRateMul || 1 ) );
