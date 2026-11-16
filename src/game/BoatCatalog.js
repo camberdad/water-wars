@@ -71,6 +71,8 @@ export const BOATS = {
 		name: 'WaveCutter speedboat', price: 800000, model: 'wavecutter',
 		blurb: 'A sleek bowrider speedboat. The fastest thing on the water by a mile: outrun anything, reach the Deadwater first, be gone before the coast guard gets close.',
 		hullMul: 1.1, speedMul: 2.4, holdKg: 40, fuelMul: 1.5, rudderMul: 0.85,
+		// 1.13.6: with the top engine she does about 66 knots, 20 more than before (Game.applyGear)
+		engineBoost: { thrust: 1.8, pitch: 1.43 },
 		up: 'y', fwd: '-z', length: 8.5, beam: 2.46, draft: 0.45, // 1.12.2: 0.22 m higher than its own water plane (more freeboard)
 		paint: [ [ 0.05, [ 0.015, 0.025, 0.06 ] ], [ 0.2, [ 0.5, 0.02, 0.02 ] ], [ 99, [ 0.85, 0.85, 0.83 ] ] ],
 		deckColor: [ 0.5, 0.51, 0.5 ], deckMaxY: 1.1, // light grey non-skid

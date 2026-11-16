@@ -5,7 +5,7 @@ import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
-import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft } from '../src/game/Trawl.js';
+import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S } from '../src/game/Weather.js';
@@ -548,6 +548,39 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const side = berthX( BOATS.superyacht ) - BOATS.superyacht.beam / 2;
 	ok( side - 62 > 2, `the superyacht's side lies ${ ( side - 62 ).toFixed( 1 ) } m off the pier head` );
 	ok( BOATS.superyacht.handling && BOATS.superyacht.handling.waveSmooth > 0 && BOATS.superyacht.speedMul < 2, 'the superyacht rides steadier and drives heavier' );
+
+}
+// ---- 1.13.6: the net's warps are a rope: dead astern on a straight course, at an angle after a turn
+{
+
+	const L = 17; // half the warp (two knots)
+	const stern = { x: 0, z: 0 }, mid = { x: 0, z: - L }, net = { x: 0, z: - 2 * L };
+	let hx = 0, hz = 1, yaw = 0; // heading (+z), turning to port then straight
+	const angle = () => {
+
+		const bx = - Math.sin( yaw ), bz = - Math.cos( yaw ); // astern
+		const nx = net.x - stern.x, nz = net.z - stern.z, n = Math.hypot( nx, nz );
+		return Math.acos( Math.max( - 1, Math.min( 1, ( nx * bx + nz * bz ) / n ) ) ) * 180 / Math.PI;
+
+	};
+	const step = ( turn, dt = 1 / 30, v = 2 ) => {
+
+		yaw += turn * dt;
+		hx = Math.sin( yaw ); hz = Math.cos( yaw );
+		stern.x += hx * v * dt; stern.z += hz * v * dt;
+		followRope( mid, stern, L );
+		followRope( net, mid, L );
+
+	};
+	for ( let i = 0; i < 300; i ++ ) step( 0 );
+	const straight = angle();
+	for ( let i = 0; i < 30 * 8; i ++ ) step( Math.PI / 2 / 8 ); // a 90 degree turn in 8 s
+	const afterTurn = angle();
+	for ( let i = 0; i < 30 * 40; i ++ ) step( 0 );
+	const later = angle();
+	ok( straight < 0.5 && afterTurn > 25 && later < 3, `the net streams astern, swings out in a turn and pulls at an angle (${ afterTurn.toFixed( 0 ) }° off), then falls in behind again (${ later.toFixed( 1 ) }°)` );
+	const d = Math.hypot( net.x - stern.x, net.z - stern.z );
+	ok( d <= 2 * L + 1e-6 && d > 2 * L * 0.9, 'the warps keep their length' );
 
 }
 console.log( `value check ${ value }` );

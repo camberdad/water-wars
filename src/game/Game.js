@@ -124,9 +124,16 @@ export class Game {
 			// the hull's physics is tuned for a work boat: past about 2x power it capsizes at speed, so the
 			// combined engine x boat multiplier eases toward 2 (every upgrade still adds, never past the edge)
 			const sm = 1 + Math.tanh( g.speedMul - 1 ); // eases toward 2 (the stabiliser keeps it upright)
-			this._power = sm; // the engine's power (fuel burn follows it)
-			b.maxThrust = this._engineBase.maxThrust * sm * sm;
-			b.pitchSpeed = this._engineBase.pitchSpeed * sm;
+			// Water Wars 1.13.6: a boat built for speed (BoatCatalog `engineBoost`, the WaveCutter) goes on
+			// gaining with each engine upgrade past that edge: its extra thrust and propeller pitch grow with the
+			// engine level, all of it at the top engine (it planes on its own hull: the stabiliser holds it)
+			const eb = ( BOATS[ this.state.boat ] || {} ).engineBoost;
+			const top = UPGRADES.engine.levels.length - 1;
+			const k = eb ? Math.min( 1, ( this.state.upgrades.engine | 0 ) / top ) : 0;
+			const thrustK = eb ? 1 + ( eb.thrust - 1 ) * k : 1, pitchK = eb ? 1 + ( eb.pitch - 1 ) * k : 1;
+			this._power = sm * Math.sqrt( thrustK ); // the engine's power (fuel burn follows it)
+			b.maxThrust = this._engineBase.maxThrust * sm * sm * thrustK;
+			b.pitchSpeed = this._engineBase.pitchSpeed * sm * pitchK;
 
 		}
 

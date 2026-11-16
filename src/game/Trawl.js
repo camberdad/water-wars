@@ -134,7 +134,38 @@ function buildCodEndGeometry() {
 
 }
 
-const _v = new Vector3(), _w = new Vector3(), _b = new Vector3();
+const _v = new Vector3(), _w = new Vector3(), _b = new Vector3(), _d = new Vector3(), _m = new Vector3();
+
+// Water Wars 1.13.6: the warps and the net are a rope, not a rod. Two knots, the middle of the warps and
+// the net's mouth, each follow the one ahead of it on a fixed length of line (a towed line dragged through
+// the water: it only ever pulls, never pushes). On a straight course they stream out dead astern; in a
+// turn they swing out wide and the warps bow, then the net comes round behind the boat again, pulling at
+// an angle until it does. node: the knot (moved, horizontal), lead: the point ahead of it, L: line length
+export function followRope( node, lead, L, payout = 0, back = null ) {
+
+	let dx = node.x - lead.x, dz = node.z - lead.z;
+	let d = Math.hypot( dx, dz );
+	if ( d < 1e-4 ) {
+
+		// on top of the lead (just shot): out astern
+		dx = back ? back.x : 0;
+		dz = back ? back.z : - 1;
+		d = 0;
+
+	} else {
+
+		dx /= d;
+		dz /= d;
+
+	}
+
+	// taut: held at the line's length; slack: paid out away from the lead (no further than the line allows)
+	const to = d > L ? L : Math.min( L, d + payout );
+	node.x = lead.x + dx * to;
+	node.z = lead.z + dz * to;
+	return d / Math.max( L, 1e-4 ); // > 1 while the line is taut and pulling
+
+}
 
 export class Trawl {
 
@@ -149,6 +180,9 @@ export class Trawl {
 		this.fast = 0;
 		this.waterY = 0;
 		this.group = null;
+		this.knots = null; // [ the middle of the warps, the net's mouth ] (world, horizontal): see followRope
+		this.taut = 0;
+		this._dt = 1 / 60;
 
 	}
 
@@ -252,6 +286,7 @@ export class Trawl {
 
 		this.build();
 		this.state = 'out';
+		this.knots = null; // (laid out from the stern on the first frame)
 		this.items = [];
 		this.wait = fillDelay( this.tier(), this.game.state.stats.netRate );
 		this.fast = 0;
@@ -277,6 +312,7 @@ export class Trawl {
 	update( dt ) {
 
 		const game = this.game, app = this.app, bc = app.boatCtl, inp = app.input;
+		this._dt = Math.min( 0.1, Math.max( 0, dt ) );
 		// the sorting screen: Space keeps the catch (once the protected animals are back in the sea)
 		if ( game.hud && game.hud.sortOpen ) {
 
@@ -336,8 +372,9 @@ export class Trawl {
 
 		}
 
-		// the net drags: about 3.5 knots flat out with the engine of the moment (more with less)
-		bc.netDrag = bc.maxThrust * 0.065 * this.len;
+		// the net drags (about 3.5 knots flat out with the engine of the moment), pulling along the warps:
+		// only while they're taut (Trawl.layLines sets the direction: BoatController.towDir)
+		bc.netDrag = bc.maxThrust * 0.065 * this.len * Math.min( 1, Math.max( 0, ( this.taut - 0.9 ) / 0.1 ) );
 
 	}
 
@@ -377,7 +414,11 @@ export class Trawl {
 		this.state = 'stowed';
 		this.len = 0;
 		this.items = [];
+		this.knots = null;
+		this._np = null;
+		this.taut = 0;
 		this.app.boatCtl.netDrag = 0;
+		this.app.boatCtl.towDir = null;
 		if ( this.group ) {
 
 			this.group.visible = false;
@@ -425,9 +466,23 @@ export class Trawl {
 		const stern = combat.mounts.stern;
 		const halfX = Math.max( 0.5, Math.min( 1.4, combat.hitHalf.x - 0.4 ) );
 		const sternW = boat.localToWorld( _w.set( 0, stern.y, stern.z ) );
-		const dist = 2 + NET_LEN * this.len;
-		const np = this._np || ( this._np = new Vector3() );
-		np.set( sternW.x + back.x * dist, 0, sternW.z + back.z * dist );
+		// the rope: stern -> the middle of the warps -> the net's mouth, half the warp each (paid out at
+		// about 8 m/s while the net goes over, hauled back in as the warp shortens)
+		const half = ( 2 + NET_LEN * this.len ) / 2;
+		if ( ! this.knots ) this.knots = [ new Vector3( sternW.x, 0, sternW.z ), new Vector3( sternW.x, 0, sternW.z ) ];
+		const [ mid, np ] = this.knots;
+		const pay = this.state === 'out' && this.len < 1 ? 8 * this._dt : 0; // (only while it goes over: a slack line astern isn't pushed)
+		const t1 = followRope( mid, sternW, half, pay, back );
+		const t2 = followRope( np, mid, half, pay, back );
+		this.taut = Math.max( t1, t2 );
+		this._np = np;
+		// the pull on the boat: from the stern toward the middle of the warps
+		const bc = this.app.boatCtl;
+		const tow = bc.towDir || ( bc.towDir = new Vector3() );
+		tow.set( mid.x - sternW.x, 0, mid.z - sternW.z );
+		if ( tow.lengthSq() > 1e-6 ) tow.normalize();
+		else tow.copy( back );
+		bc.towZ = stern.z;
 		// the water at the net (one water query), eased
 		const q = app.query;
 		if ( q && this.slot >= 0 ) {
@@ -438,22 +493,32 @@ export class Trawl {
 
 		}
 
-		// the mouth sits just under the surface with its floats riding on it; the bag fills out with the catch
-		np.y = this.waterY - 1.15;
-		this.group.position.copy( np );
-		this.group.rotation.set( 0, Math.atan2( - back.x, - back.z ), 0 );
+		// the mouth sits just under the surface with its floats riding on it, facing up its warps (toward the
+		// middle knot); the bag fills out with the catch
+		const ny = this.waterY - 1.15;
+		const dir = _d.set( mid.x - np.x, 0, mid.z - np.z );
+		if ( dir.lengthSq() < 1e-6 ) dir.set( - back.x, 0, - back.z );
+		dir.normalize();
+		this.group.position.set( np.x, ny, np.z );
+		this.group.rotation.set( 0, Math.atan2( dir.x, dir.z ), 0 );
 		const fill = this.size ? this.items.length / this.size : 0;
 		this.cod.scale.setScalar( 0.4 + 0.7 * fill );
 		this.group.visible = this.len > 0.08;
+		// (the net's own port side: its +x)
+		const sx = dir.z, sz = - dir.x;
 		for ( const w of this.warps ) {
 
 			const tip = boat.localToWorld( _v.set( w.s * halfX, stern.y + 0.3, stern.z ) );
 			const L = w.lineMat.uniforms;
 			L.lineA.value.copy( tip );
 			// to the mouth's upper corner on this side
-			const sx = - back.z * w.s, sz = back.x * w.s; // (the boat's side, horizontal)
-			L.lineB.value.set( np.x + sx * 1.3, np.y + 0.4, np.z + sz * 1.3 );
-			L.lineCtl.value.copy( L.lineA.value ).lerp( L.lineB.value, 0.5 ).y -= 0.6;
+			L.lineB.value.set( np.x + sx * 1.3 * w.s, ny + 0.4, np.z + sz * 1.3 * w.s );
+			// through the middle knot (spread to this warp's side of it, sagging when slack): the quadratic
+			// curve's control point is placed so the curve passes through it
+			const rx = L.lineB.value.x - tip.x, rz = L.lineB.value.z - tip.z, rl = Math.hypot( rx, rz ) || 1;
+			const spread = ( halfX + 1.3 ) / 2 * w.s;
+			_m.set( mid.x - rz / rl * spread, ( tip.y + L.lineB.value.y ) / 2 - ( this.taut > 0.98 ? 0.5 : 1.4 ), mid.z + rx / rl * spread );
+			L.lineCtl.value.copy( _m ).multiplyScalar( 2 ).addScaledVector( tip, - 0.5 ).addScaledVector( L.lineB.value, - 0.5 );
 			L.lineShow.value = 1.6;
 			w.line.visible = true;
 

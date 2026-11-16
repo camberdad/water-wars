@@ -94,6 +94,8 @@ export class BoatController {
 		// x how fast the throttle lever and wheel move / x the engine's spool time
 		this.handling = null;
 		this.netDrag = 0; // N per (m/s)^2: a trawl net in the water (src/game/Trawl.js)
+		this.towDir = null; // world direction the net's warps pull the stern (null: straight astern)
+		this.towZ = - 3.4; // boat-local z of the stern where the warps are made fast
 		// where this boat is moored at the harbour (a wide boat lies further out from the pier: Combat.setSkin)
 		this.berth = { position: WORLD.boatDock.position.clone(), heading: WORLD.boatDock.heading };
 		this._meanH = null;
@@ -347,10 +349,23 @@ export class BoatController {
 
 		// ---- calm-water resistance (friction + the wave-making hump past hull speed + planing)
 		const au = Math.abs( u );
-		const R = ( 40 * au + 22 * au * au + 3000 * sstep( au, 2.8, 5.4 ) + 55 * au * au * sstep( au, 7, 11 ) ) * wetD + this.netDrag * au * au;
+		const R = ( 40 * au + 22 * au * au + 3000 * sstep( au, 2.8, 5.4 ) + 55 * au * au * sstep( au, 7, 11 ) ) * wetD;
 		_p.set( 0, - 0.2, this.com.z );
 		this.toWorld( _p, _p );
 		addForceAt( _f.copy( fwd ).multiplyScalar( - R * Math.sign( u ) ), _p );
+		// ---- a trawl net astern (Water Wars 1.13.6): its drag pulls the stern along the warps (straight
+		// astern on a straight course, at an angle after a turn), at the height of the centre of mass
+		if ( this.netDrag > 0 ) {
+
+			const pull = this.netDrag * this.speed * this.speed;
+			_p.set( 0, this.com.y, this.towZ );
+			this.toWorld( _p, _p );
+			if ( this.towDir ) _f.copy( this.towDir ).setY( 0 );
+			else _f.copy( fwd ).setY( 0 ).negate();
+			if ( _f.lengthSq() > 1e-8 ) addForceAt( _f.normalize().multiplyScalar( pull ), _p );
+
+		}
+
 		// air drag on hull + house (Cd ~0.9, ~6 m^2 frontal area)
 		F.addScaledVector( this.velocity, - 3.3 * this.speed );
 
