@@ -162,7 +162,13 @@ export class BoatController {
 		this.throttleTarget = throttle;
 		const H = this.handling;
 		this.throttle += ( throttle - this.throttle ) * ( 1 - Math.exp( - dt * 2.2 * ( H && H.lever || 1 ) ) );
-		this.steer += ( steer - this.steer ) * ( 1 - Math.exp( - dt * 1.2 * ( H && H.wheel || 1 ) ) );
+		// Water Wars 1.15.2: the wheel comes back to the middle quickly when you let go of it (or swing it the
+		// other way): it used to drift back over ~2.5 s, and at speed that leftover rudder kept turning the boat
+		// long after you let go (a 0.5 s tap on the WaveCutter at 58 kn turned her 43 degrees), so every small
+		// correction overshot and she never held a straight line
+		const back = steer === 0 || Math.sign( steer ) !== Math.sign( this.steer );
+		this.steer += ( steer - this.steer ) * ( 1 - Math.exp( - dt * ( back ? 6 : 1.6 ) * ( H && H.wheel || 1 ) ) );
+		if ( steer === 0 && Math.abs( this.steer ) < 0.002 ) this.steer = 0;
 
 	}
 
@@ -436,7 +442,11 @@ export class BoatController {
 		const Ur2 = u * Math.abs( u ) + 0.9 * race;
 		const Ur = Math.sqrt( Math.abs( Ur2 ) ) * Math.sign( Ur2 );
 		const vRud = vs + aLoc.y * ( this.model.rudder.z - this.com.z );
-		const delta = this.steer * 0.6 + ( Math.abs( Ur ) > 0.3 ? Math.atan2( vRud, Math.abs( Ur ) ) * Math.sign( Ur ) : 0 );
+		// (1.15.2: speed-sensitive steering. The rudder's bite grows with the square of the speed, so at speed
+		// the same wheel turns the boat much harder: past 10 m/s, about 19 kn, the wheel puts on less rudder,
+		// as a fast boat's helmsman would. Slow boats steer as before)
+		const wheelGain = 1 / Math.max( 1, Math.abs( u ) / 10 );
+		const delta = this.steer * 0.6 * wheelGain + ( Math.abs( Ur ) > 0.3 ? Math.atan2( vRud, Math.abs( Ur ) ) * Math.sign( Ur ) : 0 );
 		const d = clamp( delta, - 0.7, 0.7 );
 		const lift = 0.5 * RHO * 0.12 * Math.abs( Ur2 ) * this.rudderLift * Math.sin( d ) * Math.cos( d ) * propWet * Math.sign( Ur2 || 1 );
 		addForceAt( _f.copy( side ).multiplyScalar( - lift ), rudW );

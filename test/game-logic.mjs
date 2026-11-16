@@ -691,6 +691,48 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( [ back, uturn, turn ].every( ( r ) => r.resets === 0 && r.top < 40 ), `going astern, a U-turn or a hard turn with the net out never runs away (top ${ [ back, uturn, turn ].map( ( r ) => r.top.toFixed( 1 ) ).join( ' / ' ) } m/s, no resets)` );
 
 }
+// ---- 1.15.2: steering at speed: a short tap of the wheel gives a small, predictable turn, and the boat
+// stops turning soon after you let go (the WaveCutter used to keep turning for seconds and never held a line)
+{
+
+	const hullSamples = [];
+	for ( let i = 0; i < 4; i ++ ) for ( let j = 0; j < 8; j ++ ) hullSamples.push( { position: new Vector3( - 1.1 + i * 0.73, - 0.35, - 3.5 + j * 1.0 ), area: 0.72, bottomY: - 0.6 } );
+	const tap = ( thrustK, pitchK, rudderMul, hold ) => {
+
+		const model = { hydro: {}, hullSamples, propeller: new Vector3( 0, - 0.6, - 3.4 ), rudder: { z: - 3.7 }, group: new Group(), setThrottle() {}, setSteering() {}, setPropellerRPM() {} };
+		const q = { latency: 0.05, cpuValid: true, version: 0, resultTime: 0, cpu: new Float32Array( 512 ), resultInputs: new Float32Array( 512 ), count: 0,
+			allocate( n, k ) { const s = this.count; this.count += k; return s; }, setPoint( i, x, z ) { this.resultInputs[ i * 4 ] = x; this.resultInputs[ i * 4 + 1 ] = z; } };
+		const bc = new BoatController( { model, query: q, terrain: { heightAt: () => - 50 }, colliders: {} } );
+		bc.contacts = () => {};
+		bc.quaternion.identity();
+		bc.moored = false;
+		bc.driven = true;
+		bc.maxThrust *= thrustK;
+		bc.pitchSpeed *= pitchK;
+		bc.rudderLift *= rudderMul;
+		const heading = () => { const f = new Vector3( 0, 0, 1 ).applyQuaternion( bc.quaternion ); return Math.atan2( f.x, f.z ) * 180 / Math.PI; };
+		let t = 0, h0 = 0, hRel = 0, top = 0;
+		for ( let i = 0; i < 30 * 60; i ++ ) {
+
+			q.version ++;
+			q.resultTime = t;
+			bc.queueQueries();
+			bc.setInput( 1, t >= 15 && t < 15 + hold ? 1 : 0, 1 / 60 );
+			bc.update( 1 / 60 );
+			t += 1 / 60;
+			top = Math.max( top, bc.velocity.length() );
+			if ( Math.abs( t - 15 ) < 1 / 120 ) h0 = heading();
+			if ( Math.abs( t - 15 - hold ) < 1 / 120 ) hRel = heading();
+
+		}
+
+		return { total: heading() - h0, after: heading() - hRel, top };
+
+	};
+	const lobster = tap( 1, 1, 1, 0.5 ), cutter = tap( 7.2, 2.86, 0.85, 0.5 );
+	ok( cutter.top > 25 && Math.abs( cutter.total ) < 15 && Math.abs( cutter.after ) < 6 && Math.abs( cutter.total - lobster.total ) < 5, `a half-second tap of the wheel: ${ lobster.total.toFixed( 1 ) }° on the lobster boat, ${ cutter.total.toFixed( 1 ) }° on the WaveCutter at ${ ( cutter.top * 1.944 ).toFixed( 0 ) } kn (${ cutter.after.toFixed( 1 ) }° after letting go)` );
+
+}
 console.log( `value check ${ value }` );
 console.log( fails ? `${ fails } FAILED` : 'all passed' );
 process.exit( fails ? 1 : 0 );
