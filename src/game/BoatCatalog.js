@@ -73,11 +73,12 @@ export const BOATS = {
 		hullMul: 1.1, speedMul: 2.4, holdKg: 40, fuelMul: 1.5, rudderMul: 0.85,
 		// 1.13.6: with the top engine she does about 66 knots, 20 more than before (Game.applyGear)
 		engineBoost: { thrust: 1.8, pitch: 1.43 },
-		up: 'y', fwd: '-z', length: 8.5, beam: 2.46, draft: 0.45, // 1.12.2: 0.22 m higher than its own water plane (more freeboard)
-		paint: [ [ 0.05, [ 0.015, 0.025, 0.06 ] ], [ 0.2, [ 0.5, 0.02, 0.02 ] ], [ 99, [ 0.85, 0.85, 0.83 ] ] ],
-		deckColor: [ 0.5, 0.51, 0.5 ], deckMaxY: 1.1, // light grey non-skid
-		gun: [ 0, 1.2, - 0.7 ], cannon: [ 0, 1.0, 3.5 ], hitHalf: [ 1.25, 1.1, 4.3 ],
-		helm: [ - 0.45, 0.1 ], // behind the wheel (starboard of the windshield)
+		// 1.15: 1.35x bigger (was 8.5 m long, 2.46 m wide, 0.45 m draft): every height and mount below scaled with her
+		up: 'y', fwd: '-z', length: 11.5, beam: 3.32, draft: 0.61, // (1.12.2: 0.22 m higher than its own water plane at 8.5 m)
+		paint: [ [ 0.07, [ 0.015, 0.025, 0.06 ] ], [ 0.27, [ 0.5, 0.02, 0.02 ] ], [ 99, [ 0.85, 0.85, 0.83 ] ] ],
+		deckColor: [ 0.5, 0.51, 0.5 ], deckMaxY: 1.49, // light grey non-skid
+		gun: [ 0, 1.62, - 0.95 ], cannon: [ 0, 1.35, 4.73 ], hitHalf: [ 1.69, 1.49, 5.8 ],
+		helm: [ - 0.61, 0.14 ], // behind the wheel (starboard of the windshield)
 	},
 	ship: {
 		name: 'Deep-sea fishing ship', price: 400000, model: 'ship',

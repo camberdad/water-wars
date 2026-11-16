@@ -9,7 +9,7 @@ import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
 import { hullOutline, placeOutline, hullContact, densify } from './HullContact.js';
 import { BOATS, berthX } from '../BoatCatalog.js';
-import { Boss } from './Boss.js';
+import { Boss, BOSSES } from './Boss.js';
 import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
 import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK, buildDockFenders } from '../Harbours.js';
@@ -46,8 +46,10 @@ export class Combat {
 		this.fx.onImpact = ( p, point, target ) => this.onImpact( p, point, target );
 		this.sfx = new CombatSFX( app );
 		this.fleet = new NPCFleet( app );
-		// the boss of the Deadwater (1.14: src/game/combat/Boss.js)
-		this.boss = new Boss( this );
+		// the bosses (src/game/combat/Boss.js): the Iron Kraken in the Deadwater (1.14), the Crimson Corsair
+		// in the Open Sea (1.15)
+		this.bosses = [ new Boss( this, BOSSES.kraken ), new Boss( this, BOSSES.corsair ) ];
+		this.boss = this.bosses[ 0 ];
 		this.time = 0;
 
 		// the player's guns
@@ -329,7 +331,7 @@ export class Combat {
 		this.updateZone( ctx.playerPos, aboard );
 		this.manageSpawns( dt, ctx.playerPos );
 		this.fleet.update( dt, ctx );
-		this.boss.update( dt, ctx );
+		for ( const B of this.bosses ) B.update( dt, ctx );
 		if ( aboard ) this.collideBoats( dt );
 		if ( aboard ) this.worldEdge( dt );
 
@@ -553,16 +555,15 @@ export class Combat {
 
 		const mine = placeOutline( this._myShape, bc.position.x, bc.position.z, bc.getYaw(), this._myPoly || ( this._myPoly = [] ) );
 		const reach = Math.hypot( w, l ) + Math.hypot( BOAT_HALF.x, BOAT_HALF.z );
-		const boss = this.boss;
-		for ( const b of [ ...this.fleet.boats, boss ] ) {
+		for ( const b of [ ...this.fleet.boats, ...this.bosses ] ) {
 
 			if ( ! b.active || b.state === 'sinking' ) continue;
-			const big = b === boss;
+			const big = b.type === 'boss';
 			const dx = bc.position.x - b.pos.x, dz = bc.position.z - b.pos.z;
-			const r = big ? Math.hypot( w, l ) + 18 : reach;
+			const r = big ? Math.hypot( w, l ) + b.half.z + 1 : reach;
 			if ( dx * dx + dz * dz > r * r ) continue; // too far apart to touch
 			// only where the hulls really meet
-			const hit = hullContact( mine, big ? placeOutline( boss.outline, b.pos.x, b.pos.z, b.yaw, this._bossPoly || ( this._bossPoly = [] ) ) : placeOutline( this._npcShape, b.pos.x, b.pos.z, b.yaw, this._npcPoly || ( this._npcPoly = [] ) ) );
+			const hit = hullContact( mine, big ? placeOutline( b.outline, b.pos.x, b.pos.z, b.yaw, b._poly || ( b._poly = [] ) ) : placeOutline( this._npcShape, b.pos.x, b.pos.z, b.yaw, this._npcPoly || ( this._npcPoly = [] ) ) );
 			if ( ! hit ) continue;
 			const nx = hit.nx, nz = hit.nz, over = hit.depth;
 			// (the boss sails her own course: she shoves you out of the way)
@@ -616,13 +617,14 @@ export class Combat {
 
 		}
 
-		if ( this.boss.alive ) {
+		for ( const B of this.bosses ) {
 
-			const t = this.boss.intersect( o, end );
+			if ( ! B.alive ) continue;
+			const t = B.intersect( o, end );
 			if ( t >= 0 && t < best ) {
 
 				best = t;
-				tgt = this.boss;
+				tgt = B;
 
 			}
 
@@ -695,12 +697,22 @@ export class Combat {
 		// for the look of it: their damage to her comes with their own reports, Boss.remoteDamage)
 		if ( p.owner === 'remote' ) {
 
-			const B = this.boss;
-			if ( ! B.alive ) return null;
-			const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
-			if ( mx * mx + mz * mz > ( 20 + a.distanceTo( b ) ) ** 2 ) return null;
-			const t = B.intersect( a, b );
-			return t >= 0 ? { point: new Vector3().lerpVectors( a, b, t ), target: 'bossLook' } : null;
+			for ( const B of this.bosses ) {
+
+				if ( ! B.alive ) continue;
+				const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
+				if ( mx * mx + mz * mz > ( B.half.z + 3 + a.distanceTo( b ) ) ** 2 ) continue;
+				const t = B.intersect( a, b );
+				if ( t >= 0 ) {
+
+					this._lookBoss = B;
+					return { point: new Vector3().lerpVectors( a, b, t ), target: 'bossLook' };
+
+				}
+
+			}
+
+			return null;
 
 		}
 
@@ -723,11 +735,11 @@ export class Combat {
 
 			}
 
-			const B = this.boss;
-			if ( B.alive ) {
+			for ( const B of this.bosses ) {
 
+				if ( ! B.alive ) continue;
 				const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
-				if ( mx * mx + mz * mz < ( 20 + a.distanceTo( b ) ) ** 2 ) {
+				if ( mx * mx + mz * mz < ( B.half.z + 3 + a.distanceTo( b ) ) ** 2 ) {
 
 					const t = B.intersect( a, b );
 					if ( t >= 0 && t < best ) {
@@ -777,7 +789,7 @@ export class Combat {
 		} else if ( target === 'bossLook' ) {
 
 			if ( shell ) this.fx.explosion( point, 0.9 );
-			else this.fx.hit( point, _v.set( point.x - this.boss.pos.x, 0, point.z - this.boss.pos.z ).normalize(), 0.25 );
+			else this.fx.hit( point, _v.set( point.x - ( this._lookBoss || this.boss ).pos.x, 0, point.z - ( this._lookBoss || this.boss ).pos.z ).normalize(), 0.25 );
 			this.sfx.shot( point, shell ? 'explosion' : 'hit', shell ? 0.8 : 0.4 );
 			return;
 
@@ -815,13 +827,13 @@ export class Combat {
 
 				}
 
-				const B = this.boss;
-				if ( B.alive && B !== target ) {
+				for ( const B of this.bosses ) {
 
+					if ( ! B.alive || B === target ) continue;
 					// (her hull is long: measured from the nearest point of her centre line)
 					const lx = point.x - B.pos.x, lz = point.z - B.pos.z, fx = Math.sin( B.yaw ), fz = Math.cos( B.yaw );
-					const along = Math.max( - 15, Math.min( 15, lx * fx + lz * fz ) );
-					const d = Math.max( 0, Math.hypot( lx - fx * along, lz - fz * along ) - 6 );
+					const along = Math.max( - B.half.z + 2, Math.min( B.half.z - 2, lx * fx + lz * fz ) );
+					const d = Math.max( 0, Math.hypot( lx - fx * along, lz - fz * along ) - B.half.x );
 					if ( d < p.splash ) {
 
 						const killed = B.damage( p.dmg * ( 1 - d / p.splash ) * 0.8, true, this._ctx );

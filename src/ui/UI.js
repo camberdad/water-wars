@@ -2158,6 +2158,7 @@ export class UI {
 						${ row( k( 'B' ), 'Grab a bent stern rod' ) }
 						${ row( k( 'N' ), 'Trawl net out / in (at sea)' ) }
 						${ row( k( 'Space' ), 'Pass a catch card · close a panel' ) }
+						${ row( k( 'Esc' ), 'Menu: settings, back to the home dock, the title screen' ) }
 					</section>
 					<section>
 						<h3>Combat (at the helm)</h3>

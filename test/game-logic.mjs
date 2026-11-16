@@ -5,7 +5,7 @@ import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
-import { BOSS, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
+import { BOSS, BOSSES, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
 import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
@@ -619,6 +619,26 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( a.captains === 2 && Math.abs( a.cash + b.cash - BOSS.pool * 1.5 ) <= 200 && a.cash > b.cash && b.cash > 0, `two captains share a bigger pool by their damage (${ a.cash.toLocaleString() } and ${ b.cash.toLocaleString() })` );
 	ok( bossPayout( 0, [ 85000 ] ).cash === 0, 'no plunder for a captain who never hit her' );
 	ok( BOSS_MODEL.model === 'ship' && BOSS_MODEL.length > 30, 'she is a 34 m warship built on the fishing ship\'s hull' );
+
+}
+// ---- 1.15: the mini boss of the Open Sea; a bigger WaveCutter
+{
+
+	const M = BOSSES.corsair;
+	let inTier2 = true;
+	for ( let t = 1.8e9; t < 1.8e9 + 3600; t += 2 ) {
+
+		const p = bossPose( t, M );
+		const z = dangerZoneAt( p.x, p.z );
+		if ( ! z || z.tier !== 2 ) inTier2 = false;
+
+	}
+
+	ok( inTier2 && M.tier === 2, 'the Crimson Corsair patrols the Open Sea (tier 2)' );
+	ok( M.hp < BOSS.hp / 2 && M.hp > 15000 && M.pool < BOSS.pool && M.mg.dmg < BOSS.mg.dmg && M.cannon.dmg < BOSS.cannon.dmg, 'a mini boss: tougher than any pirate, much weaker than the Kraken, a smaller prize' );
+	ok( bossPayout( M.hp, [], M.pool ).cash === 150000 && bossGen( M.cycleS * 3, M ) === 3, 'alone she pays $150,000; her own generations' );
+	ok( new Set( Object.values( BOSSES ).map( ( b ) => b.id ) ).size === 2 && BOSSES.kraken === BOSS, 'two bosses, each with its own id for the shared damage' );
+	ok( BOATS.wavecutter.length === 11.5 && Math.abs( BOATS.wavecutter.beam / BOATS.wavecutter.length - 2.46 / 8.5 ) < 0.002 && BOATS.wavecutter.hitHalf[ 2 ] > 5.5, 'the WaveCutter is 1.35x bigger (11.5 m), in proportion' );
 
 }
 console.log( `value check ${ value }` );

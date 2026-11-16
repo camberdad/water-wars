@@ -223,7 +223,7 @@ export class Multiplayer {
 				const p = this.peer( id );
 				const first = ! p.has;
 				p.apply( d || {} );
-				if ( d && d.bd && this.game.combat && this.game.combat.boss ) this.game.combat.boss.remoteDamage( id, d.bd );
+				if ( d && d.bd ) this.applyBossDamage( id, d.bd );
 				if ( first ) this.game.toast( `🌐 ${ p.name } sailed into the open sea`, 2600 );
 
 			} );
@@ -352,8 +352,36 @@ export class Multiplayer {
 			t: Date.now(), // (the shared wave clock: lets a peer see how far apart the clocks are)
 			// our damage to this generation of the boss (1.14: src/game/combat/Boss.js): her health bar is what
 			// every captain's damage leaves, and the plunder is shared by it
-			bd: this.game.combat && this.game.combat.boss ? this.game.combat.boss.netState() : null,
+			bd: this.bossDamage(),
 		};
+
+	}
+
+	// our damage to each boss this generation: { id: [ gen, dmg ] } (null when we haven't hit one)
+	bossDamage() {
+
+		const c = this.game.combat;
+		if ( ! c || ! c.bosses ) return null;
+		let out = null;
+		for ( const B of c.bosses ) {
+
+			const s = B.netState();
+			if ( s ) ( out || ( out = {} ) )[ B.id ] = s;
+
+		}
+
+		return out;
+
+	}
+
+	applyBossDamage( id, bd ) {
+
+		const c = this.game.combat;
+		if ( ! c || ! c.bosses ) return;
+		// (a 1.14.0 peer sends the Iron Kraken's alone, as [ gen, dmg ])
+		if ( Array.isArray( bd ) ) bd = { kraken: bd };
+		if ( typeof bd !== 'object' ) return;
+		for ( const B of c.bosses ) if ( bd[ B.id ] ) B.remoteDamage( id, bd[ B.id ] );
 
 	}
 

@@ -18,6 +18,7 @@ import { Giants } from './Giants.js';
 import { Multiplayer } from './Multiplayer.js';
 import { SharedWeather } from './Weather.js';
 import { Trawl } from './Trawl.js';
+import { PauseMenu } from './PauseMenu.js';
 import { HighScores } from './HighScores.js';
 import { SternRods } from './SternRods.js';
 import { dangerZoneAt } from './DangerZones.js';
@@ -79,6 +80,8 @@ export class Game {
 		this.sternRods = new SternRods( this );
 		// the trawl net (N at sea; 1.13.5)
 		this.trawl = new Trawl( this );
+		// the Escape menu (1.15): resume, settings, back to the home dock, the title screen
+		this.pause = new PauseMenu( this );
 		// Space passes the catch cards and closes the cooler and shop panels (as E / Esc / a click do).
 		// Caught here, before the player sees it, so the same press doesn't also jump.
 		this._space = false;
@@ -222,6 +225,7 @@ export class Game {
 
 		}
 
+		this.pause.update();
 		// the stern rods first: grabbing one may take you from the helm to the deck with a fish on
 		this.sternRods.update( dt );
 		this.trawl.update( dt );

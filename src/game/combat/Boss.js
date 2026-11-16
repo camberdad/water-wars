@@ -4,53 +4,102 @@ import { buildGunTurret, buildCannon, buildFlag } from './WeaponModels.js';
 import { segmentBox } from './NPCBoats.js';
 import { hullOutline } from './HullContact.js';
 
-// The boss (Water Wars 1.14): the Iron Kraken, a pirate warship that patrols the Deadwater (danger tier 3).
-// She is the deep-sea fishing ship's hull blown up to 34 m, painted black and red and bristling with guns:
-// two twin machine guns on the bridge roof and a heavy cannon fore and aft. She has a huge store of hit
-// points (85,000: about a minute of fire from a fully upgraded deck gun and rail cannon) and fires back at
-// anyone who attacks her or comes too close.
+// Bosses: big pirate ships with a shared health bar.
 //
-// Shared in multiplayer with no host: her course and her generation come from the wall clock (the same
-// clock as the waves), so every player sees her in the same place. Each player reports the damage they
-// have done to this generation of her (Multiplayer snapshot `bd`); her health is what's left after all of
-// it, so the bar goes down for everyone. When she goes down, everyone who hit her shares the plunder by the
-// damage they did (a bigger pool the more captains joined in). A new Kraken sails out every CYCLE_S
-// seconds after one is sunk (the next generation); one that survives a generation is repaired.
+//   Iron Kraken      (Water Wars 1.14) the boss of the Deadwater (danger tier 3): the deep-sea fishing
+//                    ship's hull blown up to 34 m, painted black and red, with twin machine guns on the
+//                    bridge roof, chasers fore and aft and a broadside gun each side. 85,000 hp (about a
+//                    minute of fire from a fully upgraded deck gun and rail cannon), $600,000 of plunder.
+//   Crimson Corsair  (1.15) the mini boss of the Open Sea (tier 2): the old fishing launch's hull at 22 m,
+//                    crimson with a gold stripe, a twin machine gun on the wheelhouse and a bow chaser.
+//                    22,000 hp, $150,000 of plunder.
+//
+// Each fires back at anyone who attacks her or comes too close. Shared in multiplayer with no host: her
+// course and her generation come from the wall clock (the same clock as the waves), so every player sees
+// her in the same place. Each player reports the damage they have done to this generation of her
+// (Multiplayer snapshot `bd`, by boss id); her health is what's left after all of it, so the bar goes down
+// for everyone. When she goes down, everyone who hit her shares the plunder by the damage they did (a
+// bigger pool the more captains joined in). A new one sails out at the next generation (every cycleS
+// seconds); one that survives a generation is repaired.
 
-export const BOSS = {
-	name: 'Iron Kraken', // ("the Iron Kraken" in sentences)
-	label: 'Pirate warship',
-	hp: 85000,
-	lair: { x: 900, z: 1500 }, // the middle of her patrol circle (about 1,700 m out: the Deadwater)
-	radius: 210, // m
-	speed: 3.2, // m/s around the circle (a lap is about 7 minutes)
-	cycleS: 20 * 60, // s: one generation of her
-	aggro: 150, // m: she opens fire on anyone this close, attacked or not
-	pool: 600000, // $ of plunder for one captain (more for a crew: see bossPayout)
-	mg: { dmg: 4, rate: 7, range: 260, spread: 0.035, speed: 240 },
-	cannon: { dmg: 32, rate: 0.22, range: 380, splash: 7, speed: 75 },
-	half: new Vector3( 6.2, 6.4, 17.2 ), // hit box half extents (local), centred CENTER_Y up
-	centerY: 4.2,
+export const BOSSES = {
+	kraken: {
+		id: 'kraken', tier: 3, mapKind: 'boss',
+		name: 'Iron Kraken', // ("the Iron Kraken" in sentences)
+		label: 'Pirate warship', waters: 'the Deadwater',
+		hp: 85000,
+		lair: { x: 900, z: 1500 }, // the middle of her patrol circle (about 1,700 m out: the Deadwater)
+		radius: 210, // m
+		speed: 3.2, // m/s around the circle (a lap is about 7 minutes)
+		cycleS: 20 * 60, // s: one generation of her
+		aggro: 150, // m: she opens fire on anyone this close, attacked or not
+		pool: 600000, // $ of plunder for one captain (more for a crew: see bossPayout)
+		mg: { dmg: 4, rate: 7, range: 260, spread: 0.035, speed: 240 },
+		cannon: { dmg: 32, rate: 0.22, range: 380, splash: 7, speed: 75 },
+		half: new Vector3( 6.2, 6.4, 17.2 ), // hit box half extents (local), centred centerY up
+		centerY: 4.2,
+		outline: [ 5.6, 16.6 ], // half beam / half length at the waterline (collisions)
+		poseArm: 13, // m fore and aft of the middle where the water is read for heave and pitch
+		// the fitting of her model: the fishing ship's hull at 34 m, black topsides over a red boot stripe
+		model: {
+			model: 'ship', up: 'y', fwd: 'z', length: 34, beam: 12, draft: 2.4,
+			paint: [ [ 0.2, [ 0.09, 0.012, 0.01 ] ], [ 1.0, [ 0.42, 0.02, 0.015 ] ], [ 5.4, [ 0.018, 0.018, 0.02 ] ], [ 99, [ 0.075, 0.07, 0.068 ] ] ],
+			deckColor: [ 0.16, 0.11, 0.07 ], deckMinY: 0.25, deckMaxY: 6.8,
+		},
+		// (heights measured off the scaled model: the bridge roof 11.9 m, the fo'c'sle 8.1 m, the aft working
+		// deck 1.05 m, the side decks about 5.3 m above the water)
+		mgs: [ [ - 2.2, 11.94, 0, 2.4 ], [ 2.2, 11.94, 0, 2.4 ] ],
+		// [ x, y, z, yaw, arc, scale ]: bow and stern chasers and a broadside gun each side
+		cannons: [ [ 0, 8.1, 15.2, 0, 'bow', 3 ], [ 0, 1.05, - 11, Math.PI, 'stern', 3 ], [ 4.4, 5.3, - 3, Math.PI / 2, 'port', 3 ], [ - 4.4, 5.3, - 3, - Math.PI / 2, 'starboard', 3 ] ],
+		flags: [ [ 0, 11.94, 0.8, 2.4 ], [ 0, 8.1, 16.4, 1.4 ] ],
+		burn: [ [ 2, 5, - 6 ], [ - 2.5, 10, 2 ], [ 1.5, 6, 10 ], [ - 1, 3, - 12 ] ],
+		smokeAt: [ 0, 12, - 2 ],
+	},
+	corsair: {
+		id: 'corsair', tier: 2, mapKind: 'miniboss',
+		name: 'Crimson Corsair',
+		label: 'Pirate gunship', waters: 'the Open Sea',
+		hp: 22000,
+		lair: { x: - 500, z: 950 }, // about 1,080 m out: the Open Sea
+		radius: 160,
+		speed: 3.8,
+		cycleS: 15 * 60,
+		aggro: 130,
+		pool: 150000,
+		mg: { dmg: 3, rate: 6, range: 230, spread: 0.04, speed: 230 },
+		cannon: { dmg: 22, rate: 0.2, range: 320, splash: 5, speed: 72 },
+		half: new Vector3( 4.3, 4.9, 11 ),
+		centerY: 3.8,
+		outline: [ 3.9, 10.4 ],
+		poseArm: 8,
+		// the old fishing launch's hull at 22 m (1.53x): crimson over a gold stripe, black topsides
+		model: {
+			model: 'oldboat', up: 'y', fwd: 'z', length: 22, beam: 8.7, draft: 1.15,
+			paint: [ [ 0.15, [ 0.06, 0.02, 0.015 ] ], [ 0.46, [ 0.85, 0.62, 0.12 ] ], [ 1.76, [ 0.34, 0.015, 0.02 ] ], [ 99, [ 0.05, 0.045, 0.04 ] ] ],
+			deckColor: [ 0.14, 0.09, 0.05 ],
+		},
+		// (measured off the scaled model: the wheelhouse roof flat at 5.45 m from 6 to 8 m aft, the foredeck 2.5 m)
+		mgs: [ [ 0, 5.46, - 6.8, 2 ] ],
+		cannons: [ [ 0, 2.49, 4.0, 0, 'bow', 2.4 ] ],
+		flags: [ [ 1.6, 5.43, - 8, 1.8 ] ],
+		burn: [ [ 1.2, 2.5, - 4 ], [ - 1.5, 5.5, - 7 ], [ 1, 2.5, 4 ] ],
+		smokeAt: [ 0, 6, - 5 ],
+	},
 };
-
-// the fitting of her model: the fishing ship's hull at 34 m, black topsides over a red boot stripe
-export const BOSS_MODEL = {
-	model: 'ship', up: 'y', fwd: 'z', length: 34, beam: 12, draft: 2.4,
-	paint: [ [ 0.2, [ 0.09, 0.012, 0.01 ] ], [ 1.0, [ 0.42, 0.02, 0.015 ] ], [ 5.4, [ 0.018, 0.018, 0.02 ] ], [ 99, [ 0.075, 0.07, 0.068 ] ] ],
-	deckColor: [ 0.16, 0.11, 0.07 ], deckMinY: 0.25, deckMaxY: 6.8,
-};
+export const BOSS = BOSSES.kraken;
+export const BOSS_MODEL = BOSS.model;
 
 const TAU = Math.PI * 2;
 
 // which generation of her sails at time t (s on the wall clock)
-export const bossGen = ( t ) => Math.floor( t / BOSS.cycleS );
+export const bossGen = ( t, cfg = BOSS ) => Math.floor( t / cfg.cycleS );
 
 // where she is at time t: on her patrol circle, heading along it (anticlockwise seen from above)
-export function bossPose( t ) {
+export function bossPose( t, cfg = BOSS ) {
 
-	const w = BOSS.speed / BOSS.radius;
+	const w = cfg.speed / cfg.radius;
 	const a = ( t * w ) % TAU;
-	const x = BOSS.lair.x + Math.cos( a ) * BOSS.radius, z = BOSS.lair.z + Math.sin( a ) * BOSS.radius;
+	const x = cfg.lair.x + Math.cos( a ) * cfg.radius, z = cfg.lair.z + Math.sin( a ) * cfg.radius;
 	// d/dt ( cos a, sin a ) = ( - sin a, cos a ): the heading (yaw about +Y, 0 = +Z)
 	return { x, z, yaw: Math.atan2( - Math.sin( a ), Math.cos( a ) ) };
 
@@ -79,29 +128,36 @@ const CSS = /* css */`
 	padding: var(--tw-2) var(--tw-4) var(--tw-3); border-radius: var(--tw-r-lg); pointer-events: none; opacity: 0; transition: opacity 400ms ease;
 	font: 600 var(--tw-fs-sm) var(--tw-font); color: #ffb0a6; text-align: center; }
 .ww-boss.is-on { opacity: 1; }
+.ww-boss.is-mini { color: #ffc27a; width: min(calc(380 * var(--tw-u)), 64vw); }
 .ww-boss-name { letter-spacing: 0.08em; text-transform: uppercase; }
 .ww-boss-name small { color: var(--tw-ink-3); text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 6px; }
 .ww-boss-bar { position: relative; height: calc(12 * var(--tw-u)); margin-top: 6px; border-radius: 99px; background: rgba(0,0,0,0.45); overflow: hidden; border: 1px solid rgba(255, 90, 74, 0.35); }
 .ww-boss-bar > span { position: absolute; inset: 0 auto 0 0; width: 100%; background: linear-gradient(90deg, #8a0f0a, #ff4a3a); transition: width 200ms linear; }
+.ww-boss.is-mini .ww-boss-bar { border-color: rgba(255, 170, 70, 0.4); }
+.ww-boss.is-mini .ww-boss-bar > span { background: linear-gradient(90deg, #8a3a0a, #ff9a3a); }
 .ww-boss-bar > i { position: absolute; inset: 0 auto 0 0; width: 100%; background: rgba(255, 220, 200, 0.5); transition: width 900ms ease 300ms; }
 .ww-boss-sub { margin-top: 4px; font: 500 var(--tw-fs-xs) var(--tw-mono); color: var(--tw-ink-2); }
 .gm-mk.is-boss > i { background: #ff2a18; color: #fff; width: calc(20 * var(--tw-u)); height: calc(20 * var(--tw-u)); margin: calc(-10 * var(--tw-u)) 0 0 calc(-10 * var(--tw-u)); box-shadow: 0 0 8px rgba(255, 40, 20, 0.8); }
+.gm-mk.is-miniboss > i { background: #ff8a1a; color: #fff; width: calc(17 * var(--tw-u)); height: calc(17 * var(--tw-u)); margin: calc(-8.5 * var(--tw-u)) 0 0 calc(-8.5 * var(--tw-u)); box-shadow: 0 0 6px rgba(255, 140, 20, 0.8); }
 `;
 const SKULL = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.4 0-8 3.1-8 7.2 0 2.4 1.2 4.4 3 5.6V19h2v-2h2v2h2v-2h2v2h2v-3.2c1.8-1.2 3-3.2 3-5.6C20 6.1 16.4 3 12 3Zm-3 9.5a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Zm6 0a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Z"/></svg>';
+let _css = false;
 
 export class Boss {
 
-	constructor( combat ) {
+	constructor( combat, cfg = BOSS ) {
 
 		this.combat = combat;
 		this.app = combat.app;
 		this.game = combat.game;
-		this.name = BOSS.name;
-		this.def = { label: BOSS.label };
+		this.cfg = cfg;
+		this.id = cfg.id;
+		this.name = cfg.name;
+		this.def = { label: cfg.label };
 		this.type = 'boss';
-		this.maxHp = BOSS.hp;
-		this.half = BOSS.half;
-		this.outline = hullOutline( 5.6, 16.6 ); // (the hull at the waterline, for collisions)
+		this.maxHp = cfg.hp;
+		this.half = cfg.half;
+		this.outline = hullOutline( cfg.outline[ 0 ], cfg.outline[ 1 ] ); // (the hull at the waterline, for collisions)
 		this.pos = new Vector3();
 		this.vel = new Vector3();
 		this.yaw = 0;
@@ -120,10 +176,10 @@ export class Boss {
 
 		// the ship: built at once, the hull mesh added when its model has loaded
 		const g = this.group = new Group();
-		g.name = 'boss-iron-kraken';
+		g.name = 'boss-' + cfg.id;
 		g.visible = false;
 		this.app.scene.add( g );
-		loadBoatGeometry( 'boss-kraken', BOSS_MODEL ).then( ( geo ) => {
+		loadBoatGeometry( 'boss-' + cfg.id, cfg.model ).then( ( geo ) => {
 
 			if ( ! geo ) return;
 			const m = new Mesh( geo, boatModelMaterial() );
@@ -134,37 +190,28 @@ export class Boss {
 
 		} ).catch( ( e ) => console.warn( 'boss model failed', e ) );
 
-		// her guns (fitted to the scaled ship: the bridge roof, the foredeck, the aft deck)
-		const mg = ( x, y, z ) => {
+		// her guns (fitted to the scaled ship)
+		this.mgs = cfg.mgs.map( ( [ x, y, z, s ] ) => {
 
 			const t = buildGunTurret( 3 );
 			t.root.position.set( x, y, z );
-			t.root.scale.setScalar( 2.4 );
+			t.root.scale.setScalar( s );
 			g.add( t.root );
 			return { t, fireT: rand( 0.5, 2 ), burst: 0 };
 
-		};
-		const gun = ( x, y, z, yaw ) => {
+		} );
+		// each cannon fires only over its own arc (shoot)
+		this.cannons = cfg.cannons.map( ( [ x, y, z, yaw, arc, s ] ) => {
 
 			const t = buildCannon( 3 );
 			t.root.position.set( x, y, z );
 			t.root.rotation.y = yaw;
-			t.root.scale.setScalar( 3.0 );
+			t.root.scale.setScalar( s );
 			g.add( t.root );
-			return { t, fireT: rand( 2, 5 ) };
+			return { t, arc, fireT: rand( 2, 5 ) };
 
-		};
-		// (heights measured off the scaled model: the bridge roof 11.9 m, the fo'c'sle 8.1 m, the aft working
-		// deck 1.05 m, the side decks about 5.3 m above the water)
-		this.mgs = [ mg( - 2.2, 11.94, 0 ), mg( 2.2, 11.94, 0 ) ];
-		// bow and stern chasers, and a broadside gun each side; each fires only over its own arc (shoot)
-		this.cannons = [
-			{ ...gun( 0, 8.1, 15.2, 0 ), arc: 'bow' },
-			{ ...gun( 0, 1.05, - 11, Math.PI ), arc: 'stern' },
-			{ ...gun( 4.4, 5.3, - 3, Math.PI / 2 ), arc: 'port' },
-			{ ...gun( - 4.4, 5.3, - 3, - Math.PI / 2 ), arc: 'starboard' },
-		];
-		for ( const [ x, y, z, s ] of [ [ 0, 11.94, 0.8, 2.4 ], [ 0, 8.1, 16.4, 1.4 ] ] ) {
+		} );
+		for ( const [ x, y, z, s ] of cfg.flags ) {
 
 			const f = buildFlag();
 			f.position.set( x, y, z );
@@ -173,10 +220,10 @@ export class Boss {
 
 		}
 
-		this.burnPts = [ new Vector3( 2, 5, - 6 ), new Vector3( - 2.5, 10, 2 ), new Vector3( 1.5, 6, 10 ), new Vector3( - 1, 3, - 12 ) ];
+		this.burnPts = cfg.burn.map( ( p ) => new Vector3().fromArray( p ) );
 		try {
 
-			this.slot = this.app.query.allocate( 'boss', 2 );
+			this.slot = this.app.query.allocate( 'boss-' + cfg.id, 2 );
 
 		} catch ( e ) {
 
@@ -238,18 +285,19 @@ export class Boss {
 
 		if ( ! Array.isArray( bd ) || bd[ 0 ] !== this.gen || ! Number.isFinite( bd[ 1 ] ) ) return;
 		// (only ever up: a report that arrives late never undoes damage)
-		this.remote.set( id, Math.max( this.remote.get( id ) || 0, Math.min( BOSS.hp, Math.max( 0, bd[ 1 ] ) ) ) );
+		this.remote.set( id, Math.max( this.remote.get( id ) || 0, Math.min( this.cfg.hp, Math.max( 0, bd[ 1 ] ) ) ) );
 
 	}
 
 	// ---- per frame
 	update( dt, ctx ) {
 
+		const C = this.cfg;
 		const t = this.clock();
-		const gen = bossGen( t );
+		const gen = bossGen( t, C );
 		if ( gen !== this.gen ) {
 
-			// a new generation: a fresh (or repaired) Kraken sails her circle
+			// a new generation: a fresh (or repaired) ship sails her circle
 			const was = this.gen, sunk = this.state !== 'alive';
 			this.gen = gen;
 			this.myDmg = 0;
@@ -258,24 +306,25 @@ export class Boss {
 			this.announced = false;
 			this.state = 'alive';
 			this.sink = 0;
-			if ( was !== null && this.distToPlayer < 1500 ) this.game.toast( sunk ? `☠ A new ${ BOSS.name } has sailed into the Deadwater` : `☠ The ${ BOSS.name } has been repaired`, 3600 );
+			if ( was !== null && this.distToPlayer < 1500 ) this.game.toast( sunk ? `☠ A new ${ C.name } has sailed into ${ C.waters }` : `☠ The ${ C.name } has been repaired`, 3600 );
 
 		}
 
-		const P = bossPose( t );
+		const P = bossPose( t, C );
 		this.yaw = P.yaw;
-		this.vel.set( Math.sin( P.yaw ) * BOSS.speed, 0, Math.cos( P.yaw ) * BOSS.speed );
+		this.vel.set( Math.sin( P.yaw ) * C.speed, 0, Math.cos( P.yaw ) * C.speed );
 		this.pos.set( P.x, 0, P.z );
 		this.lastHitT += dt;
 		const dx = ctx.playerPos.x - this.pos.x, dz = ctx.playerPos.z - this.pos.z;
 		const dist = this.distToPlayer = Math.hypot( dx, dz );
 
-		// first time out in the Deadwater: where she is
+		// the first time out in her waters: where she is
 		const zone = ctx.playerZoneLoose;
-		if ( zone && zone.tier >= 3 && ! this.told && this.alive ) {
+		if ( zone && zone.tier === C.tier && ! this.told && this.alive ) {
 
 			this.told = true;
-			this.game.toast( `☠ The ${ BOSS.name }, a pirate warship, patrols the Deadwater · ${ BOSS.hp.toLocaleString() } hp · $${ BOSS.pool.toLocaleString() } of plunder · the red skull on the minimap`, 6500 );
+			const mark = C.mapKind === 'boss' ? 'the red skull' : 'the orange skull';
+			this.game.toast( `☠ The ${ C.name }, a ${ C.label.toLowerCase() }, patrols ${ C.waters } · ${ C.hp.toLocaleString() } hp · $${ C.pool.toLocaleString() } of plunder · ${ mark } on the minimap`, 6500 );
 
 		}
 
@@ -283,24 +332,25 @@ export class Boss {
 		if ( this.alive ) {
 
 			// she fires on anyone who attacked her, and on anyone who comes too close
-			const hostile = ( this.provoked || dist < BOSS.aggro ) && ctx.playerAboard && ! ctx.playerSafe && ! ctx.playerDead;
+			const hostile = ( this.provoked || dist < C.aggro ) && ctx.playerAboard && ! ctx.playerSafe && ! ctx.playerDead;
 			if ( hostile && ! this.announced ) {
 
 				this.announced = true;
-				this.game.toast( `☠ The ${ BOSS.name } opens fire!`, 2600 );
+				this.game.toast( `☠ The ${ C.name } opens fire!`, 2600 );
 
 			}
 
 			if ( hostile ) this.shoot( dt, ctx, dist );
-			if ( this.hp < this.maxHp * 0.5 ) ctx.fx.smoulder( this.group.localToWorld( _w.set( 0, 12, - 2 ) ), 1 - this.hp / this.maxHp, dt );
+			if ( this.hp < this.maxHp * 0.5 ) ctx.fx.smoulder( this.group.localToWorld( _w.fromArray( C.smokeAt ) ), 1 - this.hp / this.maxHp, dt );
 			if ( this.hp < this.maxHp * 0.25 ) ctx.fx.burn( this.group.localToWorld( _w.copy( this.burnPts[ 0 ] ) ), 0.6, dt );
 
 		} else if ( this.state === 'sinking' ) {
 
+			const L = C.half.z * 0.8, W = C.half.x * 0.6;
 			this.sink += dt * 0.35;
 			for ( const p of this.burnPts ) if ( this.sink < 6 ) ctx.fx.burn( this.group.localToWorld( _w.copy( p ) ), 1, dt );
-			if ( Math.random() < dt * 1.5 && this.sink < 5 ) ctx.fx.explosion( this.group.localToWorld( _w.set( rand( - 4, 4 ), rand( 2, 9 ), rand( - 14, 14 ) ) ), 1.1 );
-			if ( this.sink > 2 && Math.random() < dt * 6 ) ctx.fx.splash( _w.set( this.pos.x + rand( - 8, 8 ), 0, this.pos.z + rand( - 18, 18 ) ), 0.3 );
+			if ( Math.random() < dt * 1.5 && this.sink < 5 ) ctx.fx.explosion( this.group.localToWorld( _w.set( rand( - W, W ), rand( 2, C.centerY * 2 ), rand( - L, L ) ) ), 1.1 );
+			if ( this.sink > 2 && Math.random() < dt * 6 ) ctx.fx.splash( _w.set( this.pos.x + rand( - W * 2, W * 2 ), 0, this.pos.z + rand( - L, L ) ), 0.3 );
 			if ( this.sink > 12 ) this.state = 'gone';
 
 		}
@@ -313,12 +363,12 @@ export class Boss {
 	// heave and pitch from the water under her bow and stern; a slow roll (a big hull hardly moves)
 	pose( dt ) {
 
-		const q = this.app.query, fx = Math.sin( this.yaw ), fz = Math.cos( this.yaw );
+		const q = this.app.query, fx = Math.sin( this.yaw ), fz = Math.cos( this.yaw ), arm = this.cfg.poseArm;
 		let hb = 0, hs = 0;
 		if ( q && this.slot >= 0 ) {
 
-			q.setPoint( this.slot, this.pos.x + fx * 13, this.pos.z + fz * 13 );
-			q.setPoint( this.slot + 1, this.pos.x - fx * 13, this.pos.z - fz * 13 );
+			q.setPoint( this.slot, this.pos.x + fx * arm, this.pos.z + fz * arm );
+			q.setPoint( this.slot + 1, this.pos.x - fx * arm, this.pos.z - fz * arm );
 			if ( q.cpuValid ) {
 
 				hb = q.cpu[ this.slot * 4 ];
@@ -332,10 +382,10 @@ export class Boss {
 
 		const k = 1 - Math.exp( - dt * 1.5 );
 		this.heave += ( ( hb + hs ) * 0.5 - this.heave ) * k;
-		this.pitch += ( - Math.atan2( hb - hs, 26 ) * 0.6 - this.pitch ) * k;
+		this.pitch += ( - Math.atan2( hb - hs, arm * 2 ) * 0.6 - this.pitch ) * k;
 		const tt = this.combat.time;
 		const list = this.state === 'sinking' ? Math.min( 0.35, this.sink * 0.04 ) : 0;
-		this.roll += ( Math.sin( tt * 0.4 ) * 0.012 + list - this.roll ) * k;
+		this.roll += ( Math.sin( tt * 0.4 + this.cfg.tier ) * 0.012 + list - this.roll ) * k;
 		this.group.position.set( this.pos.x, this.heave - this.sink, this.pos.z );
 		this.group.rotation.set( this.pitch - ( this.state === 'sinking' ? this.sink * 0.02 : 0 ), this.yaw, this.roll, 'YXZ' );
 		const cam = this.app.camera.position;
@@ -359,7 +409,7 @@ export class Boss {
 	shoot( dt, ctx, dist ) {
 
 		const fx = ctx.fx, combat = this.combat;
-		const M = BOSS.mg, C = BOSS.cannon;
+		const M = this.cfg.mg, C = this.cfg.cannon;
 		for ( const g of this.mgs ) {
 
 			const tgt = _v.copy( ctx.playerPos ).addScaledVector( ctx.playerVel, dist / M.speed );
@@ -391,6 +441,7 @@ export class Boss {
 
 		}
 
+		const reach = this.cfg.half.z * 0.25, wide = this.cfg.half.x * 0.5;
 		for ( const c of this.cannons ) {
 
 			const tgt = _v.copy( ctx.playerPos ).addScaledVector( ctx.playerVel, dist / C.speed );
@@ -398,9 +449,10 @@ export class Boss {
 			this.aim( c.t, tgt, dt );
 			if ( dist > C.range ) continue;
 			// each cannon only fires over its own arc (the bridge is in the way): the chasers over their end,
-			// the broadside guns over their side (+x: port)
+			// the broadside guns over their side (+x: port). A lone bow chaser covers all round.
 			const local = this.group.worldToLocal( _w.copy( ctx.playerPos ) );
-			const inArc = c.arc === 'bow' ? local.z > - 4 : c.arc === 'stern' ? local.z < 4 : c.arc === 'port' ? local.x > 3 : local.x < - 3;
+			const lone = this.cannons.length === 1;
+			const inArc = lone || ( c.arc === 'bow' ? local.z > - reach : c.arc === 'stern' ? local.z < reach : c.arc === 'port' ? local.x > wide : local.x < - wide );
 			if ( ! inArc ) continue;
 			c.fireT -= dt;
 			if ( c.fireT > 0 ) continue;
@@ -425,7 +477,7 @@ export class Boss {
 		this.lastHitT = 0;
 		if ( fromPlayer ) {
 
-			this.myDmg = Math.min( BOSS.hp, this.myDmg + dmg );
+			this.myDmg = Math.min( this.cfg.hp, this.myDmg + dmg );
 			this.provoked = true;
 
 		}
@@ -445,12 +497,14 @@ export class Boss {
 	goDown( ctx, byMe ) {
 
 		if ( ! this.alive ) return;
+		const C = this.cfg;
 		this.state = 'sinking';
 		this.sink = 0;
 		const fx = ctx ? ctx.fx : this.combat.fx;
-		for ( let i = 0; i < 4; i ++ ) fx.explosion( this.group.localToWorld( _w.set( rand( - 4, 4 ), rand( 3, 10 ), rand( - 14, 14 ) ) ), 1.6 );
+		const L = C.half.z * 0.8, W = C.half.x * 0.6;
+		for ( let i = 0; i < 4; i ++ ) fx.explosion( this.group.localToWorld( _w.set( rand( - W, W ), rand( 2, C.centerY * 2.2 ), rand( - L, L ) ) ), 1.6 );
 		this.combat.sfx.shot( this.pos, 'explosion', 1.6 );
-		const pay = bossPayout( this.myDmg, [ ...this.remote.values() ] );
+		const pay = bossPayout( this.myDmg, [ ...this.remote.values() ], C.pool );
 		const s = this.game.state;
 		if ( pay.cash > 0 ) {
 
@@ -459,9 +513,9 @@ export class Boss {
 			s.earn( pay.cash );
 			if ( this.app.audio && this.app.audio.coin ) this.app.audio.coin();
 			const crew = pay.captains > 1 ? ` · ${ Math.round( pay.share * 100 ) }% of the damage, shared with ${ pay.captains - 1 } other captain${ pay.captains > 2 ? 's' : '' }` : '';
-			this.game.toast( `☠ The ${ BOSS.name } is going down! Plunder: $${ pay.cash.toLocaleString() }${ crew }`, 7000 );
+			this.game.toast( `☠ The ${ C.name } is going down! Plunder: $${ pay.cash.toLocaleString() }${ crew }`, 7000 );
 
-		} else if ( this.distToPlayer < 1500 ) this.game.toast( `☠ Other captains sank the ${ BOSS.name }`, 4000 );
+		} else if ( this.distToPlayer < 1500 ) this.game.toast( `☠ Other captains sank the ${ C.name }`, 4000 );
 
 	}
 
@@ -472,7 +526,7 @@ export class Boss {
 		const o = this.group.position;
 		const A = _v.copy( a ).sub( o ).applyQuaternion( _q );
 		const B = _w.copy( b ).sub( o ).applyQuaternion( _q );
-		A.y -= BOSS.centerY; B.y -= BOSS.centerY;
+		A.y -= this.cfg.centerY; B.y -= this.cfg.centerY;
 		return segmentBox( A, B, this.half );
 
 	}
@@ -481,16 +535,23 @@ export class Boss {
 	updateHud( dist ) {
 
 		if ( typeof document === 'undefined' ) return;
+		const C = this.cfg;
 		if ( ! this.el ) {
 
-			const style = document.createElement( 'style' );
-			style.textContent = CSS;
-			document.head.append( style );
+			if ( ! _css ) {
+
+				_css = true;
+				const style = document.createElement( 'style' );
+				style.textContent = CSS;
+				document.head.append( style );
+
+			}
+
 			const ui = this.app.ui && this.app.ui.ui;
 			const root = ui ? ( ui.hud || ui.root ) : document.body;
 			this.el = document.createElement( 'div' );
-			this.el.className = 'ww-boss tw-glass';
-			this.el.innerHTML = `<div class="ww-boss-name">☠ The ${ BOSS.name }<small>${ BOSS.label }</small></div><div class="ww-boss-bar"><i></i><span></span></div><div class="ww-boss-sub"></div>`;
+			this.el.className = 'ww-boss tw-glass' + ( C.mapKind === 'miniboss' ? ' is-mini' : '' );
+			this.el.innerHTML = `<div class="ww-boss-name">☠ The ${ C.name }<small>${ C.label }</small></div><div class="ww-boss-bar"><i></i><span></span></div><div class="ww-boss-sub"></div>`;
 			root.append( this.el );
 			this.barEl = this.el.querySelector( '.ww-boss-bar > span' );
 			this.lagEl = this.el.querySelector( '.ww-boss-bar > i' );
@@ -498,7 +559,7 @@ export class Boss {
 
 		}
 
-		if ( ! this.mark && this.game.minimap && this.game.minimap.addMarker ) this.mark = this.game.minimap.addMarker( { id: 'boss', kind: 'boss', icon: SKULL, pos: () => this.alive ? this.pos : null } );
+		if ( ! this.mark && this.game.minimap && this.game.minimap.addMarker ) this.mark = this.game.minimap.addMarker( { id: 'boss-' + C.id, kind: C.mapKind, icon: SKULL, pos: () => this.alive ? this.pos : null } );
 		const on = this.state !== 'gone' && ( dist < 700 || this.lastHitT < 10 ) && this.combat.aboard;
 		if ( this._on !== on ) {
 
@@ -525,4 +586,3 @@ export class Boss {
 	}
 
 }
-

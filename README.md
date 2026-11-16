@@ -73,7 +73,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **Three danger tiers** ring the harbour, marked on the map and by buoys at the borders:
   1. **Coastal Waters** (220-700 m out): a few weak pirates that only attack up close.
   2. **Open Sea** (700-1,400 m, past the amber buoys): tougher pirates, rarer fish, plunder x1.5,
-     and the giant fish surface here.
+     and the giant fish surface here. A mini boss patrols here too: **the Crimson Corsair**, a 22 m pirate
+     gunship (22,000 hp, a twin machine gun and a bow cannon; the orange skull on the minimap), worth
+     $150,000, shared in multiplayer the same way as the Kraken's plunder.
   3. **Deadwater** (1,400-2,400 m, past the red buoys): pirate warlords with cannons, the rarest fish,
      plunder x2.5 and the most giants.
      The boss sails here too: **the Iron Kraken**, a 34 m pirate warship (85,000 hp, twin machine guns
@@ -153,7 +155,8 @@ to the home screen, with a button that saves your progress and installs it. The 
 |---|---|
 | `src/game/combat/Combat.js` | Aiming and firing from the helm, hit tests, damage, ramming, sinking and respawn, wanted level, bounties, looting, harbour services |
 | `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
-| `src/game/combat/Boss.js` | The boss: the Iron Kraken (the fishing ship's hull at 34 m), her clock-driven patrol, guns, shared health and plunder, health bar |
+| `src/game/combat/Boss.js` | The bosses (one class, a config each): the Iron Kraken (the fishing ship's hull at 34 m, tier 3) and the Crimson Corsair (the old launch's hull at 22 m, tier 2): clock-driven patrols, guns, shared health and plunder, health bars |
+| `src/game/PauseMenu.js` | The Escape menu: resume, settings, return to the home dock, exit to the title screen |
 | `src/game/combat/CombatFX.js` | Tracers, cannon shells, muzzle flashes, fire, smoke, splinters, water splashes (through the ocean's spray particles) |
 | `src/game/combat/WeaponModels.js` | Procedural deck guns, cannons, the pirate flag and the coast-guard light bar |
 | `src/game/combat/CombatHUD.js` | Hull, gun heat, shells, wanted stars, crosshair, boat labels, minimap dots, the "Sunk!" screen |

@@ -54,7 +54,8 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 		if ( app.game && app.game.highScores ) app.game.highScores.open();
 
 	} );
-	ui.showStartOverlay( () => {
+	// setting sail from the title screen (shown again from the Escape menu: app.onSail, src/game/PauseMenu.js)
+	const onSail = app.onSail = () => {
 
 		app.input.requestLock();
 		if ( app.audio ) app.audio.resume();
@@ -63,7 +64,8 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 		// the high-score board: from now on this captain's time at sea counts and their row syncs
 		if ( app.game && app.game.highScores ) app.game.highScores.start( ui.startName );
 
-	} );
+	};
+	ui.showStartOverlay( onSail );
 
 } ).catch( ( e ) => {
 
