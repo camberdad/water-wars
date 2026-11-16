@@ -17,6 +17,7 @@ import { Combat } from './combat/Combat.js';
 import { Giants } from './Giants.js';
 import { Multiplayer } from './Multiplayer.js';
 import { SharedWeather } from './Weather.js';
+import { Trawl } from './Trawl.js';
 import { HighScores } from './HighScores.js';
 import { SternRods } from './SternRods.js';
 import { dangerZoneAt } from './DangerZones.js';
@@ -76,6 +77,8 @@ export class Game {
 		this.highScores = new HighScores( this );
 		// extra rods in holders on the stern (the rod holder upgrade): B grabs a bent one
 		this.sternRods = new SternRods( this );
+		// the trawl net (N at sea; 1.13.5)
+		this.trawl = new Trawl( this );
 		// Space passes the catch cards and closes the cooler and shop panels (as E / Esc / a click do).
 		// Caught here, before the player sees it, so the same press doesn't also jump.
 		this._space = false;
@@ -85,7 +88,7 @@ export class Game {
 			const t = e.target;
 			if ( t && ( t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable ) ) return;
 			const h = this.hud;
-			if ( ! ( h.catchOpen || h.invOpen || h.standOpen ) ) return;
+			if ( ! ( h.catchOpen || h.invOpen || h.standOpen || h.sortOpen ) ) return;
 			e.preventDefault();
 			e.stopPropagation();
 			if ( ! e.repeat ) this._space = true;
@@ -98,6 +101,7 @@ export class Game {
 	lateUpdate() {
 
 		this.sternRods.layLines();
+		this.trawl.layLines();
 
 	}
 
@@ -213,6 +217,7 @@ export class Game {
 
 		// the stern rods first: grabbing one may take you from the helm to the deck with a fish on
 		this.sternRods.update( dt );
+		this.trawl.update( dt );
 
 		const can = this.canFish;
 		if ( inp.hit( 'KeyR' ) && can && ! this.fight ) {
@@ -245,7 +250,7 @@ export class Game {
 		const lDown = lmb && ! this._lmb, lUp = ! lmb && this._lmb, rDown = rmb && ! this._rmb;
 		this._lmb = lmb;
 		this._rmb = rmb;
-		const panelOpen = this.hud && ( this.hud.invOpen || this.hud.standOpen );
+		const panelOpen = this.hud && ( this.hud.invOpen || this.hud.standOpen || this.hud.sortOpen );
 
 		if ( rod.equipped && ! panelOpen ) {
 
@@ -332,6 +337,7 @@ export class Game {
 		// prompts when the player has nothing to say
 		if ( ! p.prompt && can ) p.prompt = this.prompt();
 		this.sternRods.prompt();
+		this.trawl.prompt();
 
 		const aboard = p.mode === 'boat' || p.mode === 'deck';
 		// the catch card's live fish portrait (or one queued thumbnail)

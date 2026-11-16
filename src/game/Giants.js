@@ -245,7 +245,7 @@ export class Giants {
 
 		// ---- the harpoon at the helm
 		this.reloadT = Math.max( 0, this.reloadT - dt );
-		const panelOpen = game.hud && ( game.hud.invOpen || game.hud.standOpen || game.hud.catchOpen );
+		const panelOpen = game.hud && ( game.hud.invOpen || game.hud.standOpen || game.hud.catchOpen || game.hud.sortOpen );
 		if ( helm && ! panelOpen ) {
 
 			if ( this.target ) {

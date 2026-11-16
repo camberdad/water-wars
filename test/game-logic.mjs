@@ -3,8 +3,9 @@ import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE,
 import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances, TIER_ODDS } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
-import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn } from '../src/game/Gear.js';
-import { BOATS } from '../src/game/BoatCatalog.js';
+import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
+import { BOATS, berthX } from '../src/game/BoatCatalog.js';
+import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S } from '../src/game/Weather.js';
@@ -69,7 +70,8 @@ ok( biteDelay( habitatAt( spots.sand ), 12, rng ) === Infinity, 'no bite delay o
 }
 for ( const id of FISH_IDS ) {
 
-	const w = rollWeight( id, rng );
+	// (the trawl-only species draw from their own stream: the seeded one stays as the fight tests expect)
+	const w = rollWeight( id, FISH[ id ].trawl ? Math.random : rng );
 	if ( w < FISH[ id ].kg[ 0 ] || w > FISH[ id ].kg[ 1 ] ) ok( false, `weight in range for ${ id }` );
 
 }
@@ -334,7 +336,7 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 {
 
 	const added = [ 'sardine', 'damselfish', 'tomtate', 'ballyhoo', 'sandPerch', 'chub', 'grayTrigger', 'rainbowRunner' ];
-	ok( added.every( ( id ) => FISH[ id ] ) && FISH_IDS.length === 52, 'eight new species (52 in all)' );
+	ok( added.every( ( id ) => FISH[ id ] ) && FISH_IDS.filter( ( id ) => ! FISH[ id ].trawl ).length === 52, 'eight new species (52 on the rod in all)' );
 	const cheap = added.filter( ( id ) => FISH[ id ].tier === 'common' );
 	ok( cheap.length === 6 && cheap.every( ( id ) => FISH[ id ].value[ 1 ] <= 210 && FISH[ id ].value[ 1 ] < FISH.silverside.value[ 0 ] ), 'six of them are common, cheaper than any common fish before' );
 	ok( TIERS.common.chance === 0.46 && TIERS.rare.chance < 0.2 && Math.abs( TIER_IDS.reduce( ( a, t ) => a + TIERS[ t ].chance, 0 ) - 1 ) < 1e-9, 'common bites are likelier, rare ones less so (the odds still add up)' );
@@ -495,6 +497,57 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( seen.breezy > seen.choppy && seen.choppy > seen.calm && seen.calm > seen.storm && seen.storm > 250, `every kind of weather comes round, storms the rarest (${ JSON.stringify( seen ) })` );
 	const mid = weatherAt( Math.floor( t0 / SPELL_S ) * SPELL_S + 60 ), kind = WEATHER.find( ( x ) => x.id === mid.id );
 	ok( WEATHER_KEYS.every( ( k ) => Math.abs( mid[ k ] - kind[ k ] ) < 1e-9 ), 'early in a spell the sea is exactly that weather\'s conditions' );
+
+}
+// ---- the trawl net (1.13.5): fish, crabs and lobster to keep; protected animals that must go back
+{
+
+	const pool = { hab: habitatAt( spots.deep ), depth: 40, tier: 2, hour: 12 };
+	let prot = 0, crust = 0, bad = 0, n = 4000;
+	const seenP = {};
+	for ( let i = 0; i < n; i ++ ) {
+
+		const it = rollNetItem( pool );
+		if ( it.protected ) {
+
+			prot ++;
+			seenP[ it.id ] = 1;
+			if ( ! PROTECTED[ it.id ] || ! ( it.kg > 0 ) ) bad ++;
+
+		} else {
+
+			const f = FISH[ it.species ];
+			if ( f.trawl ) crust ++;
+			else if ( f.tier !== 'common' && f.tier !== 'uncommon' ) bad ++;
+			if ( ! ( it.value > 0 ) || it.kg < f.kg[ 0 ] || it.kg > f.kg[ 1 ] ) bad ++;
+
+		}
+
+	}
+
+	ok( bad === 0, 'a trawl keeps only everyday fish, crabs, lobster and squid; protected animals are named and weighed' );
+	ok( prot / n > 0.1 && prot / n < 0.18, `now and then a protected animal is caught (${ ( prot / n * 100 ).toFixed( 1 ) }%)` );
+	ok( crust / n > 0.25 && crust / n < 0.45, `a good share of crabs, lobster and squid (${ ( crust / n * 100 ).toFixed( 1 ) }%)` );
+	ok( ! seenP.manatee && seenP.dolphin && seenP.seal && seenP.greenTurtle, 'dolphins, seals and turtles offshore, but no manatees in deep water' );
+	let manatee = 0;
+	for ( let i = 0; i < 3000; i ++ ) if ( rollNetItem( { hab: habitatAt( spots.shallows ), depth: 5, tier: 1 } ).id === 'manatee' ) manatee ++;
+	ok( manatee > 0, 'manatees turn up in shallow water' );
+	let onRod = 0;
+	for ( const s of Object.values( spots ) ) for ( let i = 0; i < 2000; i ++ ) if ( FISH[ pickSpecies( habitatAt( s ), 12 ) ]?.trawl ) onRod ++;
+	ok( onRod === 0 && TRAWL_IDS.length === 4, 'crabs, lobster and squid never bite on a rod' );
+	const items = [ { protected: true }, { protected: false }, { protected: true, released: true } ];
+	ok( protectedLeft( items ) === 1, 'the catch can\'t be kept while a protected animal is still in the net' );
+	ok( UPGRADES.trawl && isBoatTrack( 'trawl' ) && gearStats( { trawl: 2 } ).netSize === 12 && gearStats( {} ).trawlNet === 0, 'the trawl net is a per-boat upgrade, none to start' );
+
+}
+
+// ---- 1.13.5: a wide boat moors further out from the pier head (the superyacht rubbed the dock)
+{
+
+	ok( berthX( BOATS.lobster ) === 64.5 && berthX( {} ) === 64.5, 'the lobster boat keeps its berth' );
+	const side = berthX( BOATS.superyacht ) - BOATS.superyacht.beam / 2;
+	ok( side - 62 > 2, `the superyacht's side lies ${ ( side - 62 ).toFixed( 1 ) } m off the pier head` );
+	ok( BOATS.superyacht.handling && BOATS.superyacht.handling.waveSmooth > 0 && BOATS.superyacht.speedMul < 2, 'the superyacht rides steadier and drives heavier' );
 
 }
 console.log( `value check ${ value }` );

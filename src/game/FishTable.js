@@ -98,6 +98,13 @@ export const FISH = {
 	oarfish: { name: 'Giant oarfish', sci: 'Regalecus glesne', lw: [ 0.00053, 3.0 ], model: 'needlefish', habitat: {}, kg: [ 705, 2170 ], giantL: [ 11, 16 ], tier: 'giant', value: [ 320000, 520000 ], fight: 1, stamina: 26, time: 'any', rarity: 1 },
 	colossalTarpon: { name: 'Colossal tarpon', sci: 'Megalops atlanticus (giant)', lw: [ 0.0077, 3.02 ], model: 'tarpon', habitat: {}, kg: [ 3000, 6400 ], giantL: [ 7, 9 ], tier: 'giant', value: [ 250000, 400000 ], fight: 1, stamina: 28, time: 'any', rarity: 1 },
 	marlin: { name: 'Blue marlin', sci: 'Makaira nigricans', lw: [ 0.0012, 3.24 ], model: 'needlefish', habitat: { deep: 1 }, kg: [ 60, 200 ], tier: 'legendary', value: [ 198000, 240000 ], fight: 1, stamina: 36, time: 'day', rarity: 0.8 },
+	// ---- trawl only (Water Wars 1.13.5): crabs, lobster and squid come up in a trawl net, never on a rod
+	// (no habitat: pickSpecies never picks them). trawl: their share of the net's keepers by water type;
+	// icon: shown in the hold. (model: a stand-in for the fish props, never drawn)
+	blueCrab: { name: 'Blue crab', sci: 'Callinectes sapidus', lw: [ 0.045, 3.0 ], model: 'sergeant', habitat: {}, trawl: { shallows: 1, bay: 1, pier: 0.6, reef: 0.3, deep: 0.3 }, icon: '🦀', kg: [ 0.1, 0.5 ], tier: 'common', value: [ 150, 420 ], fight: 0, stamina: 1, time: 'any', rarity: 1 },
+	squid: { name: 'Longfin inshore squid', sci: 'Doryteuthis pealeii', lw: [ 0.0096, 3.0 ], model: 'needlefish', habitat: {}, trawl: { bay: 0.8, deep: 1, reef: 0.3 }, icon: '🦑', kg: [ 0.05, 0.4 ], tier: 'common', value: [ 120, 320 ], fight: 0, stamina: 1, time: 'any', rarity: 1 },
+	stoneCrab: { name: 'Florida stone crab', sci: 'Menippe mercenaria', lw: [ 0.06, 3.0 ], model: 'grouper', habitat: {}, trawl: { reef: 1, bay: 0.6, pier: 0.5, shallows: 0.3 }, icon: '🦀', kg: [ 0.2, 0.8 ], tier: 'uncommon', value: [ 2000, 5000 ], fight: 0, stamina: 1, time: 'any', rarity: 1 },
+	spinyLobster: { name: 'Caribbean spiny lobster', sci: 'Panulirus argus', lw: [ 0.037, 3.0 ], model: 'grouper', habitat: {}, trawl: { reef: 1, deep: 0.5, bay: 0.3 }, icon: '🦞', kg: [ 0.5, 2.5 ], tier: 'uncommon', value: [ 2500, 7000 ], fight: 0, stamina: 1, time: 'any', rarity: 1 },
 };
 
 export const FISH_IDS = Object.keys( FISH );

@@ -54,6 +54,16 @@ export const UPGRADES = {
 		{ cost: 35000, label: 'Twin stern rod holders', sternRods: 2 },
 		{ cost: 90000, label: 'Three-rod trolling spread', sternRods: 3 },
 	] },
+	// a trawl net (Water Wars 1.13.5): N at sea puts it out astern and hauls it back in. Towed slowly it fills
+	// with fish, crabs, lobster and squid, and now and then a dolphin, seal, turtle or manatee that has to
+	// be thrown back before the catch can be kept (src/game/Trawl.js). netSize: creatures a haul holds;
+	// netRate: how fast it fills
+	trawl: { cat: 'fishing', name: 'Trawl net', levels: [
+		{ cost: 0, label: 'None', trawlNet: 0, netSize: 0, netRate: 0 },
+		{ cost: 30000, label: 'Small otter trawl', trawlNet: 1, netSize: 8, netRate: 1 },
+		{ cost: 90000, label: 'Twin-rig trawl', trawlNet: 2, netSize: 12, netRate: 1.25 },
+		{ cost: 220000, label: 'Deep-sea factory trawl', trawlNet: 3, netSize: 18, netRate: 1.6 },
+	] },
 	// chum in the water: fish bite sooner
 	chum: { cat: 'fishing', name: 'Chum', levels: [
 		{ cost: 0, label: 'None', biteMul: 1 },

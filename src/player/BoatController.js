@@ -86,6 +86,17 @@ export class BoatController {
 		this.bank = 0; // roll moment per (u * drift velocity): hull bottom lift banking into turns
 		this.hullLift = 0.5; // lift coefficient of the hull + keel per radian of drift
 		this.rudderLift = 2.8; // rudder lift slope (x area 0.12 m^2), includes the hull's flap effect
+		// Water Wars 1.13.5: per-boat handling (BoatCatalog `handling`, set by Combat.setSkin; null = this
+		// hull as tuned). waveSmooth: 0..1 of each sample's difference from the mean water height ignored (a
+		// long hull spans the waves); heaveLag: s, the mean followed with this lag; stab / right: roll and
+		// pitch damping / righting of the stabiliser x; mass / yaw: x effective mass in surge and sway / yaw
+		// inertia (slower to speed up, stop and turn, without changing how it floats); lever / wheel / spool:
+		// x how fast the throttle lever and wheel move / x the engine's spool time
+		this.handling = null;
+		this.netDrag = 0; // N per (m/s)^2: a trawl net in the water (src/game/Trawl.js)
+		// where this boat is moored at the harbour (a wide boat lies further out from the pier: Combat.setSkin)
+		this.berth = { position: WORLD.boatDock.position.clone(), heading: WORLD.boatDock.heading };
+		this._meanH = null;
 
 		// state (position = model origin at the design waterline)
 		this.position = new THREE.Vector3().copy( WORLD.boatDock.position );
@@ -147,8 +158,9 @@ export class BoatController {
 		// the throttle lever moves with some inertia (the engine then spools after it); the rudder
 		// follows the wheel
 		this.throttleTarget = throttle;
-		this.throttle += ( throttle - this.throttle ) * ( 1 - Math.exp( - dt * 2.2 ) );
-		this.steer += ( steer - this.steer ) * ( 1 - Math.exp( - dt * 1.2 ) );
+		const H = this.handling;
+		this.throttle += ( throttle - this.throttle ) * ( 1 - Math.exp( - dt * 2.2 * ( H && H.lever || 1 ) ) );
+		this.steer += ( steer - this.steer ) * ( 1 - Math.exp( - dt * 1.2 * ( H && H.wheel || 1 ) ) );
 
 	}
 
@@ -229,7 +241,7 @@ export class BoatController {
 		// engine: spools up after the lever (~0.9 s), a little slower down; idles while driven
 		const lever = this.driven ? Math.abs( this.throttle ) : 0;
 		const target = Math.max( lever, this.driven ? 0.15 : 0 );
-		const tau = target > this.rpm ? 0.9 : 1.3;
+		const tau = ( target > this.rpm ? 0.9 : 1.3 ) * ( this.handling && this.handling.spool || 1 );
 		this.rpm += ( target - this.rpm ) * ( 1 - Math.exp( - Math.min( dt, 0.1 ) / tau ) );
 
 		const h = 1 / 120;
@@ -273,14 +285,35 @@ export class BoatController {
 		this._age = Math.min( this._age + h, 0.12 );
 		const blend = Math.exp( - h / 0.06 );
 
+		// the water under each sample (hEff: as read back, carried on between read-backs)
+		const H = this.handling, smooth = H && H.waveSmooth ? H.waveSmooth : 0;
+		const ns = this.samples.length;
+		let mean = 0, areaSum = 0;
+		for ( let i = 0; i < ns; i ++ ) {
+
+			this.waterOff[ i ] *= blend;
+			this.hEff[ i ] = this.waterH[ i ] + this.waterV[ i ] * this._age + this.waterOff[ i ];
+			mean += this.hEff[ i ] * this.samples[ i ].area;
+			areaSum += this.samples[ i ].area;
+
+		}
+
+		// a long, heavy hull (handling.waveSmooth) spans the waves: it feels their mean, followed with a
+		// little lag, and only part of the slope under it, so it neither bobs nor rocks like a small boat
+		mean = areaSum > 0 ? mean / areaSum : 0;
+		if ( smooth > 0 ) {
+
+			if ( this._meanH === null || ! Number.isFinite( this._meanH ) ) this._meanH = mean;
+			this._meanH += ( mean - this._meanH ) * ( 1 - Math.exp( - h / Math.max( 0.01, H.heaveLag || 0.01 ) ) );
+
+		} else this._meanH = null;
+
 		// ---- buoyancy + vertical damping per hull sample
 		let wetArea = 0, totalArea = 0, immersion = 0;
-		for ( let i = 0; i < this.samples.length; i ++ ) {
+		for ( let i = 0; i < ns; i ++ ) {
 
 			const s = this.samples[ i ];
-			this.waterOff[ i ] *= blend;
-			const hw = this.waterH[ i ] + this.waterV[ i ] * this._age + this.waterOff[ i ];
-			this.hEff[ i ] = hw;
+			const hw = smooth > 0 ? this._meanH + ( this.hEff[ i ] - mean ) * ( 1 - smooth ) : this.hEff[ i ];
 			const pw = this.toWorld( s.p, _p );
 			const depth = hw - pw.y;
 			totalArea += s.area;
@@ -292,7 +325,7 @@ export class BoatController {
 			// buoyancy + heave damping against the water's own vertical motion, along world up (in the
 			// boat frame a trimmed hull would turn forward speed into an upward push)
 			_vp.copy( this.angular ).cross( _r.copy( pw ).sub( comW ) ).add( this.velocity );
-			const vy = _vp.y - this.waterV[ i ] * 0.6;
+			const vy = _vp.y - this.waterV[ i ] * 0.6 * ( 1 - smooth );
 			const wetK = Math.min( 1, sub / 0.25 ) * s.area;
 			_f.set( 0, RHO * GRAV * s.area * sub - ( 1800 * vy + 900 * vy * Math.abs( vy ) ) * wetK, 0 );
 			addForceAt( _f, pw );
@@ -314,7 +347,7 @@ export class BoatController {
 
 		// ---- calm-water resistance (friction + the wave-making hump past hull speed + planing)
 		const au = Math.abs( u );
-		const R = ( 40 * au + 22 * au * au + 3000 * sstep( au, 2.8, 5.4 ) + 55 * au * au * sstep( au, 7, 11 ) ) * wetD;
+		const R = ( 40 * au + 22 * au * au + 3000 * sstep( au, 2.8, 5.4 ) + 55 * au * au * sstep( au, 7, 11 ) ) * wetD + this.netDrag * au * au;
 		_p.set( 0, - 0.2, this.com.z );
 		this.toWorld( _p, _p );
 		addForceAt( _f.copy( fwd ).multiplyScalar( - R * Math.sign( u ) ), _p );
@@ -393,12 +426,14 @@ export class BoatController {
 		// past ~20 degrees of heel or trim, plus pitch / roll damping, so the boat can't be flipped by
 		// throttle, waves or a hard turn at speed. (The yaw is left alone: steering is unchanged.)
 		const tilt = Math.acos( clamp( up.y, - 1, 1 ) );
-		const kRight = m * GRAV * ( 0.6 + 6 * sstep( tilt, 0.3, 1.0 ) );
+		const kRight = m * GRAV * ( 0.6 + 6 * sstep( tilt, 0.3, 1.0 ) ) * ( H && H.right || 1 );
 		_v.set( - up.z, 0, up.x ); // up x worldUp: the axis that rotates the deck back toward level
 		const s = _v.length();
 		if ( s > 1e-6 ) T.addScaledVector( _v, kRight * Math.min( 1, tilt ) / s );
-		T.x -= this.angular.x * m * 1.2;
-		T.z -= this.angular.z * m * 1.2;
+		// (a yacht's fin / gyro stabilisers: handling.stab x the damping, so she settles instead of rocking)
+		const stab = H && H.stab || 1;
+		T.x -= this.angular.x * m * 1.2 * stab;
+		T.z -= this.angular.z * m * 1.2 * stab;
 
 		// ---- mooring lines when docked and not driven
 		if ( this.moored && ! this.driven ) {
@@ -419,13 +454,14 @@ export class BoatController {
 
 		// ---- integrate (semi-implicit Euler) with added mass / inertia in the boat frame
 		const fl = _vl.copy( F ).applyQuaternion( invQ );
-		fl.x /= m * ( 1 + this.addedMass.x * wetD );
+		const hm = H && H.mass || 1; // (a heavier boat in surge and sway only: it floats the same)
+		fl.x /= m * ( 1 + this.addedMass.x * wetD ) * hm;
 		fl.y /= m * ( 1 + this.addedMass.y * wetD );
-		fl.z /= m * ( 1 + this.addedMass.z * wetD );
+		fl.z /= m * ( 1 + this.addedMass.z * wetD ) * hm;
 		this.velocity.addScaledVector( fl.applyQuaternion( this.quaternion ), h );
 		const tl = T.applyQuaternion( invQ );
 		const I = this.inertia, ai = this.addedInertia;
-		tl.set( tl.x / ( I.x * ( 1 + ai.x * wetD ) ), tl.y / ( I.y * ( 1 + ai.y * wetD ) ), tl.z / ( I.z * ( 1 + ai.z * wetD ) ) );
+		tl.set( tl.x / ( I.x * ( 1 + ai.x * wetD ) ), tl.y / ( I.y * ( 1 + ai.y * wetD ) * ( H && H.yaw || 1 ) ), tl.z / ( I.z * ( 1 + ai.z * wetD ) ) );
 		this.angular.addScaledVector( tl.applyQuaternion( this.quaternion ), h );
 		// integrate position of COM, then derive origin
 		comW.addScaledVector( this.velocity, h );
@@ -506,16 +542,17 @@ export class BoatController {
 	// back to the berth, at rest (safety net if the integration ever blows up)
 	reset() {
 
-		this.position.copy( WORLD.boatDock.position );
-		this.quaternion.setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), WORLD.boatDock.heading );
+		this.position.copy( this.berth.position );
+		this.quaternion.setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), this.berth.heading );
 		this.velocity.set( 0, 0, 0 );
 		this.angular.set( 0, 0, 0 );
 		this.throttle = 0;
 		this.steer = 0;
 		this.rpm = 0;
 		this.moored = true;
-		this.mooring.anchor.copy( WORLD.boatDock.position );
-		this.mooring.heading = WORLD.boatDock.heading;
+		this.mooring.anchor.copy( this.berth.position );
+		this.mooring.heading = this.berth.heading;
+		this._meanH = null;
 
 	}
 

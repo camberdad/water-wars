@@ -2156,6 +2156,7 @@ export class UI {
 						${ row( k( 'I' ), 'Cooler and fish log' ) }
 						${ row( k( 'K' ), 'High scores (live board)' ) }
 						${ row( k( 'B' ), 'Grab a bent stern rod' ) }
+						${ row( k( 'N' ), 'Trawl net out / in (at sea)' ) }
 						${ row( k( 'Space' ), 'Pass a catch card · close a panel' ) }
 					</section>
 					<section>

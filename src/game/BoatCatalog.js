@@ -94,13 +94,28 @@ export const BOATS = {
 	superyacht: {
 		name: 'Superyacht', price: 2500000, model: 'superyacht', sealed: true,
 		blurb: 'A 40 m superyacht: glass, chrome and teak over a fortress of a hull, a hold for a whole fleet\'s catch, and real speed for her size. The last word in luxury.',
-		hullMul: 4.2, speedMul: 2.0, holdKg: 2000, fuelMul: 6, rudderMul: 2.4,
+		// 1.13.5: heavier to drive (slower to speed up, stop and turn; a lower top speed) and steady in the
+		// waves: her 40 m hull spans them, and fin stabilisers damp the roll (BoatController handling)
+		hullMul: 4.2, speedMul: 1.7, holdKg: 2000, fuelMul: 6, rudderMul: 0.6,
+		handling: { waveSmooth: 0.75, heaveLag: 0.4, stab: 5, right: 1.6, mass: 2.6, yaw: 4, lever: 0.45, wheel: 0.5, spool: 2 },
 		up: 'y', fwd: 'x', length: 40, beam: 8.78, draft: 1.88,
 		gun: [ 0, 9, 6 ], cannon: [ 0, 4, 16 ], hitHalf: [ 4.4, 4, 20 ],
 	},
 };
 
 export const BOAT_ORDER = Object.keys( BOATS );
+
+// Water Wars 1.13.5: where a boat lies at its harbour berth, off the east side of the pier head (x, m):
+// its side about a metre off the fenders like the lobster boat's, a little more for a wide boat, never
+// closer in than the lobster boat (the 8.8 m superyacht lay against the pier at the shared berth)
+export const BERTH_X = 64.5; // WORLD.boatDock.position.x
+export const PIER_HEAD_EAST = 62; // x of the pier head's east side (WORLD.pier.x + headWidth / 2)
+export function berthX( def ) {
+
+	const beam = def && def.beam ? def.beam : 2.9;
+	return Math.max( BERTH_X, PIER_HEAD_EAST + 1.05 + beam / 2 + Math.max( 0, beam - 3 ) * 0.25 );
+
+}
 
 // stats of the active boat applied to the gear stats (GameState.stats)
 export function applyBoat( stats, id ) {

@@ -8,7 +8,7 @@ import { NPCFleet, NPC_TYPES, BOAT_HALF, BOAT_CENTER_Y, segmentBox } from './NPC
 import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
 import { hullOutline, placeOutline, hullContact, densify } from './HullContact.js';
-import { BOATS } from '../BoatCatalog.js';
+import { BOATS, berthX } from '../BoatCatalog.js';
 import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
 import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK, buildDockFenders } from '../Harbours.js';
@@ -213,11 +213,31 @@ export class Combat {
 		app.player.orbitDist = mesh ? Math.max( app.player.orbitDist, 13 * ( def.length || 8.2 ) / 8.2 ) : app.player.orbitDist;
 		if ( this._rudderBase === undefined ) this._rudderBase = app.boatCtl.rudderLift;
 		app.boatCtl.rudderLift = this._rudderBase * ( def.rudderMul || 1 );
+		// how she rides and handles (1.13.5: the superyacht is steadier in the waves and heavier to drive)
+		app.boatCtl.handling = def.handling || null;
+		this.setBerth( def );
 		// someone standing on the deck lands on the new one
 		if ( app.player.mode === 'deck' && app.player.deckMap ) {
 
 			const s = app.player.deckMap.nearest( app.player.deckPos.x, app.player.deckPos.z );
 			if ( s ) app.player.deckPos.set( s.x, s.y, s.z );
+
+		}
+
+	}
+
+	// Water Wars 1.13.5: the berth by the pier head, far enough out for the boat's own beam (the superyacht,
+	// 8.8 m wide, lay against the pier). A boat moored at the old berth moves out to the new one.
+	setBerth( def ) {
+
+		const bc = this.app.boatCtl, base = WORLD.boatDock.position;
+		const x = berthX( def );
+		const old = bc.berth.position.clone();
+		bc.berth.position.set( x, base.y, base.z );
+		if ( bc.moored && ! bc.driven && Math.hypot( bc.mooring.anchor.x - old.x, bc.mooring.anchor.z - old.z ) < 1 ) {
+
+			bc.mooring.anchor.copy( bc.berth.position );
+			bc.position.x += x - old.x;
 
 		}
 

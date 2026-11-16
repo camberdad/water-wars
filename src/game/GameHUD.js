@@ -86,6 +86,15 @@ const CSS = /* css */`
 .gm-boat-row .gm-boat-stats b { color: var(--tw-sun); font-weight: 600; }
 .gm-boat-row.is-current { background: rgba(var(--tw-aqua-rgb), 0.08); }
 .gm-panel.is-shop { width: calc(540 * var(--tw-u)); max-width: 94vw; }
+.gm-panel.gm-sort { width: calc(500 * var(--tw-u)); max-width: 94vw; }
+.gm-sort .gm-row { grid-template-columns: 1fr auto auto auto; }
+.gm-sort .gm-ico { font-size: 1.25em; margin-right: var(--tw-2); }
+.gm-sort .gm-prot { color: var(--tw-coral); font: 700 var(--tw-fs-xs) var(--tw-font); letter-spacing: 0.06em; text-transform: uppercase; margin-left: var(--tw-1); }
+.gm-sort .gm-row.is-prot { background: rgba(255, 122, 133, 0.08); }
+.gm-sort .gm-row.is-back { opacity: 0.45; }
+.gm-sort .gm-row.is-back.is-prot { opacity: 0.7; background: none; }
+.gm-sort .gm-free { color: var(--tw-aqua); font-size: var(--tw-fs-sm); }
+.gm-mini.is-release { color: #0b1418; background: var(--tw-coral); border-color: transparent; font-weight: 600; }
 .gm-log { margin-top: var(--tw-3); color: var(--tw-ink-3); font-size: var(--tw-fs-sm); line-height: 1.5; }
 .gm-row .gm-cm { font-family: var(--tw-mono); color: var(--tw-ink-3); }
 .gm-row.has-cm { grid-template-columns: 1fr auto auto auto auto; }
@@ -224,6 +233,10 @@ export class GameHUD {
 		ui.root.append( this.inv, this.stand );
 		this.invOpen = false;
 		this.standOpen = false;
+		// sorting a hauled trawl net (src/game/Trawl.js)
+		this.sort = h( 'div', 'gm-panel gm-sort tw-glass tw-interactive' );
+		ui.root.append( this.sort );
+		this.sortOpen = false;
 		this._last = {};
 		game.state.onChange( () => this.refresh() );
 		this.refresh();
@@ -306,7 +319,7 @@ export class GameHUD {
 		this.bite.classList.toggle( 'is-on', !! bite );
 		this.cast.classList.toggle( 'is-on', !! casting );
 		if ( casting ) this.castBar.style.width = `${ power * 100 }%`;
-		this.dot.classList.toggle( 'is-on', !! aiming && ! this.invOpen && ! this.standOpen );
+		this.dot.classList.toggle( 'is-on', !! aiming && ! this.invOpen && ! this.standOpen && ! this.sortOpen );
 
 	}
 
@@ -400,7 +413,7 @@ export class GameHUD {
 	renderInventory() {
 
 		const s = this.game.state;
-		const rows = s.inventory.map( ( f ) => `<div class="gm-row has-cm"><span>${ FISH[ f.species ].name }${ f.record ? '<small>record</small>' : '' }<span class="gm-tier" style="color:${ TIERS[ FISH[ f.species ].tier ].color }">${ TIERS[ FISH[ f.species ].tier ].name }</span></span><span class="gm-cm">${ U.len( f.cm ?? fishLengthCm( f.species, f.kg ) ) }</span><span class="gm-kg">${ U.lb( f.kg ) }</span><span class="gm-val">$${ f.value.toLocaleString() }</span><button class="gm-mini" data-release="${ f.id }">Release</button></div>` ).join( '' );
+		const rows = s.inventory.map( ( f ) => `<div class="gm-row has-cm"><span>${ FISH[ f.species ].icon ? FISH[ f.species ].icon + ' ' : '' }${ FISH[ f.species ].name }${ f.record ? '<small>record</small>' : '' }<span class="gm-tier" style="color:${ TIERS[ FISH[ f.species ].tier ].color }">${ TIERS[ FISH[ f.species ].tier ].name }</span></span><span class="gm-cm">${ U.len( f.cm ?? fishLengthCm( f.species, f.kg ) ) }</span><span class="gm-kg">${ U.lb( f.kg ) }</span><span class="gm-val">$${ f.value.toLocaleString() }</span><button class="gm-mini" data-release="${ f.id }">Release</button></div>` ).join( '' );
 		const logged = Object.entries( s.log ).filter( ( [ k ] ) => FISH[ k ] ).map( ( [ k, v ] ) => `${ FISH[ k ].name }: ${ v.count } caught, best ${ U.lb( v.bestKg ) } · ${ U.len( v.bestCm ?? fishLengthCm( k, v.bestKg ) ) }` ).join( '<br>' );
 		this.inv.innerHTML = `
 			<h2>${ s.upgrades.hold > 0 ? 'Fish hold' : 'Cooler' }</h2>
@@ -410,6 +423,93 @@ export class GameHUD {
 			<div class="gm-foot"><span class="gm-sub">Sell at the fish stand by the pier</span><button class="gm-btn is-ghost" data-close>Close (I)</button></div>`;
 		this.inv.querySelector( '[data-close]' ).onclick = () => this.toggleInventory( false );
 		for ( const b of this.inv.querySelectorAll( '[data-release]' ) ) b.onclick = () => s.release( Number( b.dataset.release ) );
+
+	}
+
+	// ---- sorting the trawl net's catch (Water Wars 1.13.5): every protected animal has to go back into the
+	// sea before the rest can be kept; any fish can be thrown back too. onKeep( keepers ) when done.
+	openSort( items, onKeep ) {
+
+		this.toggleInventory( false );
+		this.closeStand();
+		this.sortItems = items;
+		this.onKeep = onKeep;
+		this.sortOpen = true;
+		this.renderSort();
+		this.sort.classList.add( 'is-open' );
+		releaseMouse();
+
+	}
+
+	renderSort() {
+
+		const s = this.game.state, items = this.sortItems || [];
+		const left = items.filter( ( it ) => it.protected && ! it.released ).length;
+		const keep = items.filter( ( it ) => ! it.protected && ! it.released );
+		const kg = keep.reduce( ( a, it ) => a + it.kg, 0 ), value = keep.reduce( ( a, it ) => a + it.value, 0 );
+		const rows = items.map( ( it, i ) => {
+
+			const name = `<span><span class="gm-ico">${ it.icon }</span>${ it.name }`;
+			if ( it.protected ) return `<div class="gm-row is-prot${ it.released ? ' is-back' : '' }">${ name }<span class="gm-prot">Protected</span></span><span class="gm-kg">${ U.lb( it.kg, 0 ) }</span><span></span>${ it.released ? '<span class="gm-free">Swimming free</span>' : `<button class="gm-mini is-release" data-free="${ i }">Release</button>` }</div>`;
+			const t = TIERS[ FISH[ it.species ].tier ];
+			return `<div class="gm-row${ it.released ? ' is-back' : '' }">${ name }<span class="gm-tier" style="color:${ t.color }">${ t.name }</span></span><span class="gm-kg">${ U.lb( it.kg ) }</span><span class="gm-val">$${ it.value.toLocaleString() }</span><button class="gm-mini" data-toss="${ i }">${ it.released ? 'Keep' : 'Throw back' }</button></div>`;
+
+		} ).join( '' );
+		const room = Math.max( 0, s.stats.holdKg - s.holdKg );
+		this.sort.innerHTML = `
+			<h2>🕸 Sort the catch</h2>
+			<p class="gm-sub">${ left ? `${ left } protected animal${ left > 1 ? 's are' : ' is' } tangled in the net: release ${ left > 1 ? 'them' : 'it' } back into the sea before you keep the rest.` : 'Keep the fish, crabs and lobster, or throw any back.' } Hold room: ${ U.lb( room, 0 ) }.</p>
+			<div class="gm-list">${ rows }</div>
+			<div class="gm-foot"><button class="gm-btn is-ghost" data-all>Throw everything back</button><button class="gm-btn" data-keep ${ left ? 'disabled' : '' }>${ left ? `Release ${ left } protected first` : keep.length ? `Keep ${ keep.length } · ${ U.lb( kg, 0 ) } · $${ value.toLocaleString() } (Space)` : 'Done (Space)' }</button></div>`;
+		for ( const b of this.sort.querySelectorAll( '[data-free]' ) ) b.onclick = () => this.releaseSorted( Number( b.dataset.free ) );
+		for ( const b of this.sort.querySelectorAll( '[data-toss]' ) ) b.onclick = () => {
+
+			const it = items[ Number( b.dataset.toss ) ];
+			it.released = ! it.released;
+			this.renderSort();
+
+		};
+		this.sort.querySelector( '[data-all]' ).onclick = () => {
+
+			for ( let i = 0; i < items.length; i ++ ) if ( ! items[ i ].released ) this.releaseSorted( i, true );
+			this.keepSort();
+
+		};
+		this.sort.querySelector( '[data-keep]' ).onclick = () => this.keepSort();
+
+	}
+
+	// a protected animal (or a fish) goes back over the side
+	releaseSorted( i, quiet = false ) {
+
+		const it = this.sortItems && this.sortItems[ i ];
+		if ( ! it || it.released ) return;
+		it.released = true;
+		const au = this.game.app.audio, b = this.game.app.boatCtl;
+		if ( it.protected ) {
+
+			if ( au && au.fishSplash && b ) au.fishSplash( b.position, 0.9 );
+			if ( ! quiet ) this.toast( `${ it.icon } The ${ it.name.toLowerCase() } swims free`, 2200 );
+
+		}
+
+		if ( ! quiet ) this.renderSort();
+
+	}
+
+	// done sorting: the keepers go to the hold (only once every protected animal is back in the sea)
+	keepSort() {
+
+		const items = this.sortItems || [];
+		if ( ! this.sortOpen || items.some( ( it ) => it.protected && ! it.released ) ) return false;
+		const keep = items.filter( ( it ) => ! it.protected && ! it.released );
+		const done = this.onKeep;
+		this.sortOpen = false;
+		this.sortItems = null;
+		this.onKeep = null;
+		this.sort.classList.remove( 'is-open' );
+		if ( done ) done( keep );
+		return true;
 
 	}
 
@@ -476,6 +576,7 @@ function describe( key, lv ) {
 		case 'rod': return `casts ${ U.ft( lv.castM ) }`;
 		case 'bait': return lv.luck > 1 ? `rare fish ×${ lv.luck.toFixed( 2 ).replace( /0$/, '' ) }` : 'no bonus';
 		case 'rodHolders': return lv.sternRods ? `${ lv.sternRods } extra rod${ lv.sternRods > 1 ? 's' : '' } fishing astern in tiers 2-3 (B to grab a bite)` : 'no stern rods';
+		case 'trawl': return lv.trawlNet ? `up to ${ lv.netSize } a haul · fills ${ lv.netRate }× as fast (N at sea)` : 'no net';
 		case 'chum': return lv.biteMul < 1 ? `bites ${ Math.round( ( 1 / lv.biteMul - 1 ) * 100 ) }% sooner` : 'no chum';
 		case 'targeting': return lv.aimMul < 1 ? `${ Math.round( ( 1 - lv.aimMul ) * 100 ) }% tighter spread` : 'no aid';
 		case 'harpoon': return lv.harpoon ? `${ U.ft( lv.harpRange ) } · tires a giant ${ lv.harpPower }× as fast` : 'no harpoon';

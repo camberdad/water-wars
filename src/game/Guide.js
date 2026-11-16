@@ -93,6 +93,7 @@ const CARDS = [
 			${ row( k( 'G' ), '<b>Loot</b> a burning wreck alongside: cash and fish' ) }
 			${ row( k( 'Q' ), '<b>Harpoon</b> a giant fish when one surfaces, then tow it into a harbour to sell' ) }
 			${ row( k( 'B' ), '<b>Grab a stern rod</b> when one bends over (the stern rod holder upgrade: extra rods fish astern while the boat is stopped)' ) }
+			${ row( k( 'N' ), '<b>Trawl net</b> out and in (the trawl net upgrade): tow it slowly, then sort the catch. Dolphins, seals, turtles and manatees go back into the sea' ) }
 			${ row( k( 'K' ), '<b>High scores</b>: the live board of every captain, ranked by lifetime earnings' ) }
 			${ row( k( 'U' ), '<b>Harbour services</b> in your boat by the pier, on foot at the kiosk on the end of the main dock, or at the eight sea stations and outposts: repairs, upgrades, boats, sell your catch. All are <b>safe zones</b>' ) }
 		</div>
@@ -370,7 +371,7 @@ export class Guide {
 		prev.lastCatch = lc;
 
 		// the coach card: one tip at a time, ~7 s each (not over the catch card or a panel)
-		const busy = g.hud && ( g.hud.catchOpen || g.hud.invOpen || g.hud.standOpen );
+		const busy = g.hud && ( g.hud.catchOpen || g.hud.invOpen || g.hud.standOpen || g.hud.sortOpen );
 		if ( this._current ) {
 
 			this._coachT -= dt;
