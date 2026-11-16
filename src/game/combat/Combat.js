@@ -9,6 +9,7 @@ import { buildGunTurret, buildCannon } from './WeaponModels.js';
 import { CombatHUD } from './CombatHUD.js';
 import { hullOutline, placeOutline, hullContact, densify } from './HullContact.js';
 import { BOATS, berthX } from '../BoatCatalog.js';
+import { Boss } from './Boss.js';
 import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
 import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK, buildDockFenders } from '../Harbours.js';
@@ -45,6 +46,8 @@ export class Combat {
 		this.fx.onImpact = ( p, point, target ) => this.onImpact( p, point, target );
 		this.sfx = new CombatSFX( app );
 		this.fleet = new NPCFleet( app );
+		// the boss of the Deadwater (1.14: src/game/combat/Boss.js)
+		this.boss = new Boss( this );
 		this.time = 0;
 
 		// the player's guns
@@ -326,6 +329,7 @@ export class Combat {
 		this.updateZone( ctx.playerPos, aboard );
 		this.manageSpawns( dt, ctx.playerPos );
 		this.fleet.update( dt, ctx );
+		this.boss.update( dt, ctx );
 		if ( aboard ) this.collideBoats( dt );
 		if ( aboard ) this.worldEdge( dt );
 
@@ -549,17 +553,26 @@ export class Combat {
 
 		const mine = placeOutline( this._myShape, bc.position.x, bc.position.z, bc.getYaw(), this._myPoly || ( this._myPoly = [] ) );
 		const reach = Math.hypot( w, l ) + Math.hypot( BOAT_HALF.x, BOAT_HALF.z );
-		for ( const b of this.fleet.boats ) {
+		const boss = this.boss;
+		for ( const b of [ ...this.fleet.boats, boss ] ) {
 
 			if ( ! b.active || b.state === 'sinking' ) continue;
+			const big = b === boss;
 			const dx = bc.position.x - b.pos.x, dz = bc.position.z - b.pos.z;
-			if ( dx * dx + dz * dz > reach * reach ) continue; // too far apart to touch
+			const r = big ? Math.hypot( w, l ) + 18 : reach;
+			if ( dx * dx + dz * dz > r * r ) continue; // too far apart to touch
 			// only where the hulls really meet
-			const hit = hullContact( mine, placeOutline( this._npcShape, b.pos.x, b.pos.z, b.yaw, this._npcPoly || ( this._npcPoly = [] ) ) );
+			const hit = hullContact( mine, big ? placeOutline( boss.outline, b.pos.x, b.pos.z, b.yaw, this._bossPoly || ( this._bossPoly = [] ) ) : placeOutline( this._npcShape, b.pos.x, b.pos.z, b.yaw, this._npcPoly || ( this._npcPoly = [] ) ) );
 			if ( ! hit ) continue;
 			const nx = hit.nx, nz = hit.nz, over = hit.depth;
-			bc.position.x += nx * over * 0.5; bc.position.z += nz * over * 0.5;
-			b.pos.x -= nx * over * 0.5; b.pos.z -= nz * over * 0.5;
+			// (the boss sails her own course: she shoves you out of the way)
+			const kMe = big ? 1 : 0.5;
+			bc.position.x += nx * over * kMe; bc.position.z += nz * over * kMe;
+			if ( ! big ) {
+
+				b.pos.x -= nx * over * 0.5; b.pos.z -= nz * over * 0.5;
+
+			}
 			const rel = ( bc.velocity.x - b.vel.x ) * nx + ( bc.velocity.z - b.vel.z ) * nz;
 			if ( rel < 0 ) {
 
@@ -598,6 +611,18 @@ export class Combat {
 
 				best = t;
 				tgt = b;
+
+			}
+
+		}
+
+		if ( this.boss.alive ) {
+
+			const t = this.boss.intersect( o, end );
+			if ( t >= 0 && t < best ) {
+
+				best = t;
+				tgt = this.boss;
 
 			}
 
@@ -666,8 +691,18 @@ export class Combat {
 
 	hitTest( p, a, b ) {
 
-		// other players' shots (multiplayer) are drawn but hit nothing: no PvP
-		if ( p.owner === 'remote' ) return null;
+		// other players' shots (multiplayer) are drawn but hit nothing: no PvP. (They burst on the boss's hull,
+		// for the look of it: their damage to her comes with their own reports, Boss.remoteDamage)
+		if ( p.owner === 'remote' ) {
+
+			const B = this.boss;
+			if ( ! B.alive ) return null;
+			const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
+			if ( mx * mx + mz * mz > ( 20 + a.distanceTo( b ) ) ** 2 ) return null;
+			const t = B.intersect( a, b );
+			return t >= 0 ? { point: new Vector3().lerpVectors( a, b, t ), target: 'bossLook' } : null;
+
+		}
 
 		if ( p.owner === 'player' ) {
 
@@ -683,6 +718,24 @@ export class Combat {
 
 					best = t;
 					tgt = n;
+
+				}
+
+			}
+
+			const B = this.boss;
+			if ( B.alive ) {
+
+				const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
+				if ( mx * mx + mz * mz < ( 20 + a.distanceTo( b ) ) ** 2 ) {
+
+					const t = B.intersect( a, b );
+					if ( t >= 0 && t < best ) {
+
+						best = t;
+						tgt = B;
+
+					}
 
 				}
 
@@ -721,6 +774,13 @@ export class Combat {
 
 			}
 
+		} else if ( target === 'bossLook' ) {
+
+			if ( shell ) this.fx.explosion( point, 0.9 );
+			else this.fx.hit( point, _v.set( point.x - this.boss.pos.x, 0, point.z - this.boss.pos.z ).normalize(), 0.25 );
+			this.sfx.shot( point, shell ? 'explosion' : 'hit', shell ? 0.8 : 0.4 );
+			return;
+
 		} else if ( target === 'player' ) {
 
 			const bc = this.app.boatCtl.position;
@@ -749,6 +809,22 @@ export class Combat {
 					if ( d < p.splash ) {
 
 						const killed = n.damage( p.dmg * ( 1 - d / p.splash ) * 0.8, true, this._ctx );
+						if ( this.hud ) this.hud.hitMarker( killed );
+
+					}
+
+				}
+
+				const B = this.boss;
+				if ( B.alive && B !== target ) {
+
+					// (her hull is long: measured from the nearest point of her centre line)
+					const lx = point.x - B.pos.x, lz = point.z - B.pos.z, fx = Math.sin( B.yaw ), fz = Math.cos( B.yaw );
+					const along = Math.max( - 15, Math.min( 15, lx * fx + lz * fz ) );
+					const d = Math.max( 0, Math.hypot( lx - fx * along, lz - fz * along ) - 6 );
+					if ( d < p.splash ) {
+
+						const killed = B.damage( p.dmg * ( 1 - d / p.splash ) * 0.8, true, this._ctx );
 						if ( this.hud ) this.hud.hitMarker( killed );
 
 					}

@@ -21,9 +21,10 @@ function axis( spec ) {
 }
 
 // fetch + decode a converted model into an engine geometry in the boat frame
-export function loadBoatGeometry( id ) {
+// def: the fitting (BoatCatalog); another def under its own id loads a variant of a model (1.14: the boss)
+export function loadBoatGeometry( id, def = BOATS[ id ] ) {
 
-	const def = BOATS[ id ];
+
 	if ( ! def || ! def.model ) return Promise.resolve( null );
 	if ( _cache.has( id ) ) return _cache.get( id );
 	const p = ( async () => {

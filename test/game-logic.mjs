@@ -5,6 +5,7 @@ import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
+import { BOSS, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
 import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
@@ -585,6 +586,41 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 }
 // ---- 1.13.7: pirates only come for you when you are close, then chase you a while
 ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pirates notice you only close by (60-90 m), then follow you further' );
+// ---- 1.14: the boss of the Deadwater
+{
+
+	// she takes well over 45 s of the best guns in the game, fired without a miss
+	const gun = UPGRADES.gun.levels[ UPGRADES.gun.levels.length - 1 ];
+	const can = UPGRADES.cannon.levels[ UPGRADES.cannon.levels.length - 1 ];
+	const loader = UPGRADES.locker.levels[ UPGRADES.locker.levels.length - 1 ];
+	const dps = gun.gunDmg * gun.gunRate + can.canDmg * can.canRate * loader.canRateMul;
+	ok( BOSS.hp / dps > 45, `the boss takes ${ ( BOSS.hp / dps ).toFixed( 0 ) } s of non-stop fire from the best guns (${ Math.round( dps ) } dmg/s)` );
+	// her patrol: always in the Deadwater, the same for everyone at the same moment, moving smoothly
+	let inTier3 = true, maxStep = 0, prev = bossPose( 1.8e9 );
+	for ( let t = 1.8e9; t < 1.8e9 + 3600; t += 1 ) {
+
+		const p = bossPose( t );
+		const z = dangerZoneAt( p.x, p.z );
+		if ( ! z || z.tier !== 3 ) inTier3 = false;
+		maxStep = Math.max( maxStep, Math.hypot( p.x - prev.x, p.z - prev.z ) );
+		prev = p;
+
+	}
+
+	ok( inTier3 && maxStep < BOSS.speed * 1.01 && JSON.stringify( bossPose( 1.9e9 ) ) === JSON.stringify( bossPose( 1.9e9 ) ), 'the boss patrols the Deadwater on a course every player shares' );
+	const p0 = bossPose( 1.8e9 ), p1 = bossPose( 1.8e9 + 1 );
+	const heading = Math.atan2( p1.x - p0.x, p1.z - p0.z );
+	ok( Math.abs( Math.atan2( Math.sin( heading - p0.yaw ), Math.cos( heading - p0.yaw ) ) ) < 0.05, 'she points the way she sails' );
+	ok( bossGen( 0 ) === 0 && bossGen( BOSS.cycleS - 1 ) === 0 && bossGen( BOSS.cycleS ) === 1, 'a new generation of her every cycle' );
+	// the plunder
+	const solo = bossPayout( 85000, [] );
+	ok( solo.cash === BOSS.pool && solo.captains === 1, `alone, all the plunder is yours (${ solo.cash.toLocaleString() })` );
+	const a = bossPayout( 60000, [ 25000 ] ), b = bossPayout( 25000, [ 60000 ] );
+	ok( a.captains === 2 && Math.abs( a.cash + b.cash - BOSS.pool * 1.5 ) <= 200 && a.cash > b.cash && b.cash > 0, `two captains share a bigger pool by their damage (${ a.cash.toLocaleString() } and ${ b.cash.toLocaleString() })` );
+	ok( bossPayout( 0, [ 85000 ] ).cash === 0, 'no plunder for a captain who never hit her' );
+	ok( BOSS_MODEL.model === 'ship' && BOSS_MODEL.length > 30, 'she is a 34 m warship built on the fishing ship\'s hull' );
+
+}
 console.log( `value check ${ value }` );
 console.log( fails ? `${ fails } FAILED` : 'all passed' );
 process.exit( fails ? 1 : 0 );

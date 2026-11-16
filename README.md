@@ -76,6 +76,11 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
      and the giant fish surface here.
   3. **Deadwater** (1,400-2,400 m, past the red buoys): pirate warlords with cannons, the rarest fish,
      plunder x2.5 and the most giants.
+     The boss sails here too: **the Iron Kraken**, a 34 m pirate warship (85,000 hp, twin machine guns
+     and two heavy cannons) on a patrol circle marked by a red skull on the minimap. She opens fire on
+     anyone who attacks her or comes within 150 m. Sink her for $600,000 of plunder. In multiplayer every
+     captain sees her in the same place with one shared health bar, and everyone who hit her shares a
+     bigger pool by the damage they did. A new Kraken sails out every 20 minutes after she goes down.
   Past 2,400 m is the edge of the charted sea: the current turns you back.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
@@ -148,6 +153,7 @@ to the home screen, with a button that saves your progress and installs it. The 
 |---|---|
 | `src/game/combat/Combat.js` | Aiming and firing from the helm, hit tests, damage, ramming, sinking and respawn, wanted level, bounties, looting, harbour services |
 | `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
+| `src/game/combat/Boss.js` | The boss: the Iron Kraken (the fishing ship's hull at 34 m), her clock-driven patrol, guns, shared health and plunder, health bar |
 | `src/game/combat/CombatFX.js` | Tracers, cannon shells, muzzle flashes, fire, smoke, splinters, water splashes (through the ocean's spray particles) |
 | `src/game/combat/WeaponModels.js` | Procedural deck guns, cannons, the pirate flag and the coast-guard light bar |
 | `src/game/combat/CombatHUD.js` | Hull, gun heat, shells, wanted stars, crosshair, boat labels, minimap dots, the "Sunk!" screen |

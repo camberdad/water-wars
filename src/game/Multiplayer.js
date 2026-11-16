@@ -223,6 +223,7 @@ export class Multiplayer {
 				const p = this.peer( id );
 				const first = ! p.has;
 				p.apply( d || {} );
+				if ( d && d.bd && this.game.combat && this.game.combat.boss ) this.game.combat.boss.remoteDamage( id, d.bd );
 				if ( first ) this.game.toast( `🌐 ${ p.name } sailed into the open sea`, 2600 );
 
 			} );
@@ -349,6 +350,9 @@ export class Multiplayer {
 			m: app.player.mode,
 			w: this.heightAboveWater(),
 			t: Date.now(), // (the shared wave clock: lets a peer see how far apart the clocks are)
+			// our damage to this generation of the boss (1.14: src/game/combat/Boss.js): her health bar is what
+			// every captain's damage leaves, and the plunder is shared by it
+			bd: this.game.combat && this.game.combat.boss ? this.game.combat.boss.netState() : null,
 		};
 
 	}
