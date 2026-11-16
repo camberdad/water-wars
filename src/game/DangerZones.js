@@ -20,10 +20,12 @@ export const HARBOUR = { x: 40, z: 20 };
 export const SAFE_RADIUS = 220;
 export const WORLD_RADIUS = 2400;
 
+// aggro: m, how close you must come before a pirate notices you and comes for you (Water Wars 1.13.7:
+// close by only, was 120 / 200 / 300); chase: m, how far it then follows you before it gives up
 export const DANGER_TIERS = [
-	{ tier: 1, id: 'coastal', name: 'Coastal Waters', r0: SAFE_RADIUS, r1: 700, color: '#e8d24a', lamp: 0xffd040, aggro: 120, loot: 1, fishMul: 1, pirateTier: 1 },
-	{ tier: 2, id: 'open-sea', name: 'Open Sea', r0: 700, r1: 1400, color: '#ff9a3a', lamp: 0xff8a20, aggro: 200, loot: 1.5, fishMul: 1.4, pirateTier: 2 },
-	{ tier: 3, id: 'deadwater', name: 'Deadwater', r0: 1400, r1: WORLD_RADIUS, color: '#ff4a3a', lamp: 0xff2a18, aggro: 300, loot: 2.5, fishMul: 2, pirateTier: 3 },
+	{ tier: 1, id: 'coastal', name: 'Coastal Waters', r0: SAFE_RADIUS, r1: 700, color: '#e8d24a', lamp: 0xffd040, aggro: 60, chase: 200, loot: 1, fishMul: 1, pirateTier: 1 },
+	{ tier: 2, id: 'open-sea', name: 'Open Sea', r0: 700, r1: 1400, color: '#ff9a3a', lamp: 0xff8a20, aggro: 75, chase: 240, loot: 1.5, fishMul: 1.4, pirateTier: 2 },
+	{ tier: 3, id: 'deadwater', name: 'Deadwater', r0: 1400, r1: WORLD_RADIUS, color: '#ff4a3a', lamp: 0xff2a18, aggro: 90, chase: 280, loot: 2.5, fishMul: 2, pirateTier: 3 },
 ];
 // (older code iterates DANGER_ZONES)
 export const DANGER_ZONES = DANGER_TIERS;

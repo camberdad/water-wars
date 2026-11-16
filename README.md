@@ -67,8 +67,8 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 - **The other boats:**
   - *Fishing boats* (white) carry a little cash and their catch. Some have a rifle.
   - *Traders* (green) carry more cash and a machine gun. They run and shoot back.
-  - *Pirates* (black, with a skull flag) roam the **danger tiers** outside the harbour. They attack on sight
-    when you come near, and get tougher, richer and keener the further out you sail. Sinking them is legal and
+  - *Pirates* (black, with a skull flag) roam the **danger tiers** outside the harbour. They leave you be until
+    you come close (60-90 m), then come for you, and get tougher, richer and keener the further out you sail. Sinking them is legal and
     pays a bounty.
 - **Three danger tiers** ring the harbour, marked on the map and by buoys at the borders:
   1. **Coastal Waters** (220-700 m out): a few weak pirates that only attack up close.

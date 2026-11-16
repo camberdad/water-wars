@@ -583,6 +583,8 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( d <= 2 * L + 1e-6 && d > 2 * L * 0.9, 'the warps keep their length' );
 
 }
+// ---- 1.13.7: pirates only come for you when you are close, then chase you a while
+ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pirates notice you only close by (60-90 m), then follow you further' );
 console.log( `value check ${ value }` );
 console.log( fails ? `${ fails } FAILED` : 'all passed' );
 process.exit( fails ? 1 : 0 );

@@ -15,7 +15,7 @@ import { DANGER_TIERS, dangerZoneAt, randomInZone, HARBOUR, WORLD_RADIUS } from 
 //   fisher      steams between fishing spots and sits on them a while; sometimes carries a rifle.
 //               Honest: attacking one makes you wanted.
 //   trader      runs long routes with cash aboard and a machine gun; flees and fires back.
-//   pirate      lives in the Danger Waters (red on the map) and only attacks on sight in there, or
+//   pirate      lives in the Danger Waters (red on the map) and only attacks when you come close in there, or
 //               when you shoot first; bounty on its head (no wanted level for sinking it).
 //   coastguard  only out when you are wanted (two stars and up): it hunts you down.
 //
@@ -296,11 +296,12 @@ export class NPCBoat {
 		const dist = toP.length();
 		this.distToPlayer = dist;
 		const bearing = Math.atan2( toP.x, toP.z );
-		// pirates: on sight only when you are in the danger waters (a little slack at the edge), or once
-		// you have fired on them; the coast guard: whenever you are wanted
+		// pirates: only when you come close to one in the danger waters (a little slack at the edge), or once
+		// you have fired on them; then it follows you out to its chase range (1.13.7). The coast guard:
+		// whenever you are wanted
 		if ( this.provoked && this.type === 'pirate' && dist > 320 ) this.provoked = false;
 		// nobody hunts you in a safe zone (the harbour, the sea stations) or ashore
-		const hunting = ! ctx.playerSafe && ( ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < ( this.home ? this.home.aggro : 200 ) ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 ) );
+		const hunting = ! ctx.playerSafe && ( ( this.type === 'pirate' && ctx.playerAboard && ( ( ctx.playerZoneLoose && dist < ( this.state === 'attack' ? ( this.home ? this.home.chase : 200 ) : ( this.home ? this.home.aggro : 60 ) ) ) || this.provoked ) ) || ( this.type === 'coastguard' && ctx.wanted >= 2 ) );
 
 		switch ( this.state ) {
 
