@@ -8,6 +8,8 @@ import { BOATS, berthX } from '../src/game/BoatCatalog.js';
 import { BOSS, BOSSES, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
 import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
+import { BoatController } from '../src/player/BoatController.js';
+import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S } from '../src/game/Weather.js';
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
@@ -639,6 +641,54 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( bossPayout( M.hp, [], M.pool ).cash === 150000 && bossGen( M.cycleS * 3, M ) === 3, 'alone she pays $150,000; her own generations' );
 	ok( new Set( Object.values( BOSSES ).map( ( b ) => b.id ) ).size === 2 && BOSSES.kraken === BOSS, 'two bosses, each with its own id for the shared damage' );
 	ok( BOATS.wavecutter.length === 11.5 && Math.abs( BOATS.wavecutter.beam / BOATS.wavecutter.length - 2.46 / 8.5 ) < 0.002 && BOATS.wavecutter.hitHalf[ 2 ] > 5.5, 'the WaveCutter is 1.35x bigger (11.5 m), in proportion' );
+
+}
+// ---- 1.15.1: towing the trawl net can't run the boat physics away (it used to freeze the game)
+{
+
+	const hullSamples = [];
+	for ( let i = 0; i < 4; i ++ ) for ( let j = 0; j < 8; j ++ ) hullSamples.push( { position: new Vector3( - 1.1 + i * 0.73, - 0.35, - 3.5 + j * 1.0 ), area: 0.72, bottomY: - 0.6 } );
+	const sim = ( script, seconds = 30 ) => {
+
+		const model = { hydro: {}, hullSamples, propeller: new Vector3( 0, - 0.6, - 3.4 ), rudder: { z: - 3.7 }, group: new Group(), setThrottle() {}, setSteering() {}, setPropellerRPM() {} };
+		const q = { latency: 0.05, cpuValid: true, version: 0, resultTime: 0, cpu: new Float32Array( 512 ), resultInputs: new Float32Array( 512 ), count: 0,
+			allocate( n, k ) { const s = this.count; this.count += k; return s; }, setPoint( i, x, z ) { this.resultInputs[ i * 4 ] = x; this.resultInputs[ i * 4 + 1 ] = z; } };
+		const bc = new BoatController( { model, query: q, terrain: { heightAt: () => - 50 }, colliders: {} } );
+		bc.contacts = () => {};
+		bc.position.set( 0, 0, 0 );
+		bc.quaternion.identity();
+		bc.moored = false;
+		bc.driven = true;
+		bc.maxThrust *= 4; // the top engine
+		bc.pitchSpeed *= 2;
+		let resets = 0, top = 0, t = 0;
+		const reset = bc.reset.bind( bc );
+		bc.reset = () => { resets ++; reset(); };
+		for ( let i = 0; i < seconds * 60; i ++ ) {
+
+			q.version ++;
+			q.resultTime = t;
+			bc.queueQueries();
+			const s = script( t, bc );
+			bc.setInput( s.throttle, s.steer || 0, 1 / 60 );
+			bc.netDrag = bc.maxThrust * 0.065;
+			bc.towDir = ( bc.towDir || new Vector3() ).copy( s.tow( bc ) );
+			bc.update( 1 / 60 );
+			top = Math.max( top, bc.velocity.length() );
+			t += 1 / 60;
+
+		}
+
+		return { resets, top };
+
+	};
+	const astern = ( bc ) => new Vector3( 0, 0, - 1 ).applyQuaternion( bc.quaternion ).setY( 0 ).normalize();
+	const normal = sim( () => ( { throttle: 1, tow: astern } ) );
+	const back = sim( ( t ) => ( { throttle: t < 10 ? 1 : - 1, tow: astern } ) );
+	const uturn = sim( ( t ) => ( { throttle: 1, tow: t < 10 ? astern : ( bc ) => astern( bc ).negate() } ) );
+	const turn = sim( ( t ) => ( { throttle: 1, steer: t > 10 ? 1 : 0, tow: t < 10 ? astern : ( bc ) => new Vector3( 1, 0, 0 ).applyQuaternion( bc.quaternion ).setY( 0 ).normalize() } ) );
+	ok( normal.resets === 0 && normal.top > 3 && normal.top < 4.5, `towing the net: about 7 knots flat out (${ ( normal.top * 1.944 ).toFixed( 1 ) } kn)` );
+	ok( [ back, uturn, turn ].every( ( r ) => r.resets === 0 && r.top < 40 ), `going astern, a U-turn or a hard turn with the net out never runs away (top ${ [ back, uturn, turn ].map( ( r ) => r.top.toFixed( 1 ) ).join( ' / ' ) } m/s, no resets)` );
 
 }
 console.log( `value check ${ value }` );

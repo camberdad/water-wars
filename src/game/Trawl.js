@@ -469,7 +469,11 @@ export class Trawl {
 		// the rope: stern -> the middle of the warps -> the net's mouth, half the warp each (paid out at
 		// about 8 m/s while the net goes over, hauled back in as the warp shortens)
 		const half = ( 2 + NET_LEN * this.len ) / 2;
-		if ( ! this.knots ) this.knots = [ new Vector3( sternW.x, 0, sternW.z ), new Vector3( sternW.x, 0, sternW.z ) ];
+		// (1.15.1: a boat that jumped, reset to its berth or sent home, lays the net out afresh behind it
+		// instead of dragging a rope hundreds of metres long, taut, to where it was)
+		const far = this.knots && Math.hypot( this.knots[ 0 ].x - sternW.x, this.knots[ 0 ].z - sternW.z ) > half + 30;
+		if ( ! Number.isFinite( sternW.x + sternW.z ) ) return;
+		if ( ! this.knots || far || ! Number.isFinite( this.knots[ 0 ].x + this.knots[ 1 ].x ) ) this.knots = [ new Vector3( sternW.x, 0, sternW.z ), new Vector3( sternW.x, 0, sternW.z ) ];
 		const [ mid, np ] = this.knots;
 		const pay = this.state === 'out' && this.len < 1 ? 8 * this._dt : 0; // (only while it goes over: a slack line astern isn't pushed)
 		const t1 = followRope( mid, sternW, half, pay, back );

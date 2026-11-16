@@ -253,6 +253,7 @@ export class BoatController {
 
 			this.step( h );
 			this.limitTilt();
+			this.limitSpeed();
 			this._acc -= h;
 			steps ++;
 
@@ -355,14 +356,31 @@ export class BoatController {
 		addForceAt( _f.copy( fwd ).multiplyScalar( - R * Math.sign( u ) ), _p );
 		// ---- a trawl net astern (Water Wars 1.13.6): its drag pulls the stern along the warps (straight
 		// astern on a straight course, at an angle after a turn), at the height of the centre of mass
+		//
+		// 1.15.1: a tow line only resists the stern moving AWAY from the net, by that speed alone. (It used
+		// to pull toward the net by the boat's whole speed squared, whichever way the boat moved: going
+		// astern, coming round in a turn or after a U-turn the boat moved toward the net, so the pull sped
+		// it up, which pulled harder... in seconds the speed ran away to NaN and the boat was reset to its
+		// berth every frame: the "lost thrust, then the game froze".) Never more than would stop that motion
+		// in this step, nor more than the engine can push; the lever arm stays on the hull the physics has.
 		if ( this.netDrag > 0 ) {
 
-			const pull = this.netDrag * this.speed * this.speed;
-			_p.set( 0, this.com.y, this.towZ );
-			this.toWorld( _p, _p );
 			if ( this.towDir ) _f.copy( this.towDir ).setY( 0 );
 			else _f.copy( fwd ).setY( 0 ).negate();
-			if ( _f.lengthSq() > 1e-8 ) addForceAt( _f.normalize().multiplyScalar( pull ), _p );
+			if ( _f.lengthSq() > 1e-8 ) {
+
+				_f.normalize(); // toward the net
+				const away = - ( this.velocity.x * _f.x + this.velocity.z * _f.z );
+				if ( away > 0 ) {
+
+					const pull = Math.min( this.netDrag * away * away, m * away / h * 0.5, this.maxThrust * 1.5 );
+					_p.set( 0, this.com.y, Math.max( - 4.2, Math.min( 0, this.towZ ) ) );
+					this.toWorld( _p, _p );
+					addForceAt( _f.multiplyScalar( pull ), _p );
+
+				}
+
+			}
 
 		}
 
@@ -491,6 +509,20 @@ export class BoatController {
 
 		// origin = com - R * comLocal
 		this.position.copy( comW ).sub( _v.copy( this.com ).applyQuaternion( this.quaternion ) );
+
+	}
+
+	// Water Wars 1.15.1: a safety net under the integrator. No boat goes faster than MAX_SPEED (the WaveCutter
+	// tops out near 34 m/s) or spins faster than MAX_SPIN: if a force ever runs away again, the boat is held
+	// at the limit for a moment instead of the numbers blowing up to NaN (which reset it to its berth every
+	// frame and froze the game).
+	limitSpeed() {
+
+		const MAX_SPEED = 60, MAX_SPIN = 4; // m/s, rad/s
+		const v = this.velocity.length();
+		if ( v > MAX_SPEED ) this.velocity.multiplyScalar( MAX_SPEED / v );
+		const w = this.angular.length();
+		if ( w > MAX_SPIN ) this.angular.multiplyScalar( MAX_SPIN / w );
 
 	}
 
