@@ -7,6 +7,7 @@ import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn } from '../s
 import { BOATS } from '../src/game/BoatCatalog.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
+import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S } from '../src/game/Weather.js';
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
 
 let fails = 0;
@@ -469,6 +470,31 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const offline = new Leaderboard( { fetch: async () => { throw new Error( 'down' ); }, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: () => {} }, config: { ...LEADERBOARD_CONFIG, BIN_ID: 'test', MASTER_KEY: 'k' } } );
 	const ob = await offline.fetchBoard();
 	ok( ! ob.online && ob.scores.some( ( r ) => r.name === 'Ahab' ), 'offline, the board falls back to this device\'s copy' );
+
+}
+
+// ---- shared multiplayer weather (1.13.4): the same on every computer, smooth, mostly mild
+{
+
+	const t0 = 1.8e9;
+	ok( JSON.stringify( weatherAt( t0 ) ) === JSON.stringify( weatherAt( t0 ) ), 'the weather at a given moment is always the same (every player works out the same)' );
+	let jump = 0, dirJump = 0, prev = weatherAt( t0 );
+	const seen = {};
+	for ( let t = t0 + 1; t < t0 + 48 * 3600; t += 1 ) {
+
+		const w = weatherAt( t );
+		for ( const k of WEATHER_KEYS ) jump = Math.max( jump, Math.abs( w[ k ] - prev[ k ] ) / ( Math.max( ...WEATHER.map( ( x ) => x[ k ] ) ) || 1 ) );
+		let d = Math.abs( w.windDir - prev.windDir ); d = Math.min( d, 360 - d );
+		dirJump = Math.max( dirJump, d );
+		prev = w;
+
+	}
+
+	for ( let i = 0; i < 4000; i ++ ) seen[ WEATHER[ spellKind( i ) ].id ] = ( seen[ WEATHER[ spellKind( i ) ].id ] || 0 ) + 1;
+	ok( jump < 0.01 && dirJump < 0.1, `the weather changes smoothly, never in a jump (largest step a second: ${ ( jump * 100 ).toFixed( 2 ) }% of the range, wind ${ dirJump.toFixed( 3 ) }°)` );
+	ok( seen.breezy > seen.choppy && seen.choppy > seen.calm && seen.calm > seen.storm && seen.storm > 250, `every kind of weather comes round, storms the rarest (${ JSON.stringify( seen ) })` );
+	const mid = weatherAt( Math.floor( t0 / SPELL_S ) * SPELL_S + 60 ), kind = WEATHER.find( ( x ) => x.id === mid.id );
+	ok( WEATHER_KEYS.every( ( k ) => Math.abs( mid[ k ] - kind[ k ] ) < 1e-9 ), 'early in a spell the sea is exactly that weather\'s conditions' );
 
 }
 console.log( `value check ${ value }` );

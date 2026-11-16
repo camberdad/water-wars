@@ -85,6 +85,33 @@ export class AppUI {
 
 		};
 
+		// Water Wars 1.13.4: the shared multiplayer weather (src/game/Weather.js) sets the sea and sky here.
+		// While it does, the controls it drives are locked (they show its values) so they can't drift apart.
+		const SHARED = new Set( [ 'wind', 'windDir', 'fetch', 'chop', 'swell', 'surf', 'period', 'whitecaps', 'clouds', 'haze' ] );
+		let locked = false;
+		this.applyConditions = ( c ) => {
+
+			for ( const k of SHARED ) if ( Number.isFinite( c[ k ] ) ) s[ k ] = c[ k ];
+			spectrum();
+			whitecaps();
+			fft.choppiness.value = s.chop;
+			shore.amplitude.value = s.surf;
+			shore.period.value = s.period;
+			if ( app.clouds ) app.clouds.coverage.value = s.clouds;
+			if ( app.haze && Number.isFinite( s.haze ) ) app.haze.density.value = s.haze;
+			for ( const ctl of ui._controls ) {
+
+				const shared = ctl.label === 'Conditions' || ( ctl.object === s && SHARED.has( ctl.key ) );
+				if ( ! shared ) continue;
+				if ( ! locked && ctl.setEnabled ) ctl.setEnabled( false );
+				ctl.update();
+
+			}
+
+			locked = true;
+
+		};
+
 		// ---------------------------------------------------------------- Ocean
 		const ocean = ui.addTab( 'ocean', 'Ocean', 'ocean' );
 		const sea = ocean.addFolder( 'Sea state', { icon: 'wind' } );

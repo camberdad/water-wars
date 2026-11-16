@@ -228,6 +228,8 @@ export class Multiplayer {
 			} );
 			getShot( ( d, id ) => this.remoteShot( d, id ) );
 			this.active = true;
+			// the same weather and waves as everyone else online (src/game/Weather.js)
+			if ( this.game.weather ) this.game.weather.start();
 			// send on a timer, not from the frame loop: a background tab barely draws, but its timers still
 			// run (about once a second), so others keep seeing you
 			this.timer = setInterval( () => {

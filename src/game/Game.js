@@ -16,6 +16,7 @@ import { Guide } from './Guide.js';
 import { Combat } from './combat/Combat.js';
 import { Giants } from './Giants.js';
 import { Multiplayer } from './Multiplayer.js';
+import { SharedWeather } from './Weather.js';
 import { HighScores } from './HighScores.js';
 import { SternRods } from './SternRods.js';
 import { dangerZoneAt } from './DangerZones.js';
@@ -69,6 +70,8 @@ export class Game {
 		this.giants = new Giants( this );
 		// open-world multiplayer (joined from the start screen)
 		this.multiplayer = new Multiplayer( this );
+		// ...and its shared weather: every player online has the same sea and sky (1.13.4)
+		this.weather = new SharedWeather( this );
 		// the shared high-score board (jsonbin.io): K, or the start screen button
 		this.highScores = new HighScores( this );
 		// extra rods in holders on the stern (the rod holder upgrade): B grabs a bent one
@@ -319,6 +322,7 @@ export class Game {
 		this.combat.update( dt );
 		this.giants.update( dt );
 		this.multiplayer.update( dt );
+		this.weather.update( dt );
 		this.highScores.update( dt );
 
 		// the traders
