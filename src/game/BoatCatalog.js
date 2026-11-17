@@ -99,9 +99,10 @@ export const BOATS = {
 		name: 'Superyacht', price: 2500000, model: 'superyacht', sealed: true,
 		blurb: 'A 40 m superyacht: glass, chrome and teak over a fortress of a hull, a hold for a whole fleet\'s catch, and real speed for her size. The last word in luxury.',
 		// 1.13.5: heavier to drive (slower to speed up, stop and turn; a lower top speed) and steady in the
-		// waves: her 40 m hull spans them, and fin stabilisers damp the roll (BoatController handling)
+		// waves: her 40 m hull spans them, and fin stabilisers damp the roll (BoatController handling). (1.18:
+		// less wave smoothing, 0.5 from 0.75: her buoyancy now spans her whole hull, and she has to ride a storm sea)
 		hullMul: 4.2, speedMul: 1.7, holdKg: 2000, fuelMul: 6, rudderMul: 0.6,
-		handling: { waveSmooth: 0.75, heaveLag: 0.4, stab: 5, right: 1.6, mass: 2.6, yaw: 4, lever: 0.45, wheel: 0.5, spool: 2 },
+		handling: { waveSmooth: 0.5, heaveLag: 0.25, stab: 5, right: 1.6, mass: 2.6, yaw: 4, lever: 0.45, wheel: 0.5, spool: 2 },
 		up: 'y', fwd: 'x', length: 40, beam: 8.78, draft: 1.88,
 		gun: [ 0, 9, 6 ], cannon: [ 0, 4, 16 ], hitHalf: [ 4.4, 4, 20 ],
 	},

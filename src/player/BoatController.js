@@ -31,6 +31,10 @@ const _c3 = new THREE.Vector3();
 const _c4 = new THREE.Vector3();
 const _c5 = new THREE.Vector3();
 const _invQ = new THREE.Quaternion();
+const RESERVE = 0.3; // m above a hull sample's design waterline where the reserve buoyancy starts (1.18)
+const WAVE_FOLLOW = 1; // how much of the wave slope the stabiliser rights toward (0: dead level, as before 1.18)
+const _n = new THREE.Vector3();
+const _wo = new THREE.Vector3();
 const _euler = new THREE.Euler();
 const _dq = new THREE.Quaternion();
 
@@ -76,6 +80,12 @@ export class BoatController {
 			p: new THREE.Vector3( s.position.x * sx, s.position.y, cbz + ( s.position.z - cbz ) * sz ),
 			area: s.area, bottom: s.bottomY ?? s.position.y,
 		} ) );
+		// (the lobster hull's own layout, for setHull to stretch over a bought boat's hull)
+		this._cbz = cbz;
+		this._base = this.samples.map( ( s ) => s.p.clone() );
+		this._baseInertia = this.inertia.clone();
+		this.hullK = { length: 1, beam: 1 };
+		this.subCap = 1.6; // m: how deep under water a sample's buoyancy keeps growing (the hull's freeboard)
 		let pitchK = 0;
 		for ( const s of this.samples ) pitchK += s.area * ( s.p.z - cbz ) ** 2;
 		this.pitchStiffness = RHO * GRAV * pitchK; // N m / rad (for the running-trim moment)
@@ -342,7 +352,7 @@ export class BoatController {
 			const depth = hw - pw.y;
 			totalArea += s.area;
 			if ( depth <= 0 ) continue;
-			const sub = Math.min( depth, 1.6 );
+			const sub = Math.min( depth, this.subCap );
 			const wet = Math.min( 1, depth / 0.3 );
 			wetArea += s.area * wet;
 			immersion += s.area * Math.min( sub / Math.max( - s.p.y, 0.05 ), 1.5 );
@@ -351,7 +361,10 @@ export class BoatController {
 			_vp.copy( this.angular ).cross( _r.copy( pw ).sub( comW ) ).add( this.velocity );
 			const vy = _vp.y - this.waterV[ i ] * 0.6 * ( 1 - smooth );
 			const wetK = Math.min( 1, sub / 0.25 ) * s.area;
-			_f.set( 0, RHO * GRAV * s.area * sub - ( 1800 * vy + 900 * vy * Math.abs( vy ) ) * wetK, 0 );
+			// (1.18: reserve buoyancy. Past RESERVE m above its own waterline the flared topsides go in too: the
+			// push grows three times as fast, so a hull buried by a crest comes back up before the deck goes under)
+			const over = Math.max( 0, Math.min( depth, this.subCap * 1.5 ) - ( - s.p.y + RESERVE ) );
+			_f.set( 0, RHO * GRAV * s.area * ( sub + 5 * over ) - ( 1800 * vy + 900 * vy * Math.abs( vy ) ) * wetK, 0 );
 			addForceAt( _f, pw );
 
 		}
@@ -484,21 +497,41 @@ export class BoatController {
 		// ---- small extra angular damping (appendages, bilge), scaled by wetness
 		const wd = 0.2 + wetD;
 		// the keel's lift resists roll in proportion to speed (a boat underway rolls much less)
-		_v.set( - aLoc.x * 25000, - aLoc.y * 2000, - aLoc.z * ( 4500 + 900 * au ) ).multiplyScalar( wd ).applyQuaternion( this.quaternion );
+		// (1.18: scaled with the hull's pitch and roll inertia, setHull: a long hull is damped as well as a short one)
+		const kL2 = this.hullK.length ** 2, kB2 = this.hullK.beam ** 2;
+		_v.set( - aLoc.x * 25000 * kL2, - aLoc.y * 2000, - aLoc.z * ( 4500 + 900 * au ) * kB2 ).multiplyScalar( wd ).applyQuaternion( this.quaternion );
 		T.add( _v );
 
 		// ---- Water Wars stabiliser (gyro + ballast): a righting moment toward level that grows steeply
 		// past ~20 degrees of heel or trim, plus pitch / roll damping, so the boat can't be flipped by
 		// throttle, waves or a hard turn at speed. (The yaw is left alone: steering is unchanged.)
-		const tilt = Math.acos( clamp( up.y, - 1, 1 ) );
+		//
+		// 1.18: toward the WAVE SURFACE under the hull (the mean slope of the water at the hull samples), not
+		// toward dead level: in a steep sea the boat rides up the face of a wave instead of being held flat
+		// while the crest climbs over its bow. The rocking it damps is relative to the surface too.
+		let sgx = 0, sgz = 0, sa = 0;
+		for ( let i = 0; i < this.samples.length; i ++ ) {
+
+			sgx += this.gx[ i ] * this.samples[ i ].area;
+			sgz += this.gz[ i ] * this.samples[ i ].area;
+			sa += this.samples[ i ].area;
+
+		}
+
+		const follow = clamp( 1 - smooth, 0, 1 ) * WAVE_FOLLOW;
+		const wn = _n.set( - sgx / sa * follow, 1, - sgz / sa * follow ).normalize(); // the surface's normal
+		if ( ! this._nPrev ) this._nPrev = wn.clone();
+		_wo.copy( this._nPrev ).cross( wn ).divideScalar( h ); // the surface's rate of turn
+		this._nPrev.copy( wn );
+		const tilt = Math.acos( clamp( up.dot( wn ), - 1, 1 ) );
 		const kRight = m * GRAV * ( 0.6 + 6 * sstep( tilt, 0.3, 1.0 ) ) * ( H && H.right || 1 );
-		_v.set( - up.z, 0, up.x ); // up x worldUp: the axis that rotates the deck back toward level
+		_v.copy( up ).cross( wn ); // the axis that rotates the deck back toward the surface
 		const s = _v.length();
 		if ( s > 1e-6 ) T.addScaledVector( _v, kRight * Math.min( 1, tilt ) / s );
 		// (a yacht's fin / gyro stabilisers: handling.stab x the damping, so she settles instead of rocking)
 		const stab = H && H.stab || 1;
-		T.x -= this.angular.x * m * 1.2 * stab;
-		T.z -= this.angular.z * m * 1.2 * stab;
+		T.x -= ( this.angular.x - _wo.x ) * m * 1.2 * stab;
+		T.z -= ( this.angular.z - _wo.z ) * m * 1.2 * stab;
 
 		// ---- mooring lines when docked and not driven
 		if ( this.moored && ! this.driven ) {
@@ -787,6 +820,33 @@ export class BoatController {
 
 	}
 
+	// Water Wars 1.18: fit the buoyancy to the hull in use. Every boat floats on the lobster boat's 32 hull
+	// samples, which spread over its 8 m waterplane: a 14-40 m bought boat's bow and stern hung out past them,
+	// so in a big sea they dipped into crests the physics never felt and the model clipped under the water.
+	// The samples now spread over the hull in use (same areas: the boat floats at the same draft), so it rises
+	// and tilts with the waves along its whole length and beam; the pitch and roll inertia (and their damping)
+	// grow with the spread so it doesn't snap about; and each sample's buoyancy keeps growing deeper, to the
+	// taller hull's freeboard. hull: { length, beam } (m), or null for the lobster boat
+	setHull( hull ) {
+
+		const kL = hull && hull.length ? Math.max( 0.8, hull.length / 8.2 ) : 1;
+		const kB = hull && hull.beam ? Math.max( 0.8, hull.beam / 3.0 ) : 1;
+		this.hullK = { length: kL, beam: kB };
+		const cbz = this._cbz;
+		this.samples.forEach( ( s, i ) => {
+
+			const b = this._base[ i ];
+			s.p.set( b.x * kB, b.y, cbz + ( b.z - cbz ) * kL );
+
+		} );
+		this.inertia.set( this._baseInertia.x * kL * kL, this._baseInertia.y, this._baseInertia.z * kB * kB );
+		this.subCap = 1.6 * Math.min( 2.5, Math.max( 1, Math.sqrt( kL ) ) );
+		let pitchK = 0;
+		for ( const s of this.samples ) pitchK += s.area * ( s.p.z - cbz ) ** 2;
+		this.pitchStiffness = RHO * GRAV * pitchK;
+
+	}
+
 	// a point on the visual boat (the deck you walk on, the helm eye): local -> world
 	toVisual( local, out ) {
 
@@ -801,8 +861,8 @@ export class BoatController {
 		g.position.copy( this.visualPosition );
 		g.quaternion.copy( this.visualQuaternion );
 		g.updateMatrixWorld( true );
-		this.toWorld( _v.set( 0, 0, 3.9 ), this.bowWorld );
-		this.toWorld( _v.set( 0, 0, - 3.8 ), this.sternWorld );
+		this.toWorld( _v.set( 0, 0, 3.9 * this.hullK.length ), this.bowWorld );
+		this.toWorld( _v.set( 0, 0, - 3.8 * this.hullK.length ), this.sternWorld );
 
 	}
 

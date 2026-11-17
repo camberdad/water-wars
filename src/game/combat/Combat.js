@@ -221,6 +221,8 @@ export class Combat {
 		// how she rides and handles (1.13.5: the superyacht is steadier in the waves and heavier to drive)
 		app.boatCtl.handling = def.handling || null;
 		app.boatCtl.visualLength = mesh && def.length ? def.length : 8.2; // (1.16: long hulls tilt and bob less)
+		// (1.18: the buoyancy spreads over the hull in use, so it rides the waves along its whole length)
+		app.boatCtl.setHull( mesh && def.length ? { length: def.length, beam: def.beam } : null );
 		this.setBerth( def );
 		// someone standing on the deck lands on the new one
 		if ( app.player.mode === 'deck' && app.player.deckMap ) {

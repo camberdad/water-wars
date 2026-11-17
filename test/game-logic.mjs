@@ -10,6 +10,7 @@ import { MissileBattery } from '../src/game/combat/Missiles.js';
 import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope, NET_DRAG, TOW_MAX } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { BoatController } from '../src/player/BoatController.js';
+import { BoatModel } from '../src/world/BoatModel.js';
 import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S } from '../src/game/Weather.js';
@@ -893,6 +894,71 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 		ok( hit && hit.m === m && ! miss && shot && bat.flying.length === 0, 'a shot through a missile hits it and brings it down; one 6 m over it misses' );
 
 	}
+
+}
+// ---- 1.18: in a heavy storm the deck stays above the water (the buoyancy spans the hull in use, rights
+// toward the wave surface and pushes back hard on a buried hull)
+{
+
+	const REAL = new BoatModel();
+	const HEAVY = [ [ 2.2, 60, 0.4, 0 ], [ 1.36, 34, 1.1, 1.7 ], [ 0.85, 18.7, - 0.5, 0.5 ], [ 0.51, 10.2, 2.0, 2.1 ] ];
+	const water = ( x, z, t ) => {
+
+		let h = 0, gx = 0, gz = 0;
+		for ( const [ A, L, dir, ph ] of HEAVY ) {
+
+			const k = 2 * Math.PI / L, w = Math.sqrt( 9.81 * k ), dx = Math.cos( dir ), dz = Math.sin( dir ), a = k * ( x * dx + z * dz ) - w * t + ph;
+			h += A * Math.sin( a );
+			gx += A * k * dx * Math.cos( a );
+			gz += A * k * dz * Math.cos( a );
+
+		}
+
+		return { h, gx, gz };
+
+	};
+	const clip = ( def ) => {
+
+		const L = def ? def.length : 8.2, B = def ? def.beam : 3, F = Math.pow( L / 8.2, 0.6 );
+		const q = { latency: 0.05, cpuValid: true, version: 0, resultTime: 0, cpu: new Float32Array( 512 ), resultInputs: new Float32Array( 512 ), count: 0,
+			allocate( n, k ) { const s = this.count; this.count += k; return s; }, setPoint( i, x, z ) { this.resultInputs[ i * 4 ] = x; this.resultInputs[ i * 4 + 1 ] = z; } };
+		const bc = new BoatController( { model: REAL, query: q, terrain: { heightAt: () => - 50 }, colliders: {} } );
+		bc.contacts = () => {};
+		bc.quaternion.identity();
+		bc.moored = false;
+		bc.driven = true;
+		bc.visualLength = L;
+		if ( def ) bc.setHull( { length: L, beam: B } );
+		const pts = [ [ 0, F * 1.2, 0.45 * L ], [ 0, F, - 0.45 * L ], [ 0.45 * B, F * 0.9, 0 ], [ - 0.45 * B, F * 0.9, 0 ] ].map( ( a ) => new Vector3( ...a ) );
+		let t = 0, frames = 0, under = 0;
+		for ( let i = 0; i < 40 * 60; i ++ ) {
+
+			q.version ++;
+			q.resultTime = t;
+			bc.queueQueries();
+			for ( let k = 0; k < q.count; k ++ ) {
+
+				const w = water( q.resultInputs[ k * 4 ], q.resultInputs[ k * 4 + 1 ], t ), len = Math.hypot( 1, w.gx, w.gz );
+				q.cpu[ k * 4 ] = w.h;
+				q.cpu[ k * 4 + 1 ] = - w.gx / len;
+				q.cpu[ k * 4 + 2 ] = - w.gz / len;
+
+			}
+
+			bc.setInput( t > 20 ? 0.6 : 0, 0, 1 / 60 );
+			bc.update( 1 / 60 );
+			t += 1 / 60;
+			if ( t < 5 ) continue;
+			frames ++;
+			if ( pts.some( ( p ) => { const wp = bc.toVisual( p, new Vector3() ); return water( wp.x, wp.z, t ).h > wp.y; } ) ) under ++;
+
+		}
+
+		return under / frames * 100;
+
+	};
+	const lobster = clip( null ), launch = clip( BOATS.oldboat );
+	ok( lobster < 3 && launch < 4, `in a heavy storm (crests to 5 m) the deck stays above the water: lobster boat under ${ lobster.toFixed( 1 ) }% of the time, the 14 m old launch ${ launch.toFixed( 1 ) }%` );
 
 }
 console.log( `value check ${ value }` );
