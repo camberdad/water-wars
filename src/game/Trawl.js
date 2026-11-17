@@ -17,10 +17,10 @@ export const MIN_DEPTH = 4; // m of water to shoot the net
 export const SNAG_DEPTH = 2.5; // shallower than this under the net and it comes in before it snags
 export const DOCK_CLEAR = 70; // m from the berth: no trawling in the harbour mouth
 export const TOW_MIN = 0.6; // m/s: slower than this and the net hangs slack (nothing swims in)
-export const TOW_MAX = 9; // m/s: faster than this for a moment and the net is hauled in before it tears (1.15.4: was 6.5)
-// the net's drag, as a fraction of the engine's thrust (N per (m/s)^2 per N): towing tops out near 11 knots
-// with any engine (1.15.4: was 0.065, about 7 knots: too slow)
-export const NET_DRAG = 0.022;
+export const TOW_MAX = 13; // m/s: faster than this for a moment and the net is hauled in before it tears (1.16.1: was 9)
+// the net's drag, as a fraction of the engine's thrust (N per (m/s)^2 per N): towing tops out near 13 knots
+// with a stock engine, 16 with the top one (1.16.1: was 0.022, about 10-12 knots; 1.15.4: was 0.065)
+export const NET_DRAG = 0.009;
 export const NET_LEN = 32; // m of warp astern
 export const SHOOT_S = 4; // s to pay the net out
 export const HAUL_S = 3.5; // s to haul it back
@@ -375,7 +375,7 @@ export class Trawl {
 
 		}
 
-		// the net drags (about 11 knots flat out with the engine of the moment), pulling along the warps:
+		// the net drags (about 13-16 knots flat out), pulling along the warps:
 		// only while they're taut (Trawl.layLines sets the direction: BoatController.towDir)
 		bc.netDrag = bc.maxThrust * NET_DRAG * this.len * Math.min( 1, Math.max( 0, ( this.taut - 0.9 ) / 0.1 ) );
 

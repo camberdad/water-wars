@@ -97,6 +97,7 @@ export class BoatController {
 		this.netDrag = 0; // N per (m/s)^2: a trawl net in the water (src/game/Trawl.js)
 		this.towDir = null; // world direction the net's warps pull the stern (null: straight astern)
 		this.towZ = - 3.4; // boat-local z of the stern where the warps are made fast
+		this.towLever = 0.2; // how much of the stern's lever arm the pull keeps (1: all of it, as up to 1.16.0)
 		// where this boat is moored at the harbour (a wide boat lies further out from the pier: Combat.setSkin)
 		this.berth = { position: WORLD.boatDock.position.clone(), heading: WORLD.boatDock.heading };
 		this._meanH = null;
@@ -396,7 +397,10 @@ export class BoatController {
 				if ( away > 0 ) {
 
 					const pull = Math.min( this.netDrag * away * away, m * away / h * 0.5, this.maxThrust * 1.5 );
-					_p.set( 0, this.com.y, Math.max( - 4.2, Math.min( 0, this.towZ ) ) );
+					// (1.16.1: most of the pull goes through the middle of the hull, only towLever of it at the stern:
+					// a net astern no longer drags the stern back into line and fights every turn)
+					const sternZ = Math.max( - 4.2, Math.min( 0, this.towZ ) );
+					_p.set( 0, this.com.y, this.com.z + ( sternZ - this.com.z ) * this.towLever );
 					this.toWorld( _p, _p );
 					addForceAt( _f.multiplyScalar( pull ), _p );
 
