@@ -734,6 +734,46 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( cutter.top > 25 && Math.abs( cutter.total ) < 15 && Math.abs( cutter.after ) < 6 && Math.abs( cutter.total - lobster.total ) < 5, `a half-second tap of the wheel: ${ lobster.total.toFixed( 1 ) }° on the lobster boat, ${ cutter.total.toFixed( 1 ) }° on the WaveCutter at ${ ( cutter.top * 1.944 ).toFixed( 0 ) } kn (${ cutter.after.toFixed( 1 ) }° after letting go)` );
 
 }
+// ---- 1.16: the visual boat tilts (bow rise, banking, idle bobbing); the physics body stays upright
+{
+
+	const hullSamples = [];
+	for ( let i = 0; i < 4; i ++ ) for ( let j = 0; j < 8; j ++ ) hullSamples.push( { position: new Vector3( - 1.1 + i * 0.73, - 0.35, - 3.5 + j * 1.0 ), area: 0.72, bottomY: - 0.6 } );
+	const model = { hydro: {}, hullSamples, propeller: new Vector3( 0, - 0.6, - 3.4 ), rudder: { z: - 3.7 }, group: new Group(), setThrottle() {}, setSteering() {}, setPropellerRPM() {} };
+	const q = { latency: 0.05, cpuValid: true, version: 0, resultTime: 0, cpu: new Float32Array( 512 ), resultInputs: new Float32Array( 512 ), count: 0,
+		allocate( n, k ) { const s = this.count; this.count += k; return s; }, setPoint( i, x, z ) { this.resultInputs[ i * 4 ] = x; this.resultInputs[ i * 4 + 1 ] = z; } };
+	const bc = new BoatController( { model, query: q, terrain: { heightAt: () => - 50 }, colliders: {} } );
+	bc.contacts = () => {};
+	bc.quaternion.identity();
+	bc.moored = false;
+	bc.driven = true;
+	const D = 180 / Math.PI;
+	const tilt = ( Q ) => ( { pitch: Math.asin( new Vector3( 0, 0, 1 ).applyQuaternion( Q ).y ) * D, roll: Math.asin( new Vector3( 1, 0, 0 ).applyQuaternion( Q ).y ) * D } );
+	let t = 0, rise = 0, bodyMax = 0, bank = 0, dip = 0, bob = 0;
+	for ( let i = 0; i < 36 * 60; i ++ ) {
+
+		q.version ++;
+		q.resultTime = t;
+		bc.queueQueries();
+		const throttle = t < 2 ? 0 : t < 26 ? 1 : 0, steer = t >= 14 && t < 20 ? 1 : 0;
+		bc.setInput( throttle, steer, 1 / 60 );
+		bc.update( 1 / 60 );
+		t += 1 / 60;
+		const v = tilt( bc.visualQuaternion ), b = tilt( bc.quaternion );
+		bodyMax = Math.max( bodyMax, Math.abs( b.pitch ), Math.abs( b.roll ) );
+		if ( t > 2 && t < 10 ) rise = Math.max( rise, v.pitch );
+		if ( t > 15 && t < 20 ) bank = Math.min( bank, v.roll );
+		if ( t > 26 && t < 32 ) dip = Math.min( dip, v.pitch );
+		if ( t < 2 || t > 34 ) bob = Math.max( bob, Math.abs( v.pitch ), Math.abs( v.roll ) );
+
+	}
+
+	ok( rise > 3 && rise < 9 && dip < - 0.2 && bank < - 3 && bodyMax < 3, `the visual boat: bow up ${ rise.toFixed( 1 ) }° under full throttle, down ${ ( - dip ).toFixed( 1 ) }° when it eases off, banks ${ ( - bank ).toFixed( 1 ) }° into a port turn; the physics body stays within ${ bodyMax.toFixed( 1 ) }° of level` );
+	ok( bob > 0.1 && bob < 2, `idle, it bobs gently (${ bob.toFixed( 2 ) }°)` );
+	const p = bc.toVisual( new Vector3( 0, 1, 2 ), new Vector3() );
+	ok( Number.isFinite( p.x + p.y + p.z ) && p.distanceTo( bc.toWorld( new Vector3( 0, 1, 2 ), new Vector3() ) ) < 0.5, 'a point on the visual boat stays close to the same point on the physics body' );
+
+}
 console.log( `value check ${ value }` );
 console.log( fails ? `${ fails } FAILED` : 'all passed' );
 process.exit( fails ? 1 : 0 );

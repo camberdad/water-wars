@@ -560,7 +560,7 @@ export class Player {
 
 		const b = this.boat;
 		_qa.setFromAxisAngle( _yAxis, b.getYaw() + Math.PI );
-		_qb.copy( b.quaternion ).multiply( _qc.setFromAxisAngle( _yAxis, Math.PI ) );
+		_qb.copy( b.visualQuaternion || b.quaternion ).multiply( _qc.setFromAxisAngle( _yAxis, Math.PI ) );
 		return out.slerpQuaternions( _qb, _qa, 0.55 );
 
 	}
@@ -569,7 +569,8 @@ export class Player {
 	deckToWorld() {
 
 		const b = this.boat;
-		b.toWorld( this.deckPos, this.position );
+		// (on the visual boat: Water Wars 1.16, BoatController.toVisual)
+		b.toVisual( this.deckPos, this.position );
 		this.yaw = b.getYaw() + Math.PI + this.deckYaw;
 
 	}
@@ -770,7 +771,7 @@ export class Player {
 		// camera: eye above the feet, following the boat's motion
 		// (deckLift: a bought boat's deck sits higher than the lobster boat's, Water Wars)
 		const eyeL = _v.set( p.x, p.y + EYE + ( this.deckLift || 0 ) + Math.sin( this.bob ) * 0.02, p.z );
-		b.toWorld( eyeL, this.camera.position );
+		b.toVisual( eyeL, this.camera.position );
 		this._camY = this.camera.position.y;
 		this.deckBase( _q );
 		this.camera.quaternion.copy( _q ).multiply( _qa.setFromEuler( _e.set( this.pitch, this.deckYaw, 0 ) ) );
@@ -804,14 +805,14 @@ export class Player {
 		this.prompt = { key: 'E', text: 'Leave helm   ·   V  camera' };
 
 		// keep the player attached (for audio / queries)
-		b.toWorld( b.model.helmEye, this.position );
+		b.toVisual( b.model.helmEye, this.position );
 		this.position.y -= EYE;
 
 		if ( this.camMode === 'first' ) {
 
 			this.helmYaw = THREE.MathUtils.clamp( this.helmYaw - look.x * 0.0022, - 2.2, 2.2 );
 			this.helmPitch = THREE.MathUtils.clamp( this.helmPitch - look.y * 0.0022, - 1.2, 1.0 );
-			const eye = b.toWorld( b.model.helmEye, new THREE.Vector3() );
+			const eye = b.toVisual( b.model.helmEye, new THREE.Vector3() );
 			this.camera.position.copy( eye );
 			// Water Wars: the view is fully stabilised at the helm, so the crosshair stays where you put it:
 			// level with the horizon whatever the boat's roll and pitch, and following the heading smoothly

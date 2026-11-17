@@ -31,6 +31,7 @@ const _c3 = new THREE.Vector3();
 const _c4 = new THREE.Vector3();
 const _c5 = new THREE.Vector3();
 const _invQ = new THREE.Quaternion();
+const _euler = new THREE.Euler();
 const _dq = new THREE.Quaternion();
 
 // Rigid-body model of an 8.2 m, 3.2 t Downeast lobster boat (semi-displacement hull, full keel).
@@ -138,6 +139,17 @@ export class BoatController {
 		this.bowWorld = new THREE.Vector3();
 		this.sternWorld = new THREE.Vector3();
 
+		// Water Wars 1.16: the visual boat. The physics body above floats on the waves (buoyancy pitches and
+		// rolls it with the swell) and its thrust always pushes along its own keel. On top of that pose the
+		// model the player sees gets its own motion, visual only, on spring-dampers so it feels heavy: the bow
+		// rises as the boat accelerates (easing back to a little running trim at speed) and dips as it slows,
+		// the boat banks into turns (steering x forward speed), and it bobs gently when idle. The model, the
+		// guns, the deck you walk on and the helm camera all follow this visual pose; the physics never does.
+		this.visualQuaternion = new THREE.Quaternion();
+		this.visualPosition = new THREE.Vector3();
+		this.visualLength = 8.2; // m: the hull in use (Combat.setSkin): long hulls tilt and bob less
+		this.vis = { pitch: 0, pitchV: 0, roll: 0, rollV: 0, heave: 0, heaveV: 0, acc: 0, uPrev: 0, t: Math.random() * 100, bobP: 0, bobR: 0, bobH: 0 };
+
 		this.apply();
 
 	}
@@ -241,6 +253,7 @@ export class BoatController {
 		this.readQueries();
 		if ( ! this.hasWater ) {
 
+			this.updateVisual( dt );
 			this.apply();
 			return;
 
@@ -270,6 +283,7 @@ export class BoatController {
 		this.model.setThrottle( this.throttle );
 		this.model.setSteering( this.steer );
 		this.model.setPropellerRPM( this.rpm * 2400 * Math.sign( this.throttle || 1 ) );
+		this.updateVisual( dt );
 		this.apply();
 
 	}
@@ -357,7 +371,9 @@ export class BoatController {
 		// ---- calm-water resistance (friction + the wave-making hump past hull speed + planing)
 		const au = Math.abs( u );
 		const R = ( 40 * au + 22 * au * au + 3000 * sstep( au, 2.8, 5.4 ) + 55 * au * au * sstep( au, 7, 11 ) ) * wetD;
-		_p.set( 0, - 0.2, this.com.z );
+		// (1.16: through the centre of mass: drag slows the boat without pitching its bow down; the visual boat
+		// does the pitching, BoatController.updateVisual)
+		_p.set( 0, this.com.y, this.com.z );
 		this.toWorld( _p, _p );
 		addForceAt( _f.copy( fwd ).multiplyScalar( - R * Math.sign( u ) ), _p );
 		// ---- a trawl net astern (Water Wars 1.13.6): its drag pulls the stern along the warps (straight
@@ -405,7 +421,9 @@ export class BoatController {
 			const vk = vs + aLoc.y * dz - aLoc.z * ( this.lateralY - this.com.y );
 			const Y = - 0.5 * RHO * A * ( this.hullLift * au * vk + 1.1 * vk * Math.abs( vk ) ) * wetD;
 			induced += Y * vk;
-			_p.set( 0, this.lateralY, sz );
+			// (1.16: at the height of the centre of mass: the keel's side force turns the boat without heeling
+			// it outward; the visual boat banks into the turn instead)
+			_p.set( 0, this.com.y, sz );
 			this.toWorld( _p, _p );
 			addForceAt( _f.copy( side ).multiplyScalar( Y ), _p );
 
@@ -437,7 +455,7 @@ export class BoatController {
 		// flow angle at the stern (drift + yaw) reduces its angle of attack
 		// the rudder's side force is partly carried by the aft hull (flap effect), so it acts higher
 		// than the blade's centre: less heel kick when the wheel goes over
-		const rudW = this.toWorld( _rud.set( 0, - 0.15, this.model.rudder.z ), _rud );
+		const rudW = this.toWorld( _rud.set( 0, this.com.y, this.model.rudder.z ), _rud ); // (1.16: no heel from the rudder either)
 		const race = Math.max( thrust, 0 ) * 2 / ( RHO * 0.14 ); // slipstream dynamic pressure term (m^2/s^2)
 		const Ur2 = u * Math.abs( u ) + 0.9 * race;
 		const Ur = Math.sqrt( Math.abs( Ur2 ) ) * Math.sign( Ur2 );
@@ -455,8 +473,8 @@ export class BoatController {
 
 		// ---- running trim and rise: the bow lifts over the hump, then the hull runs at a few degrees
 		// with some dynamic lift (only while the hull is in the water)
-		const trim = ( 2.0 * sstep( u, 2.5, 4.8 ) - 0.6 * sstep( u, 4.8, 7.5 ) - 0.4 * sstep( u, 7.5, 10.5 ) ) * DEG;
-		T.addScaledVector( side, this.pitchStiffness * trim * imm * - 1 );
+		// (1.16: the bow-up running trim moment is gone from the physics: it tilted the body, and with it the
+		// thrust, upward. The bow rise is now visual only: updateVisual)
 		F.addScaledVector( up, m * GRAV * 0.08 * sstep( u, 3.5, 9 ) * imm );
 
 		// ---- small extra angular damping (appendages, bilge), scaled by wetness
@@ -690,11 +708,94 @@ export class BoatController {
 
 	}
 
+	// The visual boat's motion on top of the physics pose (see the constructor). Spring-dampers per channel
+	// (about 0.4 Hz, damped: heavy, no snap), toward targets from the forward acceleration, the steering and
+	// the speed, plus slow sine-wave bobbing that fades as the boat gets going.
+	updateVisual( dt ) {
+
+		const V = this.vis;
+		dt = Math.min( Math.max( dt, 0 ), 0.1 );
+		if ( dt <= 0 ) return this.composeVisual();
+		const u = Number.isFinite( this.forwardSpeed ) ? this.forwardSpeed : 0;
+		// forward acceleration, smoothed (the waves jiggle the speed a little every frame)
+		const a = clamp( ( u - V.uPrev ) / dt, - 10, 10 );
+		V.uPrev = u;
+		V.acc += ( a - V.acc ) * ( 1 - Math.exp( - dt / 0.35 ) );
+		// big hulls (the 40 m superyacht) move less; heavier handling springs slower
+		const size = clamp( 10 / this.visualLength, 0.3, 1.2 );
+		const heavy = this.handling && this.handling.mass || 1;
+		const au = Math.abs( u );
+		// 1. bow rise: up with the acceleration (dip when slowing), easing back to a little running trim once
+		// the boat stops gaining speed at the top
+		const trim = 1.4 * DEG * sstep( au, 2, 12 );
+		const pitchT = ( clamp( V.acc * 1.5, - 2.5, 6 ) * DEG + trim ) * size;
+		// 2. banking: into the turn, by the steering times the forward speed (port helm, port side down)
+		const rollT = clamp( this.steer * u * 0.75, - 11, 11 ) * DEG * size;
+		// 3. idle bobbing: low, slow, out of step sine waves on pitch, roll and heave, fading at speed
+		V.t += dt;
+		const t = V.t, idle = ( 1 - 0.75 * sstep( au, 0.3, 6 ) ) * size;
+		V.bobP = ( 0.5 * Math.sin( t * 0.71 ) + 0.25 * Math.sin( t * 1.37 + 1.3 ) ) * DEG * idle;
+		V.bobR = ( 0.75 * Math.sin( t * 0.53 + 2.1 ) + 0.3 * Math.sin( t * 1.21 + 0.4 ) ) * DEG * idle;
+		V.bobH = ( 0.04 * Math.sin( t * 0.87 + 0.7 ) + 0.018 * Math.sin( t * 1.63 + 2.6 ) ) * idle;
+		// spring-dampers (semi-implicit): w rad/s, zeta 0.75
+		const w = 2.6 / Math.sqrt( heavy ), z = 0.75;
+		const spring = ( k, target ) => {
+
+			V[ k + 'V' ] += ( w * w * ( target - V[ k ] ) - 2 * z * w * V[ k + 'V' ] ) * dt;
+			V[ k ] += V[ k + 'V' ] * dt;
+
+		};
+		spring( 'pitch', pitchT );
+		spring( 'roll', rollT );
+		spring( 'heave', 0.025 * sstep( au, 3, 10 ) * size ); // (a touch of lift on the plane)
+		this.composeVisual();
+
+	}
+
+	// visual pose = physics pose x the visual tilt about the hull's middle (at the waterline) + heave
+	composeVisual() {
+
+		const V = this.vis;
+		if ( ! V ) {
+
+			this.visualQuaternion.copy( this.quaternion );
+			this.visualPosition.copy( this.position );
+			return;
+
+		}
+
+		const pitch = V.pitch + V.bobP, roll = V.roll + V.bobR;
+		// bow up = a negative turn about the boat's +X (+Z forward); port side down = a negative turn about +Z
+		_dq.setFromEuler( _euler.set( - pitch, 0, - roll, 'XYZ' ) );
+		this.visualQuaternion.copy( this.quaternion ).multiply( _dq );
+		const pivot = _c5.set( 0, 0, this.com.z );
+		// position: keep the pivot where the physics has it
+		this.visualPosition.copy( pivot ).applyQuaternion( this.quaternion ).add( this.position );
+		this.visualPosition.sub( _c4.copy( pivot ).applyQuaternion( this.visualQuaternion ) );
+		this.visualPosition.y += V.heave + V.bobH;
+		if ( ! Number.isFinite( this.visualPosition.x + this.visualPosition.y + this.visualPosition.z + this.visualQuaternion.w ) ) {
+
+			this.vis = { pitch: 0, pitchV: 0, roll: 0, rollV: 0, heave: 0, heaveV: 0, acc: 0, uPrev: 0, t: 0, bobP: 0, bobR: 0, bobH: 0 };
+			this.visualQuaternion.copy( this.quaternion );
+			this.visualPosition.copy( this.position );
+
+		}
+
+	}
+
+	// a point on the visual boat (the deck you walk on, the helm eye): local -> world
+	toVisual( local, out ) {
+
+		return out.copy( local ).applyQuaternion( this.visualQuaternion ).add( this.visualPosition );
+
+	}
+
 	apply() {
 
 		const g = this.model.group;
-		g.position.copy( this.position );
-		g.quaternion.copy( this.quaternion );
+		this.composeVisual();
+		g.position.copy( this.visualPosition );
+		g.quaternion.copy( this.visualQuaternion );
 		g.updateMatrixWorld( true );
 		this.toWorld( _v.set( 0, 0, 3.9 ), this.bowWorld );
 		this.toWorld( _v.set( 0, 0, - 3.8 ), this.sternWorld );

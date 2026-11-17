@@ -1,6 +1,6 @@
 {
   "name": "water-wars",
-  "version": "1.15.5",
+  "version": "1.16.0",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5189",
     "build": "vite build",
