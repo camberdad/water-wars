@@ -2,7 +2,6 @@ import { Mesh, Group, Vector3 } from '../engine/index.js';
 import { prepare, mergePrepared, cylinder, sphere, torus, mat4 } from '../world/boat/GeoKit.js';
 import { createPropMaterial, createLineMaterial } from './GameMaterials.js';
 import { buildLineGeometry } from './FishingRod.js';
-import { FISH } from './FishTable.js';
 import { pickSpecies, rollWeight, biteDelay } from './Bites.js';
 import { dangerZoneAt } from './DangerZones.js';
 
@@ -251,7 +250,6 @@ export class SternRods {
 			h.bite.t -= dt;
 			if ( h.bite.t <= 0 ) {
 
-				game.toast( `The fish on stern rod ${ h.i + 1 } shook the hook`, 2000 );
 				h.bite = null;
 				h.wait = this.newWait();
 
@@ -292,8 +290,7 @@ export class SternRods {
 		h.bite = { species, kg: rollWeight( species ), t: BITE_WINDOW };
 		const au = this.app.audio;
 		if ( au && au.fishSplash ) au.fishSplash( h.water, 0.5 );
-		if ( au && au.rodReady ) au.rodReady();
-		game.toast( `🎣 Stern rod ${ h.i + 1 } is bent over! Press B to grab it`, 3000 );
+		if ( au && au.rodReady ) au.rodReady(); // (and the B prompt: SternRods.prompt)
 
 	}
 
@@ -341,7 +338,6 @@ export class SternRods {
 		rod.lineOut = LINE_LEN;
 		game.bite = { phase: 'take', species, kg, t: 5 };
 		game.strike();
-		game.toast( `Grabbed stern rod ${ h.i + 1 } · ${ FISH[ species ].tier === 'common' ? 'fish on!' : 'something good is on!' }`, 1800 );
 		return true;
 
 	}

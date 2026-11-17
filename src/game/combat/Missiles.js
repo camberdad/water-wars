@@ -156,10 +156,10 @@ export class MissileBattery {
 		ctx.fx.muzzle( m.pos, _w, true );
 		ctx.fx.explosion( m.pos, 0.35 );
 		this.boss.combat.sfx.shot( m.pos, 'cannon', 1.5 );
-		const now = this.boss.combat.time;
-		if ( now - this.warned > 8 ) {
+		// (the first launch only: after that the MISSILE INCOMING warning under her health bar says it)
+		if ( ! this.warned ) {
 
-			this.warned = now;
+			this.warned = true;
 			this.boss.game.toast( `🚀 The ${ this.boss.cfg.name } fired a missile! Turn hard across its path to dodge it, or outrun it`, 3600 );
 
 		}
@@ -222,7 +222,6 @@ export class MissileBattery {
 		ctx.fx.explosion( m.pos, shotDown ? 1.6 : 2.4 );
 		if ( m.pos.y < 3 ) ctx.fx.splash( m.pos, 1 );
 		combat.sfx.shot( m.pos, 'explosion', 1.8 );
-		if ( shotDown ) this.boss.game.toast( '🚀 Missile shot down!', 1600 );
 		// the blast: full damage close in, nothing at C.radius; a shove away from it
 		if ( ! ctx.playerAboard || ctx.playerSafe ) return;
 		const bc = this.app.boatCtl;
@@ -235,7 +234,6 @@ export class MissileBattery {
 		if ( _v.lengthSq() > 1e-4 ) bc.velocity.addScaledVector( _v.normalize(), 4 * k );
 		bc.angular.x += ( Math.random() - 0.5 ) * 0.6 * k;
 		bc.angular.z += ( Math.random() - 0.5 ) * 0.8 * k;
-		if ( k > 0.4 ) this.boss.game.toast( '💥 Missile hit!', 1400 );
 
 	}
 

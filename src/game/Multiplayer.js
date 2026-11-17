@@ -282,7 +282,6 @@ export class Multiplayer {
 		if ( this.slotOwners ) this.slotOwners = this.slotOwners.map( ( o ) => ( o === p ? null : o ) );
 		p.dispose();
 		if ( p.marker && p.marker.el ) p.marker.el.remove();
-		if ( announce && p.has ) this.game.toast( `🌐 ${ p.name } left the open sea`, 2200 );
 
 	}
 

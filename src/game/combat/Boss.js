@@ -358,7 +358,6 @@ export class Boss {
 			this.announced = false;
 			this.state = 'alive';
 			this.sink = 0;
-			if ( was !== null && this.distToPlayer < 1500 ) this.game.toast( sunk ? `☠ A new ${ C.name } has sailed into ${ C.waters }` : `☠ The ${ C.name } has been repaired`, 3600 );
 
 		}
 
@@ -385,13 +384,6 @@ export class Boss {
 		const hostile = this.alive && ( this.provoked || dist < C.aggro ) && ctx.playerAboard && ! ctx.playerSafe && ! ctx.playerDead;
 		if ( this.missiles ) this.missiles.update( dt, ctx, hostile, dist );
 		if ( this.alive ) {
-
-			if ( hostile && ! this.announced ) {
-
-				this.announced = true;
-				this.game.toast( `☠ The ${ C.name } opens fire!`, 2600 );
-
-			}
 
 			if ( hostile ) this.shoot( dt, ctx, dist );
 			if ( this.hp < this.maxHp * 0.5 ) ctx.fx.smoulder( this.group.localToWorld( _w.fromArray( C.smokeAt ) ), 1 - this.hp / this.maxHp, dt );

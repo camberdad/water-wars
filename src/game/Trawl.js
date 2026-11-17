@@ -293,7 +293,13 @@ export class Trawl {
 		this.items = [];
 		this.wait = fillDelay( this.tier(), this.game.state.stats.netRate );
 		this.fast = 0;
-		game.toast( '🕸 Net going out · tow it slowly, it drags · N to haul it in', 3200 );
+		// (how it works, the first time only; then the N prompt says it)
+		if ( ! this._told ) {
+
+			this._told = true;
+			game.toast( '🕸 Net going out · tow it slowly, it drags · N to haul it in', 3200 );
+
+		}
 
 	}
 
@@ -390,7 +396,6 @@ export class Trawl {
 		this.wait = fillDelay( this.tier(), game.state.stats.netRate );
 		const au = this.app.audio;
 		if ( au && au.fishSplash ) au.fishSplash( np, it.protected ? 0.8 : 0.35 );
-		if ( it.protected ) game.toast( `${ it.icon } A ${ it.name.toLowerCase() } is caught in the net! Haul in and set it free`, 3200 );
 		if ( this.full ) game.toast( `🕸 The net is full (${ this.items.length }) · N to haul it in`, 3200 );
 
 	}

@@ -436,7 +436,6 @@ export class Combat {
 
 			this._capT = 0;
 			bc.rightBoat();
-			this.game.toast( 'Boat righted', 1600 );
 
 		}
 
@@ -448,10 +447,8 @@ export class Combat {
 		const safe = aboard ? safeZoneAt( pos.x, pos.z ) : null;
 		if ( safe !== this.safe ) {
 
-			const was = this.safe;
+			// (the status card's zone pill shows a safe zone: no notification, 1.17.2)
 			this.safe = safe;
-			if ( safe ) this.game.toast( `✓ ${ safe.name }: safe zone. Nobody fires here; shop, repair and fish in peace.`, 3200 );
-			else if ( was ) this.game.toast( `Leaving the safe zone of ${ was.name.replace( /^The /, 'the ' ) }`, 2200 );
 
 		}
 
@@ -461,8 +458,14 @@ export class Combat {
 		this.zone = z;
 		if ( ! aboard ) return;
 		const blurb = [ '', 'a few pirates about, keep your distance', 'tougher pirates, rarer fish, giants surface out here', 'pirate warlords with cannons · the rarest fish, the most giants and plunder' ];
-		if ( z && ( ! was || z.tier > was.tier ) ) this.game.toast( `⚠ Danger tier ${ z.tier }: ${ z.name } · ${ blurb[ z.tier ] }`, 4200 );
-		else if ( z ) this.game.toast( `Back in ${ z.name } (danger tier ${ z.tier })`, 2400 );
+		// (the first time out into each tier only: the status card's zone pill shows it after that)
+		this._toldTier = this._toldTier || {};
+		if ( z && ( ! was || z.tier > was.tier ) && ! this._toldTier[ z.tier ] ) {
+
+			this._toldTier[ z.tier ] = true;
+			this.game.toast( `⚠ Danger tier ${ z.tier }: ${ z.name } · ${ blurb[ z.tier ] }`, 4200 );
+
+		}
 
 	}
 
@@ -587,7 +590,6 @@ export class Combat {
 					this.fx.hit( at, _w.set( nx, 0, nz ), 0.8 );
 					this.sfx.shot( at, 'hit', 1.2 );
 					b.damage( dmg, true, this._ctx );
-					this.game.toast( 'Ramming!', 1200 );
 
 				}
 

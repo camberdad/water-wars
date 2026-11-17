@@ -489,7 +489,6 @@ export class GameHUD {
 		if ( it.protected ) {
 
 			if ( au && au.fishSplash && b ) au.fishSplash( b.position, 0.9 );
-			if ( ! quiet ) this.toast( `${ it.icon } The ${ it.name.toLowerCase() } swims free`, 2200 );
 
 		}
 

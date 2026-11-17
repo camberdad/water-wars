@@ -235,7 +235,6 @@ export class Game {
 
 			rod.equip( ! rod.equipped );
 			if ( ! rod.equipped ) this.cancelLine();
-			this.toast( rod.equipped ? 'Rod out · hold left mouse to cast' : 'Rod away', 1600 );
 
 		}
 
@@ -521,7 +520,6 @@ export class Game {
 
 		if ( where !== 'water' ) {
 
-			this.toast( 'Landed on the sand', 1400 );
 			return;
 
 		}
@@ -578,7 +576,6 @@ export class Game {
 
 		} else if ( b.phase === 'take' ) {
 
-			this.toast( 'It took the bait and ran', 1800 );
 			this.bite = { phase: 'wait', t: biteDelay( this.habitat(), this.hour ) * ( this.state.stats.biteMul || 1 ) };
 
 		}
@@ -590,8 +587,7 @@ export class Game {
 		const b = this.bite;
 		if ( ! b || b.phase === 'wait' || b.phase === 'nibble' ) {
 
-			// too early: a nibbling fish isn't hooked yet; it keeps nibbling (a hint, no penalty)
-			if ( b && b.phase === 'nibble' ) this.toast( 'Not yet · wait for it to pull under', 1500 );
+			// too early: a nibbling fish isn't hooked yet; it keeps nibbling (no penalty)
 			return;
 
 		}
@@ -599,8 +595,7 @@ export class Game {
 		const g = this.state.stats;
 		this.fight = new CatchMinigame( { species: b.species, kg: b.kg, lineKg: g.lineKg, reelSpeed: g.reelSpeed, distance: Math.max( 3, this.rod.lineOut ) } );
 		this.bite = null;
-		this.rod.hook();
-		this.toast( 'Fish on!', 1200 );
+		this.rod.hook(); // (the fight panel says "Fish on!")
 
 	}
 
@@ -662,7 +657,6 @@ export class Game {
 	// line in at once (mode change)
 	cancelLine( silent = false ) {
 
-		if ( this.fight && ! silent ) this.toast( 'Lost it', 1400 );
 		this.fight = null;
 		this.bite = null;
 		if ( this.rod.state !== 'stowed' ) this.rod.setState( this.rod.equipped ? 'idle' : 'stowed' );

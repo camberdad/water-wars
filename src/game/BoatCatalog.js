@@ -43,13 +43,14 @@ export const BOATS = {
 		gun: [ 0, 3.3, - 1.5 ], cannon: [ 0, 1.9, 4.4 ], hitHalf: [ 2.4, 2.4, 6.2 ],
 	},
 	// Water Wars 1.9: a weathered old fishing launch (bow on +z); its hull material is plain white in the
-	// source, painted by height here: antifouling, a boot stripe, a dark green hull, cream topsides
+	// source, painted by height here (1.17.2: grey and dark blue): a blue-black bottom, a light grey boot
+	// stripe, a dark navy hull and grey topsides, over weathered wooden decks
 	oldboat: {
 		name: 'Old fishing launch', price: 95000, model: 'oldboat',
 		blurb: 'A weathered old fishing launch with tyre fenders and a cavernous hold. Slow and thirsty, but she carries a mountain of fish and takes a beating.',
 		hullMul: 1.9, speedMul: 0.95, holdKg: 320, fuelMul: 2.0,
 		up: 'y', fwd: 'z', length: 14.4, beam: 5.7, draft: 0.75, rudderMul: 1.4, // 1.12.4: 0.15 m higher out of the water
-		paint: [ [ 0.1, [ 0.3, 0.05, 0.03 ] ], [ 0.3, [ 0.75, 0.73, 0.68 ] ], [ 1.15, [ 0.03, 0.09, 0.06 ] ], [ 99, [ 0.62, 0.58, 0.48 ] ] ],
+		paint: [ [ 0.1, [ 0.018, 0.022, 0.035 ] ], [ 0.3, [ 0.52, 0.55, 0.58 ] ], [ 1.15, [ 0.01, 0.024, 0.08 ] ], [ 99, [ 0.34, 0.36, 0.38 ] ] ],
 		deckColor: [ 0.26, 0.17, 0.09 ], // weathered wooden decks
 		gun: [ 0, 4.0, - 2.0 ], cannon: [ 0, 2.2, 5.0 ], hitHalf: [ 2.85, 2.5, 7.2 ],
 	},

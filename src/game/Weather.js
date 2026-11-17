@@ -121,7 +121,7 @@ export class SharedWeather {
 		if ( w.id !== this.id ) {
 
 			if ( this.id === null ) this.game.toast( `🌐 Shared weather: ${ w.name.toLowerCase() } seas. Every player online has the same weather and waves.`, 4000 );
-			else this.game.toast( w.id === 'storm' ? '🌐 ⛈ A storm is rolling in' : `🌐 The weather is turning ${ w.name.toLowerCase() }`, 3200 );
+			else if ( w.id === 'storm' ) this.game.toast( '🌐 ⛈ A storm is rolling in', 3200 ); // (only storms: 1.17.2)
 			this.id = w.id;
 
 		}
