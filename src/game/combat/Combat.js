@@ -48,7 +48,7 @@ export class Combat {
 		this.fleet = new NPCFleet( app );
 		// the bosses (src/game/combat/Boss.js): the Iron Kraken in the Deadwater (1.14), the Crimson Corsair
 		// in the Open Sea (1.15)
-		this.bosses = [ new Boss( this, BOSSES.kraken ), new Boss( this, BOSSES.corsair ) ];
+		this.bosses = [ new Boss( this, BOSSES.kraken ), new Boss( this, BOSSES.corsair ), new Boss( this, BOSSES.tempest ) ];
 		this.boss = this.bosses[ 0 ];
 		this.time = 0;
 
@@ -731,6 +731,20 @@ export class Combat {
 
 					best = t;
 					tgt = n;
+
+				}
+
+			}
+
+			// (1.17: the Black Tempest's missiles can be shot down)
+			for ( const B of this.bosses ) {
+
+				if ( ! B.missiles ) continue;
+				const hit = B.missiles.intersect( a, b );
+				if ( hit && hit.t < best ) {
+
+					best = hit.t;
+					tgt = hit.m;
 
 				}
 

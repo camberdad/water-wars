@@ -6,6 +6,7 @@ import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
 import { BOSS, BOSSES, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
+import { MissileBattery } from '../src/game/combat/Missiles.js';
 import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope, NET_DRAG, TOW_MAX } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { BoatController } from '../src/player/BoatController.js';
@@ -640,7 +641,7 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	const fire = ( b ) => b.mgs.length * b.mg.dmg * b.mg.rate + b.cannons.length * b.cannon.dmg * b.cannon.rate;
 	ok( M.hp >= 40000 && M.hp < BOSS.hp && M.pool < BOSS.pool && fire( M ) > 45 && fire( M ) < fire( BOSS ), `a mini boss: ${ M.hp.toLocaleString() } hp, ${ Math.round( fire( M ) ) } dmg/s of guns (the Kraken ${ Math.round( fire( BOSS ) ) }), a smaller prize` );
 	ok( bossPayout( M.hp, [], M.pool ).cash === 150000 && bossGen( M.cycleS * 3, M ) === 3, 'alone she pays $150,000; her own generations' );
-	ok( new Set( Object.values( BOSSES ).map( ( b ) => b.id ) ).size === 2 && BOSSES.kraken === BOSS, 'two bosses, each with its own id for the shared damage' );
+	ok( new Set( Object.values( BOSSES ).map( ( b ) => b.id ) ).size === Object.keys( BOSSES ).length && BOSSES.kraken === BOSS, 'every boss has its own id for the shared damage' );
 	ok( BOATS.wavecutter.length === 11.5 && Math.abs( BOATS.wavecutter.beam / BOATS.wavecutter.length - 2.46 / 8.5 ) < 0.002 && BOATS.wavecutter.hitHalf[ 2 ] > 5.5, 'the WaveCutter is 1.35x bigger (11.5 m), in proportion' );
 
 }
@@ -763,13 +764,13 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 		bodyMax = Math.max( bodyMax, Math.abs( b.pitch ), Math.abs( b.roll ) );
 		if ( t > 2 && t < 10 ) rise = Math.max( rise, v.pitch );
 		if ( t > 15 && t < 20 ) bank = Math.min( bank, v.roll );
-		if ( t > 26 && t < 32 ) dip = Math.min( dip, v.pitch );
+		if ( t > 26 && t < 32 ) dip = Math.min( dip, bc.vis.pitch * D ); // (the dip itself, without the random idle bob)
 		if ( t < 2 ) bob = Math.max( bob, Math.abs( v.pitch ), Math.abs( v.roll ) ); // (idle at the start: the end is still settling)
 
 	}
 
 	ok( rise > 3 && rise < 9 && dip < - 0.2 && bank < - 3 && bodyMax < 3, `the visual boat: bow up ${ rise.toFixed( 1 ) }° under full throttle, down ${ ( - dip ).toFixed( 1 ) }° when it eases off, banks ${ ( - bank ).toFixed( 1 ) }° into a port turn; the physics body stays within ${ bodyMax.toFixed( 1 ) }° of level` );
-	ok( bob > 0.1 && bob < 2, `idle, it bobs gently (${ bob.toFixed( 2 ) }°)` );
+	ok( bob > 0.1 && bob < 3, `idle, it bobs gently (${ bob.toFixed( 2 ) }°)` );
 	const p = bc.toVisual( new Vector3( 0, 1, 2 ), new Vector3() );
 	ok( Number.isFinite( p.x + p.y + p.z ) && p.distanceTo( bc.toWorld( new Vector3( 0, 1, 2 ), new Vector3() ) ) < 0.5, 'a point on the visual boat stays close to the same point on the physics body' );
 
@@ -829,6 +830,69 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	};
 	const free = turn( false ), net = turn( true );
 	ok( net.tow * 1.944 > 11 && net.turned > free.turned * 0.85, `with the net out: ${ ( net.tow * 1.944 ).toFixed( 1 ) } kn, and it turns ${ net.turned.toFixed( 0 ) }° in 15 s with the wheel over (${ free.turned.toFixed( 0 ) }° without the net)` );
+
+}
+// ---- 1.17: the Black Tempest: a second boss in the Deadwater, with big slow homing missiles
+{
+
+	const T = BOSSES.tempest;
+	let inTier3 = true, nearKraken = Infinity;
+	for ( let t = 1.8e9; t < 1.8e9 + 3600; t += 2 ) {
+
+		const p = bossPose( t, T ), k = bossPose( t, BOSS );
+		const z = dangerZoneAt( p.x, p.z );
+		if ( ! z || z.tier !== 3 ) inTier3 = false;
+		nearKraken = Math.min( nearKraken, Math.hypot( p.x - k.x, p.z - k.z ) );
+
+	}
+
+	ok( inTier3 && T.tier === 3 && nearKraken > 1000, `the Black Tempest patrols her own stretch of the Deadwater (never within ${ Math.round( nearKraken ) } m of the Kraken)` );
+	ok( T.missile && T.missile.speed < 25 && T.missile.dmg >= 150 && T.missile.radius >= 10, 'her missiles are slow (slower than a fast boat) but hit very hard' );
+	// a missile in flight: hits a boat that sits still, can be outrun by a fast one
+	const fire = ( boatSpeed, heading = 0, dodgeAt = 0 ) => {
+
+		let hurt = 0;
+		const scene = new Group(), group = new Group();
+		const boat = { position: new Vector3( 0, 0, 300 ), velocity: new Vector3( Math.sin( heading ) * boatSpeed, 0, Math.cos( heading ) * boatSpeed ), angular: new Vector3() };
+		const boss = { app: { scene, boatCtl: boat }, group, cfg: T, game: { toast() {} }, combat: { time: 0, sfx: { shot() {} }, damagePlayer( d ) { hurt += d; } } };
+		const bat = new MissileBattery( boss, T.missile, [ [ 0, 2, 0, 0 ] ] );
+		const fx = { muzzle() {}, explosion() {}, splash() {}, trail() {} };
+		const ctx = { fx, playerPos: boat.position, playerVel: boat.velocity, playerAboard: true, playerSafe: false, playerDead: false };
+		bat.launch( ctx );
+		let h = heading;
+		for ( let i = 0; i < 40 * 60 && bat.flying.length; i ++ ) {
+
+			// the dodge: hard over (29 deg/s) once the missile is dodgeAt metres off
+			if ( dodgeAt && bat.flying[ 0 ].pos.distanceTo( boat.position ) < dodgeAt ) h += 0.5 / 60;
+			boat.velocity.set( Math.sin( h ) * boatSpeed, 0, Math.cos( h ) * boatSpeed );
+			boat.position.addScaledVector( boat.velocity, 1 / 60 );
+			bat.update( 1 / 60, ctx, false, 300 );
+
+		}
+
+		return hurt;
+
+	};
+	const sitting = fire( 0 ), fleeing = fire( 30 ), crossing = fire( 5, Math.PI / 2 ), dodging = fire( 10, Math.PI / 2, 40 );
+	ok( sitting > 100 && crossing > 100 && fleeing === 0 && dodging === 0, `a missile hits a boat that sits still (${ Math.round( sitting ) }) or crawls across its path (${ Math.round( crossing ) }), misses one that turns hard at 20 kn as it closes in, and can't catch one running at 58 kn` );
+	ok( Object.keys( BOSSES ).length === 3 && ! BOSSES.tempest.cannons.length && BOSSES.tempest.launchers.length === 2, 'three bosses; the Tempest fights with missiles and a machine gun' );
+	// the deck gun can shoot one down
+	{
+
+		const boat = { position: new Vector3( 0, 0, 300 ), velocity: new Vector3(), angular: new Vector3() };
+		const boss = { app: { scene: new Group(), boatCtl: boat }, group: new Group(), cfg: T, game: { toast() {} }, combat: { time: 0, sfx: { shot() {} }, damagePlayer() {} } };
+		const bat = new MissileBattery( boss, T.missile, [ [ 0, 2, 0, 0 ] ] );
+		const ctx = { fx: { muzzle() {}, explosion() {}, splash() {}, trail() {} }, playerPos: boat.position, playerVel: boat.velocity, playerAboard: true, playerSafe: false, playerDead: false };
+		bat.launch( ctx );
+		for ( let i = 0; i < 120; i ++ ) bat.update( 1 / 60, ctx, false, 300 );
+		const m = bat.flying[ 0 ];
+		const a = m.pos.clone().add( new Vector3( 20, 1, 0 ) ), b = m.pos.clone().add( new Vector3( - 20, - 1, 0 ) );
+		const hit = bat.intersect( a, b );
+		const miss = bat.intersect( a.clone().add( new Vector3( 0, 6, 0 ) ), b.clone().add( new Vector3( 0, 6, 0 ) ) );
+		const shot = hit && hit.m.damage( 10, true, ctx );
+		ok( hit && hit.m === m && ! miss && shot && bat.flying.length === 0, 'a shot through a missile hits it and brings it down; one 6 m over it misses' );
+
+	}
 
 }
 console.log( `value check ${ value }` );

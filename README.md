@@ -83,6 +83,10 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
      anyone who attacks her or comes within 150 m. Sink her for $600,000 of plunder. In multiplayer every
      captain sees her in the same place with one shared health bar, and everyone who hit her shares a
      bigger pool by the damage they did. A new Kraken sails out every 20 minutes after she goes down.
+     A second boss roams the far side of the Deadwater: **the Black Tempest**, a 28 m pirate missile boat
+     (60,000 hp; the purple skull on the minimap) worth $450,000. She fires big, slow missiles (41 kn) that
+     home on you and hit for up to 170 in a 15 m blast. Turn hard across a missile's path as it closes in,
+     outrun it in a fast boat, or shoot it down with the deck gun; a boat that sits still takes the hit.
   Past 2,400 m is the edge of the charted sea: the current turns you back.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
@@ -157,6 +161,7 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
 | `src/game/combat/Boss.js` | The bosses (one class, a config each): the Iron Kraken (the fishing ship's hull at 34 m, tier 3) and the Crimson Corsair (the old launch's hull at 22 m, tier 2): clock-driven patrols, guns, shared health and plunder, health bars |
 | `src/game/PauseMenu.js` | The Escape menu: resume, settings, return to the home dock, exit to the title screen |
+| `src/game/combat/Missiles.js` | The Black Tempest's missiles: launch racks, homing with a limited turn rate and a committed final run, proximity fuse, blast damage, shooting them down |
 | `src/game/combat/CombatFX.js` | Tracers, cannon shells, muzzle flashes, fire, smoke, splinters, water splashes (through the ocean's spray particles) |
 | `src/game/combat/WeaponModels.js` | Procedural deck guns, cannons, the pirate flag and the coast-guard light bar |
 | `src/game/combat/CombatHUD.js` | Hull, gun heat, shells, wanted stars, crosshair, boat labels, minimap dots, the "Sunk!" screen |

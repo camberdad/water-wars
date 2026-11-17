@@ -3,6 +3,7 @@ import { loadBoatGeometry, boatModelMaterial } from '../Boats.js';
 import { buildGunTurret, buildCannon, buildFlag } from './WeaponModels.js';
 import { segmentBox } from './NPCBoats.js';
 import { hullOutline } from './HullContact.js';
+import { MissileBattery } from './Missiles.js';
 
 // Bosses: big pirate ships with a shared health bar.
 //
@@ -10,6 +11,10 @@ import { hullOutline } from './HullContact.js';
 //                    ship's hull blown up to 34 m, painted black and red, with twin machine guns on the
 //                    bridge roof, chasers fore and aft and a broadside gun each side. 85,000 hp (about a
 //                    minute of fire from a fully upgraded deck gun and rail cannon), $600,000 of plunder.
+//   Black Tempest    (1.17) a second boss of the Deadwater, on her own patrol far from the Kraken's: the
+//                    WaveCutter's hull at 28 m, gunmetal grey, with two missile racks. Big, slow missiles that
+//                    home on you for a few seconds (Missiles.js): turn hard across their path or outrun
+//                    them, or take a massive hit. 60,000 hp, $450,000 of plunder.
 //   Crimson Corsair  (1.15) the mini boss of the Open Sea (tier 2): the old fishing launch's hull at 22 m,
 //                    crimson with a gold stripe, a twin machine gun on the wheelhouse and a bow chaser.
 //                    45,000 hp, $150,000 of plunder.
@@ -54,6 +59,42 @@ export const BOSSES = {
 		flags: [ [ 0, 11.94, 0.8, 2.4 ], [ 0, 8.1, 16.4, 1.4 ] ],
 		burn: [ [ 2, 5, - 6 ], [ - 2.5, 10, 2 ], [ 1.5, 6, 10 ], [ - 1, 3, - 12 ] ],
 		smokeAt: [ 0, 12, - 2 ],
+	},
+	tempest: {
+		id: 'tempest', tier: 3, mapKind: 'boss2',
+		name: 'Black Tempest',
+		label: 'Pirate missile boat', waters: 'the Deadwater',
+		hp: 60000,
+		lair: { x: - 1250, z: 1350 }, // about 1,850 m out, the far side of the Deadwater from the Kraken
+		radius: 240,
+		speed: 4.5,
+		cycleS: 20 * 60,
+		aggro: 280, // m: she spots you from further off, and her missiles reach further still
+		pool: 450000,
+		mg: { dmg: 3, rate: 7, range: 220, spread: 0.04, speed: 230 }, // (close defence)
+		cannon: { dmg: 0, rate: 0, range: 0, splash: 0, speed: 70 },
+		// big slow missiles, 21 m/s (41 kn): they home on you until their fuel runs out after 26 s, but turn at
+		// most 0.42 rad/s (24 deg/s, a 50 m circle), so a hard turn across their path near the end makes them
+		// overshoot, and a fast boat outruns them. They go off within 8 m of the boat: 170 close in, nothing
+		// 15 m out
+		missile: { dmg: 170, radius: 15, speed: 21, turn: 0.42, guide: 26, every: 6.5, range: 560, life: 26, maxOut: 3 },
+		half: new Vector3( 4.1, 3.4, 14 ),
+		centerY: 2.2,
+		outline: [ 3.8, 13.4 ],
+		poseArm: 10,
+		// the WaveCutter's hull at 28 m (3.3x): gunmetal topsides over a black stripe and a dark red bottom
+		model: {
+			model: 'wavecutter', up: 'y', fwd: '-z', length: 28, beam: 8.1, draft: 1.49,
+			paint: [ [ 0.16, [ 0.07, 0.015, 0.012 ] ], [ 0.66, [ 0.015, 0.015, 0.017 ] ], [ 99, [ 0.16, 0.17, 0.18 ] ] ],
+			deckColor: [ 0.09, 0.095, 0.1 ], deckMaxY: 3.6,
+		},
+		// (measured off the scaled model: the aft side decks 2.75 m, the bow deck 2.8 m, the console top 4.9 m)
+		mgs: [ [ 0, 2.77, 10.8, 1.8 ] ],
+		cannons: [],
+		launchers: [ [ 1.5, 2.75, - 10, 0.35 ], [ - 1.5, 2.75, - 10, - 0.35 ] ], // [ x, y, z, yaw ]: aft, angled outboard
+		flags: [ [ 0, 4.91, 1, 1.8 ] ],
+		burn: [ [ 1.5, 2.8, - 9 ], [ - 1.2, 3.5, 1 ], [ 1, 2.8, 9 ] ],
+		smokeAt: [ 0, 4, - 4 ],
 	},
 	corsair: {
 		id: 'corsair', tier: 2, mapKind: 'miniboss',
@@ -139,6 +180,15 @@ const CSS = /* css */`
 .ww-boss-bar > i { position: absolute; inset: 0 auto 0 0; width: 100%; background: rgba(255, 220, 200, 0.5); transition: width 900ms ease 300ms; }
 .ww-boss-sub { margin-top: 4px; font: 500 var(--tw-fs-xs) var(--tw-mono); color: var(--tw-ink-2); }
 .gm-mk.is-boss > i { background: #ff2a18; color: #fff; width: calc(20 * var(--tw-u)); height: calc(20 * var(--tw-u)); margin: calc(-10 * var(--tw-u)) 0 0 calc(-10 * var(--tw-u)); box-shadow: 0 0 8px rgba(255, 40, 20, 0.8); }
+.gm-mk.is-boss2 > i { background: #8a2aff; color: #fff; width: calc(20 * var(--tw-u)); height: calc(20 * var(--tw-u)); margin: calc(-10 * var(--tw-u)) 0 0 calc(-10 * var(--tw-u)); box-shadow: 0 0 8px rgba(150, 60, 255, 0.85); }
+.ww-boss.is-tempest { color: #d6b8ff; }
+.ww-boss.is-tempest .ww-boss-bar { border-color: rgba(170, 110, 255, 0.45); }
+.ww-boss.is-tempest .ww-boss-bar > span { background: linear-gradient(90deg, #3a0f7a, #a46aff); }
+.ww-missile { position: absolute; left: 50%; top: calc(var(--tw-edge) + 92 * var(--tw-u)); transform: translateX(-50%); padding: 4px 14px; border-radius: 999px;
+	background: rgba(200, 20, 10, 0.75); color: #fff; font: 700 var(--tw-fs-sm) var(--tw-font); letter-spacing: 0.08em; text-transform: uppercase; pointer-events: none;
+	opacity: 0; transition: opacity 150ms; animation: ww-mblink 0.5s steps(2) infinite; }
+.ww-missile.is-on { opacity: 1; }
+@keyframes ww-mblink { 50% { background: rgba(120, 10, 5, 0.75); } }
 .gm-mk.is-miniboss > i { background: #ff8a1a; color: #fff; width: calc(17 * var(--tw-u)); height: calc(17 * var(--tw-u)); margin: calc(-8.5 * var(--tw-u)) 0 0 calc(-8.5 * var(--tw-u)); box-shadow: 0 0 6px rgba(255, 140, 20, 0.8); }
 `;
 const SKULL = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.4 0-8 3.1-8 7.2 0 2.4 1.2 4.4 3 5.6V19h2v-2h2v2h2v-2h2v2h2v-3.2c1.8-1.2 3-3.2 3-5.6C20 6.1 16.4 3 12 3Zm-3 9.5a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Zm6 0a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Z"/></svg>';
@@ -222,6 +272,7 @@ export class Boss {
 		}
 
 		this.burnPts = cfg.burn.map( ( p ) => new Vector3().fromArray( p ) );
+		this.missiles = cfg.missile ? new MissileBattery( this, cfg.missile, cfg.launchers || [] ) : null;
 		try {
 
 			this.slot = this.app.query.allocate( 'boss-' + cfg.id, 2 );
@@ -324,16 +375,17 @@ export class Boss {
 		if ( zone && zone.tier === C.tier && ! this.told && this.alive ) {
 
 			this.told = true;
-			const mark = C.mapKind === 'boss' ? 'the red skull' : 'the orange skull';
+			const mark = C.mapKind === 'boss' ? 'the red skull' : C.mapKind === 'boss2' ? 'the purple skull' : 'the orange skull';
 			this.game.toast( `☠ The ${ C.name }, a ${ C.label.toLowerCase() }, patrols ${ C.waters } · ${ C.hp.toLocaleString() } hp · $${ C.pool.toLocaleString() } of plunder · ${ mark } on the minimap`, 6500 );
 
 		}
 
 		if ( this.alive && this.hp <= 0 ) this.goDown( ctx, false );
+		// she fires on anyone who attacked her, and on anyone who comes too close
+		const hostile = this.alive && ( this.provoked || dist < C.aggro ) && ctx.playerAboard && ! ctx.playerSafe && ! ctx.playerDead;
+		if ( this.missiles ) this.missiles.update( dt, ctx, hostile, dist );
 		if ( this.alive ) {
 
-			// she fires on anyone who attacked her, and on anyone who comes too close
-			const hostile = ( this.provoked || dist < C.aggro ) && ctx.playerAboard && ! ctx.playerSafe && ! ctx.playerDead;
 			if ( hostile && ! this.announced ) {
 
 				this.announced = true;
@@ -551,7 +603,7 @@ export class Boss {
 			const ui = this.app.ui && this.app.ui.ui;
 			const root = ui ? ( ui.hud || ui.root ) : document.body;
 			this.el = document.createElement( 'div' );
-			this.el.className = 'ww-boss tw-glass' + ( C.mapKind === 'miniboss' ? ' is-mini' : '' );
+			this.el.className = 'ww-boss tw-glass' + ( C.mapKind === 'miniboss' ? ' is-mini' : C.mapKind === 'boss2' ? ' is-tempest' : '' );
 			this.el.innerHTML = `<div class="ww-boss-name">☠ The ${ C.name }<small>${ C.label }</small></div><div class="ww-boss-bar"><i></i><span></span></div><div class="ww-boss-sub"></div>`;
 			root.append( this.el );
 			this.barEl = this.el.querySelector( '.ww-boss-bar > span' );
@@ -561,6 +613,31 @@ export class Boss {
 		}
 
 		if ( ! this.mark && this.game.minimap && this.game.minimap.addMarker ) this.mark = this.game.minimap.addMarker( { id: 'boss-' + C.id, kind: C.mapKind, icon: SKULL, pos: () => this.alive ? this.pos : null } );
+		if ( this.missiles ) {
+
+			if ( ! this.warnEl ) {
+
+				const ui = this.app.ui && this.app.ui.ui;
+				this.warnEl = document.createElement( 'div' );
+				this.warnEl.className = 'ww-missile';
+				( ui ? ( ui.hud || ui.root ) : document.body ).append( this.warnEl );
+
+			}
+
+			const p = this.combat.app.boatCtl.position;
+			let near = Infinity;
+			for ( const m of this.missiles.flying ) near = Math.min( near, Math.hypot( m.pos.x - p.x, m.pos.z - p.z ) );
+			const warn = near < 400 && this.combat.aboard;
+			if ( this._warn !== warn ) this.warnEl.classList.toggle( 'is-on', this._warn = warn );
+			if ( warn ) {
+
+				const txt = `🚀 Missile incoming · ${ Math.round( near ) } m`;
+				if ( this._warnTxt !== txt ) this.warnEl.textContent = this._warnTxt = txt;
+
+			}
+
+		}
+
 		const on = this.state !== 'gone' && ( dist < 700 || this.lastHitT < 10 ) && this.combat.aboard;
 		if ( this._on !== on ) {
 

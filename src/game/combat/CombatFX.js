@@ -364,6 +364,22 @@ export class CombatFX {
 
 	}
 
+	// a rocket motor (Water Wars 1.17: the Black Tempest's missiles): a flame at the tail and a thick, lingering
+	// smoke trail left hanging in the air behind it. vel: the missile's velocity (the smoke is left behind)
+	trail( pos, vel, dt ) {
+
+		this._puff( this.flashes, pos, { life: 0.05, s0: 0.35, s1: 0.6, kind: 'flash' } );
+		const n = Math.min( 4, Math.floor( dt * 40 + Math.random() ) );
+		for ( let i = 0; i < n; i ++ ) {
+
+			const k = Math.random() * dt;
+			_d.copy( pos ).addScaledVector( vel, - k );
+			this._puff( this.smokes, _d, { vel: _v.set( ( Math.random() - 0.5 ) * 0.6, 0.3, ( Math.random() - 0.5 ) * 0.6 ), life: 2.6 + Math.random() * 1.4, s0: 0.35, s1: 1.6 + Math.random() * 0.8, rise: 0.15, drag: 1.2, kind: 'smoke' } );
+
+		}
+
+	}
+
 	// a damaged (not burning) hull trailing grey smoke
 	smoulder( pos, intensity, dt ) {
 
