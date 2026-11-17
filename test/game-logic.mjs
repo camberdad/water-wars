@@ -13,7 +13,7 @@ import { BoatController } from '../src/player/BoatController.js';
 import { BoatModel } from '../src/world/BoatModel.js';
 import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
-import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged } from '../src/game/Weather.js';
+import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged, SharedWeather } from '../src/game/Weather.js';
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
 
 let fails = 0;
@@ -978,6 +978,26 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	}
 
 	ok( rebuilds > 3 && rebuilds < 60 && ! spectrumChanged( { wind: 7, windDir: 25, fetch: 120, swell: 0.48 }, { wind: 7.4, windDir: 30, fetch: 130, swell: 0.5 } ), `the waves are rebuilt ${ rebuilds } times in an hour of shared weather (was 3,600), and not for small drifts` );
+
+}
+// ---- 1.18.3: the shared weather moves the sea every frame (it stepped once a second: the waves snapped)
+{
+
+	let calls = 0, panels = 0;
+	const app = { ui: { applyConditions( c, o ) { calls ++; if ( o && o.panel ) panels ++; } } };
+	const W = new SharedWeather( { app, toast() {} } );
+	let t = 1.8e9;
+	W.clock = () => t;
+	W.start();
+	calls = 0; panels = 0;
+	for ( let i = 0; i < 120; i ++ ) {
+
+		t += 1 / 60;
+		W.update( 1 / 60 );
+
+	}
+
+	ok( calls === 120 && panels >= 1 && panels <= 3, `the shared weather applies every frame (${ calls } in 2 s) and refreshes the settings sliders once a second (${ panels })` );
 
 }
 console.log( `value check ${ value }` );

@@ -93,7 +93,8 @@ export function spectrumChanged( prev, next ) {
 }
 
 // Drives the sea and sky from the shared weather while the player is online (Game creates it,
-// Multiplayer starts it once connected). The settings panel's sea-state and cloud controls follow it.
+// Multiplayer starts it once connected), every frame. The settings panel's sea-state and cloud controls
+// follow it once a second.
 export class SharedWeather {
 
 	constructor( game ) {
@@ -126,14 +127,17 @@ export class SharedWeather {
 	update( dt ) {
 
 		if ( ! this.on ) return;
-		this.wait -= dt;
-		if ( this.wait > 0 ) return;
-		// once a second: the conditions change slowly (a new wave spectrum costs a small compute pass)
-		this.wait = 1;
 		const ui = this.app.ui;
 		if ( ! ui || ! ui.applyConditions ) return;
+		// 1.18.3: every frame, so the sea changes smoothly. (Once a second, the choppiness, whitecaps, surf,
+		// clouds and haze stepped to new values: in multiplayer the waves visibly snapped once a second.)
+		// The wave spectrum itself is rebuilt only on a real change (spectrumChanged), and the settings
+		// panel's sliders follow once a second (refreshing them is page layout work, not for every frame).
+		this.wait -= dt;
+		const panel = this.wait <= 0;
+		if ( panel ) this.wait = 1;
 		const w = weatherAt( this.clock() );
-		ui.applyConditions( w );
+		ui.applyConditions( w, { panel } );
 		if ( w.id !== this.id ) {
 
 			if ( this.id === null ) this.game.toast( `🌐 Shared weather: ${ w.name.toLowerCase() } seas. Every player online has the same weather and waves.`, 4000 );

@@ -90,7 +90,8 @@ export class AppUI {
 		// While it does, the controls it drives are locked (they show its values) so they can't drift apart.
 		const SHARED = new Set( [ 'wind', 'windDir', 'fetch', 'chop', 'swell', 'surf', 'period', 'whitecaps', 'clouds', 'haze' ] );
 		let locked = false, built = null;
-		this.applyConditions = ( c ) => {
+		// opts.panel: refresh the panel's sliders too (the shared weather does once a second, not every frame)
+		this.applyConditions = ( c, opts = {} ) => {
 
 			for ( const k of SHARED ) if ( Number.isFinite( c[ k ] ) ) s[ k ] = c[ k ];
 			// (1.18.1: the wave spectrum only when the wind, fetch or swell have really changed: rebuilding it
@@ -115,6 +116,7 @@ export class AppUI {
 			shore.period.value = s.period;
 			if ( app.clouds ) app.clouds.coverage.value = s.clouds;
 			if ( app.haze && Number.isFinite( s.haze ) ) app.haze.density.value = s.haze;
+			if ( locked && opts.panel === false ) return;
 			for ( const ctl of ui._controls ) {
 
 				const shared = ctl.label === 'Conditions' || ( ctl.object === s && SHARED.has( ctl.key ) );
