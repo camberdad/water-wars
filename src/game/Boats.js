@@ -82,8 +82,26 @@ export function loadBoatGeometry( id, def = BOATS[ id ] ) {
 
 				const y = pos[ i * 3 + 1 ];
 				// deckColor: surfaces facing up above the waterline are decks, not hull sides
-				const band = def.deckColor && y > ( def.deckMinY ?? 0.25 ) && y < ( def.deckMaxY ?? 1.6 ) && nrm[ i * 3 + 1 ] > 0.75 ? [ 0, def.deckColor ] : def.paint.find( ( b ) => y < b[ 0 ] ) || def.paint[ def.paint.length - 1 ];
+				const deck = def.deckColor && y > ( def.deckMinY ?? 0.25 ) && y < ( def.deckMaxY ?? 1.6 ) && nrm[ i * 3 + 1 ] > 0.75;
+				const bi = deck ? - 1 : Math.max( 0, def.paint.findIndex( ( b ) => y < b[ 0 ] ) === - 1 ? def.paint.length - 1 : def.paint.findIndex( ( b ) => y < b[ 0 ] ) );
+				const band = deck ? [ 0, def.deckColor ] : def.paint[ bi ];
 				col[ i * 3 ] = band[ 1 ][ 0 ]; col[ i * 3 + 1 ] = band[ 1 ][ 1 ]; col[ i * 3 + 2 ] = band[ 1 ][ 2 ];
+				// 1.18.2: paintBlend (m): bands fade into each other over this height either side of the line
+				// between them, instead of switching at one height: on a hull of big triangles a hard switch
+				// came out as a jagged, pixelated stair-step along every paint line
+				if ( ! deck && def.paintBlend > 0 ) {
+
+					const W = def.paintBlend;
+					const blend = ( other, line ) => {
+
+						const k = 0.5 * ( 1 - Math.min( 1, Math.abs( y - line ) / W ) );
+						for ( let c = 0; c < 3; c ++ ) col[ i * 3 + c ] += ( other[ 1 ][ c ] - col[ i * 3 + c ] ) * k;
+
+					};
+					if ( bi > 0 && y - def.paint[ bi - 1 ][ 0 ] < W ) blend( def.paint[ bi - 1 ], def.paint[ bi - 1 ][ 0 ] );
+					else if ( bi < def.paint.length - 1 && band[ 0 ] - y < W ) blend( def.paint[ bi + 1 ], band[ 0 ] );
+
+				}
 
 			}
 			aux[ i * 4 ] = C8[ i * 4 + 3 ] / 255;

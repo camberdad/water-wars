@@ -59,10 +59,13 @@ const CSS = /* css */`
 .ww-update.is-done .ww-update-fill { background: linear-gradient(90deg, #2fa764, #76e5a0); box-shadow: 0 0 14px rgba(91, 232, 147, 0.55); }
 .ww-update-check { display: inline-grid; width: 20px; height: 20px; margin-right: 5px; place-items: center; border-radius: 50%; background: #21884e;
 	color: #fff; font: bold 14px Arial, sans-serif; vertical-align: -3px; }
-.ww-update.is-pending { top: 14px; transform: translateX(-50%); width: auto; max-width: calc(100vw - 36px); padding: 10px 12px 10px 16px; border-radius: 10px;
-	display: flex; align-items: center; gap: 12px; text-align: left; }
-.ww-update-link { color: #6fd6c6; font-weight: 700; text-decoration: underline; }
-.ww-update.is-pending button { flex: none; font: 600 13px Inter, system-ui, sans-serif; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer;
+/* 1.18.2: a small pill under the top-left HUD (it was a wide card at the top of the screen), out of the
+   way of the boss bars, the prompts and the boat's gauges; one button */
+.ww-update.is-pending { top: 124px; bottom: auto; left: 16px; transform: none; width: auto; max-width: min(340px, calc(100vw - 24px)); padding: 5px 5px 5px 12px;
+	border-radius: 999px; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 12px; opacity: 0.88;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45); border-color: rgba(111, 214, 198, 0.35); }
+.ww-update.is-pending:hover { opacity: 1; }
+.ww-update.is-pending button { flex: none; font: 600 12px Inter, system-ui, sans-serif; border: 0; border-radius: 999px; padding: 5px 11px; cursor: pointer;
 	background: #6fd6c6; color: #08221e; }
 `;
 
@@ -138,11 +141,9 @@ function showPending( version, onGoHome ) {
 	n.id = 'ww-update';
 	n.className = 'ww-update is-pending';
 	n.setAttribute( 'role', 'status' );
-	n.innerHTML = `<span>There has been a new update published (v${ version }). Finish what you are doing and <a href="#" class="ww-update-link">click here</a> to return to the main menu.</span>
-		<button type="button">Return to main menu</button>`;
-	// the button, the link, or anywhere on the notice
-	n.style.cursor = 'pointer';
-	n.onclick = ( e ) => {
+	n.innerHTML = `<span>Update v${ version } ready</span><button type="button">Return to main menu</button>`;
+	// (the one button: a stray click on the notice doesn't send anyone home mid-game)
+	n.querySelector( 'button' ).onclick = ( e ) => {
 
 		e.preventDefault();
 		onGoHome();

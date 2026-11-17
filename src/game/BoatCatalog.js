@@ -87,8 +87,11 @@ export const BOATS = {
 		hullMul: 2.8, speedMul: 1.2, holdKg: 700, fuelMul: 3,
 		// sits deep: its working deck is a little under the waterline (the hull keeps the sea out)
 		up: 'y', fwd: 'z', length: 13, beam: 4.6, draft: 1.7, floorMin: - 0.6, rudderMul: 1.5,
-		// the hull material is plain white in the source: antifouling, boot stripe, topsides, white house
-		paint: [ [ 0.1, [ 0.32, 0.035, 0.025 ] ], [ 0.32, [ 0.85, 0.84, 0.8 ] ], [ 2.0, [ 0.025, 0.07, 0.16 ] ], [ 99, [ 0.78, 0.78, 0.75 ] ] ],
+		// the hull material is plain white in the source. 1.18.2: sleek greys (was red, white, navy and cream: four
+		// hard bands that came out jagged on the big triangles): a charcoal bottom, a dark gunmetal hull and a
+		// pale grey house, blended into each other over 0.35 m (paintBlend)
+		paint: [ [ 0.1, [ 0.035, 0.038, 0.042 ] ], [ 0.32, [ 0.06, 0.064, 0.07 ] ], [ 2.0, [ 0.13, 0.14, 0.15 ] ], [ 99, [ 0.42, 0.44, 0.46 ] ] ],
+		paintBlend: 0.35,
 		// its working deck sits below the waterline: wooden decking, not the red antifouling of the bottom
 		deckColor: [ 0.3, 0.22, 0.14 ], deckMinY: - 0.55, deckMaxY: 2.5,
 		gun: [ 0, 4.5, 1.6 ], cannon: [ 0, 2.6, 5.4 ], hitHalf: [ 2.5, 2.6, 6.8 ],
