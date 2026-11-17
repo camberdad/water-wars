@@ -76,6 +76,22 @@ export function weatherAt( t ) {
 
 }
 
+// Water Wars 1.18.1: does the wave spectrum need rebuilding for these conditions? Rebuilding it (OceanFFT's
+// initial spectrum) re-draws every wave at once: done every second as the wind drifted, it made the whole sea
+// visibly jump once a second. Only a real change does it now (about 1.5 m/s of wind, 12 degrees of
+// direction, a quarter more or less fetch, 0.1 of swell); everything else in the weather changes smoothly.
+// prev: the conditions the spectrum was last built for (null: never)
+export const SPECTRUM_STEP = { wind: 1.5, windDir: 12, fetch: 0.25, swell: 0.1 };
+export function spectrumChanged( prev, next ) {
+
+	if ( ! prev ) return true;
+	const dDir = Math.abs( ( ( next.windDir - prev.windDir ) % 360 + 540 ) % 360 - 180 );
+	return Math.abs( next.wind - prev.wind ) >= SPECTRUM_STEP.wind || dDir >= SPECTRUM_STEP.windDir ||
+		Math.abs( Math.log( Math.max( 1, next.fetch ) / Math.max( 1, prev.fetch ) ) ) >= Math.log( 1 + SPECTRUM_STEP.fetch ) ||
+		Math.abs( next.swell - prev.swell ) >= SPECTRUM_STEP.swell;
+
+}
+
 // Drives the sea and sky from the shared weather while the player is online (Game creates it,
 // Multiplayer starts it once connected). The settings panel's sea-state and cloud controls follow it.
 export class SharedWeather {

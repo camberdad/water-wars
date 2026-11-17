@@ -2,6 +2,7 @@ import * as THREE from '../engine/index.js';
 import { UI } from './UI.js';
 import { G } from '../core/Globals.js';
 import { GroundBounce } from '../materials/GroundBounce.js';
+import { spectrumChanged } from '../game/Weather.js';
 
 // Binds the Tidewater UI (panel + HUD) to the running app.
 const SEA = {
@@ -88,11 +89,26 @@ export class AppUI {
 		// Water Wars 1.13.4: the shared multiplayer weather (src/game/Weather.js) sets the sea and sky here.
 		// While it does, the controls it drives are locked (they show its values) so they can't drift apart.
 		const SHARED = new Set( [ 'wind', 'windDir', 'fetch', 'chop', 'swell', 'surf', 'period', 'whitecaps', 'clouds', 'haze' ] );
-		let locked = false;
+		let locked = false, built = null;
 		this.applyConditions = ( c ) => {
 
 			for ( const k of SHARED ) if ( Number.isFinite( c[ k ] ) ) s[ k ] = c[ k ];
-			spectrum();
+			// (1.18.1: the wave spectrum only when the wind, fetch or swell have really changed: rebuilding it
+			// every second as the wind drifted made the sea jump once a second. The wind the spray and the
+			// sound use follows smoothly)
+			if ( spectrumChanged( built, s ) ) {
+
+				spectrum();
+				built = { wind: s.wind, windDir: s.windDir, fetch: s.fetch, swell: s.swell };
+
+			} else {
+
+				const a = THREE.MathUtils.degToRad( s.windDir );
+				G.windDir.value.set( Math.cos( a ), Math.sin( a ) );
+				G.windSpeed.value = s.wind;
+
+			}
+
 			whitecaps();
 			fft.choppiness.value = s.chop;
 			shore.amplitude.value = s.surf;

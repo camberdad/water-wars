@@ -13,7 +13,7 @@ import { BoatController } from '../src/player/BoatController.js';
 import { BoatModel } from '../src/world/BoatModel.js';
 import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
-import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S } from '../src/game/Weather.js';
+import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged } from '../src/game/Weather.js';
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
 
 let fails = 0;
@@ -959,6 +959,25 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	};
 	const lobster = clip( null ), launch = clip( BOATS.oldboat );
 	ok( lobster < 3 && launch < 4, `in a heavy storm (crests to 5 m) the deck stays above the water: lobster boat under ${ lobster.toFixed( 1 ) }% of the time, the 14 m old launch ${ launch.toFixed( 1 ) }%` );
+
+}
+// ---- 1.18.1: the shared weather rebuilds the wave spectrum only on a real change (not every second: the sea jumped)
+{
+
+	let prev = null, rebuilds = 0;
+	for ( let t = 1.8e9; t < 1.8e9 + 3600; t ++ ) {
+
+		const w = weatherAt( t );
+		if ( spectrumChanged( prev, w ) ) {
+
+			rebuilds ++;
+			prev = { ...w };
+
+		}
+
+	}
+
+	ok( rebuilds > 3 && rebuilds < 60 && ! spectrumChanged( { wind: 7, windDir: 25, fetch: 120, swell: 0.48 }, { wind: 7.4, windDir: 30, fetch: 130, swell: 0.5 } ), `the waves are rebuilt ${ rebuilds } times in an hour of shared weather (was 3,600), and not for small drifts` );
 
 }
 console.log( `value check ${ value }` );
