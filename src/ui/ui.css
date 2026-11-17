@@ -279,7 +279,7 @@ body {
 }
 
 /* rotating tips: stacked in one grid cell (no layout shift), cross-faded by a CSS cycle so they keep
-   turning while scripts are blocked. 8 tips x 6 s. */
+   turning while scripts are blocked: 6 s each, the cycle timed to the tip count (index.html). */
 .loader-tips {
 	display: flex;
 	align-items: flex-start;
@@ -331,15 +331,12 @@ body {
 	background: rgba(200, 225, 235, 0.08);
 }
 
-/* the cycle starts 0.8 s in, so the first tip is readable at once */
+/* The timing script under the tip list (index.html) spreads the tips over one cycle, 6 s each however many
+   there are, and adds .is-timed. Until it has run only the first tip shows: they all share one grid cell,
+   and on the same timing they would show on top of each other (1.15.3). The cycle starts 0.8 s in, so the
+   first tip is readable at once. */
 .loader-tip:nth-child(1) { animation-delay: -0.8s; }
-.loader-tip:nth-child(2) { animation-delay: 5.2s; }
-.loader-tip:nth-child(3) { animation-delay: 11.2s; }
-.loader-tip:nth-child(4) { animation-delay: 17.2s; }
-.loader-tip:nth-child(5) { animation-delay: 23.2s; }
-.loader-tip:nth-child(6) { animation-delay: 29.2s; }
-.loader-tip:nth-child(7) { animation-delay: 35.2s; }
-.loader-tip:nth-child(8) { animation-delay: 41.2s; }
+.loader-tip-list:not(.is-timed) .loader-tip:not(:first-child) { display: none; }
 
 @keyframes tw-kenburns {
 	from { transform: scale(1.06) translate3d(0, 0, 0); }

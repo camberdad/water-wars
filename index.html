@@ -73,6 +73,29 @@
 						<p class="loader-tip">A <b>trawl net</b> fills with fish, crabs and lobster while you tow it slowly. Press <kbd>N</kbd> to haul it in, and set any dolphins, seals, turtles or manatees free before you keep the rest.</p>
 						<p class="loader-tip">Press <kbd>I</kbd> for your cooler and the fish log. Deck lights from Marta let you fish after dark.</p>
 					</div>
+					<script>
+						// The tips take turns, 6 s each, however many there are (Water Wars 1.15.3: the CSS cycle was written
+						// for 8 tips and there are now many more: the rest all showed at once for the first seconds, one on top
+						// of the other). A CSS animation, so they keep turning while the game loads; a random tip first.
+						( function () {
+
+							var list = document.currentScript.previousElementSibling;
+							var tips = list.querySelectorAll( '.loader-tip' ), n = tips.length, S = 6, T = n * S;
+							var k = Math.floor( Math.random() * n );
+							var p = function ( s ) { return ( s / T * 100 ).toFixed( 3 ) + '%'; };
+							var css = document.createElement( 'style' );
+							css.textContent = '@keyframes tw-tip-n { 0% { opacity: 0; transform: translateY(4px); } ' +
+								p( 0.77 ) + ' { opacity: 1; transform: translateY(0); } ' +
+								p( 5.28 ) + ' { opacity: 1; transform: translateY(0); } ' +
+								p( 6 ) + ' { opacity: 0; transform: translateY(-3px); } ' +
+								'100% { opacity: 0; transform: translateY(-3px); } } ' +
+								'.loader-tip-list.is-timed .loader-tip { animation: tw-tip-n ' + T + 's linear infinite; }';
+							document.head.appendChild( css );
+							for ( var i = 0; i < n; i ++ ) tips[ i ].style.animationDelay = ( ( ( i - k + n ) % n ) * S - 0.8 ) + 's';
+							list.classList.add( 'is-timed' );
+
+						} )();
+					</script>
 				</div>
 			</div>
 		</div>
