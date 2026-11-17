@@ -6,7 +6,7 @@ import { GameState } from '../src/game/GameState.js';
 import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
 import { BOSS, BOSSES, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
-import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope } from '../src/game/Trawl.js';
+import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope, NET_DRAG, TOW_MAX } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { BoatController } from '../src/player/BoatController.js';
 import { Vector3, Group } from '../src/engine/index.js';
@@ -671,7 +671,7 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 			bc.queueQueries();
 			const s = script( t, bc );
 			bc.setInput( s.throttle, s.steer || 0, 1 / 60 );
-			bc.netDrag = bc.maxThrust * 0.065;
+			bc.netDrag = bc.maxThrust * NET_DRAG;
 			bc.towDir = ( bc.towDir || new Vector3() ).copy( s.tow( bc ) );
 			bc.update( 1 / 60 );
 			top = Math.max( top, bc.velocity.length() );
@@ -687,7 +687,7 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	const back = sim( ( t ) => ( { throttle: t < 10 ? 1 : - 1, tow: astern } ) );
 	const uturn = sim( ( t ) => ( { throttle: 1, tow: t < 10 ? astern : ( bc ) => astern( bc ).negate() } ) );
 	const turn = sim( ( t ) => ( { throttle: 1, steer: t > 10 ? 1 : 0, tow: t < 10 ? astern : ( bc ) => new Vector3( 1, 0, 0 ).applyQuaternion( bc.quaternion ).setY( 0 ).normalize() } ) );
-	ok( normal.resets === 0 && normal.top > 3 && normal.top < 4.5, `towing the net: about 7 knots flat out (${ ( normal.top * 1.944 ).toFixed( 1 ) } kn)` );
+	ok( normal.resets === 0 && normal.top > 5 && normal.top < TOW_MAX - 1.5, `towing the net: about 11 knots flat out, under the too-fast limit (${ ( normal.top * 1.944 ).toFixed( 1 ) } kn)` );
 	ok( [ back, uturn, turn ].every( ( r ) => r.resets === 0 && r.top < 40 ), `going astern, a U-turn or a hard turn with the net out never runs away (top ${ [ back, uturn, turn ].map( ( r ) => r.top.toFixed( 1 ) ).join( ' / ' ) } m/s, no resets)` );
 
 }
