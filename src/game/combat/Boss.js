@@ -14,7 +14,7 @@ import { MissileBattery } from './Missiles.js';
 //   Black Tempest    (1.17) a second boss of the Deadwater, on her own patrol far from the Kraken's: the
 //                    WaveCutter's hull at 28 m, gunmetal grey, with two missile racks. Big, slow missiles that
 //                    home on you for a few seconds (Missiles.js): turn hard across their path or outrun
-//                    them, or take a massive hit. 60,000 hp, $450,000 of plunder.
+//                    them, or take a massive hit (300). 60,000 hp, $1,000,000 of plunder.
 //   Crimson Corsair  (1.15) the mini boss of the Open Sea (tier 2): the old fishing launch's hull at 22 m,
 //                    crimson with a gold stripe, a twin machine gun on the wheelhouse and a bow chaser.
 //                    45,000 hp, $150,000 of plunder.
@@ -70,14 +70,14 @@ export const BOSSES = {
 		speed: 4.5,
 		cycleS: 20 * 60,
 		aggro: 280, // m: she spots you from further off, and her missiles reach further still
-		pool: 450000,
+		pool: 1000000, // (1.17.1: was $450,000: the biggest prize at sea)
 		mg: { dmg: 3, rate: 7, range: 220, spread: 0.04, speed: 230 }, // (close defence)
 		cannon: { dmg: 0, rate: 0, range: 0, splash: 0, speed: 70 },
-		// big slow missiles, 21 m/s (41 kn): they home on you until their fuel runs out after 26 s, but turn at
+		// big slow missiles, 18 m/s (35 kn; 1.17.1: was 21): they home on you until their fuel runs out after 26 s, but turn at
 		// most 0.42 rad/s (24 deg/s, a 50 m circle), so a hard turn across their path near the end makes them
-		// overshoot, and a fast boat outruns them. They go off within 8 m of the boat: 170 close in, nothing
+		// overshoot, and a fast boat outruns them. They go off within 8 m of the boat: 300 close in (1.17.1: was 170), nothing
 		// 15 m out
-		missile: { dmg: 170, radius: 15, speed: 21, turn: 0.42, guide: 26, every: 6.5, range: 560, life: 26, maxOut: 3 },
+		missile: { dmg: 300, radius: 15, speed: 18, turn: 0.42, guide: 26, every: 6.5, range: 560, life: 26, maxOut: 3 },
 		half: new Vector3( 4.1, 3.4, 14 ),
 		centerY: 2.2,
 		outline: [ 3.8, 13.4 ],

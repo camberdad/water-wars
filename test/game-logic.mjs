@@ -847,7 +847,7 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	}
 
 	ok( inTier3 && T.tier === 3 && nearKraken > 1000, `the Black Tempest patrols her own stretch of the Deadwater (never within ${ Math.round( nearKraken ) } m of the Kraken)` );
-	ok( T.missile && T.missile.speed < 25 && T.missile.dmg >= 150 && T.missile.radius >= 10, 'her missiles are slow (slower than a fast boat) but hit very hard' );
+	ok( T.missile && T.missile.speed <= 18 && T.missile.dmg === 300 && T.missile.radius >= 10 && T.pool >= 1000000 && T.pool > BOSS.pool, 'her missiles are slow (35 kn) but hit for 300; sinking her pays $1,000,000, the biggest prize at sea' );
 	// a missile in flight: hits a boat that sits still, can be outrun by a fast one
 	const fire = ( boatSpeed, heading = 0, dodgeAt = 0 ) => {
 
@@ -874,7 +874,7 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 
 	};
 	const sitting = fire( 0 ), fleeing = fire( 30 ), crossing = fire( 5, Math.PI / 2 ), dodging = fire( 10, Math.PI / 2, 40 );
-	ok( sitting > 100 && crossing > 100 && fleeing === 0 && dodging === 0, `a missile hits a boat that sits still (${ Math.round( sitting ) }) or crawls across its path (${ Math.round( crossing ) }), misses one that turns hard at 20 kn as it closes in, and can't catch one running at 58 kn` );
+	ok( sitting >= 299 && crossing > 100 && fleeing === 0 && dodging === 0, `a missile hits a boat that sits still (${ Math.round( sitting ) }) or crawls across its path (${ Math.round( crossing ) }), misses one that turns hard at 20 kn as it closes in, and can't catch one running at 58 kn` );
 	ok( Object.keys( BOSSES ).length === 3 && ! BOSSES.tempest.cannons.length && BOSSES.tempest.launchers.length === 2, 'three bosses; the Tempest fights with missiles and a machine gun' );
 	// the deck gun can shoot one down
 	{

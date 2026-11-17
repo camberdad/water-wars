@@ -84,8 +84,8 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
      captain sees her in the same place with one shared health bar, and everyone who hit her shares a
      bigger pool by the damage they did. A new Kraken sails out every 20 minutes after she goes down.
      A second boss roams the far side of the Deadwater: **the Black Tempest**, a 28 m pirate missile boat
-     (60,000 hp; the purple skull on the minimap) worth $450,000. She fires big, slow missiles (41 kn) that
-     home on you and hit for up to 170 in a 15 m blast. Turn hard across a missile's path as it closes in,
+     (60,000 hp; the purple skull on the minimap) worth $1,000,000. She fires big, slow missiles (35 kn) that
+     home on you and hit for up to 300 in a 15 m blast. Turn hard across a missile's path as it closes in,
      outrun it in a fast boat, or shoot it down with the deck gun; a boat that sits still takes the hit.
   Past 2,400 m is the edge of the charted sea: the current turns you back.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.

@@ -228,8 +228,8 @@ export class MissileBattery {
 		const bc = this.app.boatCtl;
 		const d = Math.hypot( bc.position.x - m.pos.x, ( bc.position.y + 1 ) - m.pos.y, bc.position.z - m.pos.z );
 		if ( d >= C.radius ) return;
-		// (full damage out to just inside the fuse distance: a missile that reaches the boat hits it squarely)
-		const k = Math.min( 1, Math.max( 0, 1 - ( d - FUSE * 0.9 ) / ( C.radius - FUSE * 0.9 ) ) );
+		// (full damage out to the fuse distance: a missile that reaches the boat hits it squarely, for C.dmg)
+		const k = Math.min( 1, Math.max( 0, 1 - ( d - FUSE ) / ( C.radius - FUSE ) ) );
 		combat.damagePlayer( C.dmg * k );
 		_v.set( bc.position.x - m.pos.x, 0, bc.position.z - m.pos.z );
 		if ( _v.lengthSq() > 1e-4 ) bc.velocity.addScaledVector( _v.normalize(), 4 * k );
