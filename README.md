@@ -74,7 +74,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   1. **Coastal Waters** (220-700 m out): a few weak pirates that only attack up close.
   2. **Open Sea** (700-1,400 m, past the amber buoys): tougher pirates, rarer fish, plunder x1.5,
      and the giant fish surface here. A mini boss patrols here too: **the Crimson Corsair**, a 22 m pirate
-     gunship (22,000 hp, a twin machine gun and a bow cannon; the orange skull on the minimap), worth
+     gunship (45,000 hp, a hard-hitting twin machine gun and bow cannon; the orange skull on the minimap), worth
      $150,000, shared in multiplayer the same way as the Kraken's plunder.
   3. **Deadwater** (1,400-2,400 m, past the red buoys): pirate warlords with cannons, the rarest fish,
      plunder x2.5 and the most giants.

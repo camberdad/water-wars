@@ -12,7 +12,7 @@ import { hullOutline } from './HullContact.js';
 //                    minute of fire from a fully upgraded deck gun and rail cannon), $600,000 of plunder.
 //   Crimson Corsair  (1.15) the mini boss of the Open Sea (tier 2): the old fishing launch's hull at 22 m,
 //                    crimson with a gold stripe, a twin machine gun on the wheelhouse and a bow chaser.
-//                    22,000 hp, $150,000 of plunder.
+//                    45,000 hp, $150,000 of plunder.
 //
 // Each fires back at anyone who attacks her or comes too close. Shared in multiplayer with no host: her
 // course and her generation come from the wall clock (the same clock as the waves), so every player sees
@@ -59,15 +59,16 @@ export const BOSSES = {
 		id: 'corsair', tier: 2, mapKind: 'miniboss',
 		name: 'Crimson Corsair',
 		label: 'Pirate gunship', waters: 'the Open Sea',
-		hp: 22000,
+		hp: 45000, // (1.15.5: was 22,000: too easy)
 		lair: { x: - 500, z: 950 }, // about 1,080 m out: the Open Sea
 		radius: 160,
 		speed: 3.8,
 		cycleS: 15 * 60,
-		aggro: 130,
+		aggro: 160,
 		pool: 150000,
-		mg: { dmg: 3, rate: 6, range: 230, spread: 0.04, speed: 230 },
-		cannon: { dmg: 22, rate: 0.2, range: 320, splash: 5, speed: 72 },
+		// (1.15.5: harder hitting, about twice the damage: was mg 3 dmg x 6/s, cannon 22 dmg every 5 s)
+		mg: { dmg: 5, rate: 8, range: 250, spread: 0.035, speed: 235 },
+		cannon: { dmg: 34, rate: 0.3, range: 340, splash: 6, speed: 74 },
 		half: new Vector3( 4.3, 4.9, 11 ),
 		centerY: 3.8,
 		outline: [ 3.9, 10.4 ],

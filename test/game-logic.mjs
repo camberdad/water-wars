@@ -637,7 +637,8 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	}
 
 	ok( inTier2 && M.tier === 2, 'the Crimson Corsair patrols the Open Sea (tier 2)' );
-	ok( M.hp < BOSS.hp / 2 && M.hp > 15000 && M.pool < BOSS.pool && M.mg.dmg < BOSS.mg.dmg && M.cannon.dmg < BOSS.cannon.dmg, 'a mini boss: tougher than any pirate, much weaker than the Kraken, a smaller prize' );
+	const fire = ( b ) => b.mgs.length * b.mg.dmg * b.mg.rate + b.cannons.length * b.cannon.dmg * b.cannon.rate;
+	ok( M.hp >= 40000 && M.hp < BOSS.hp && M.pool < BOSS.pool && fire( M ) > 45 && fire( M ) < fire( BOSS ), `a mini boss: ${ M.hp.toLocaleString() } hp, ${ Math.round( fire( M ) ) } dmg/s of guns (the Kraken ${ Math.round( fire( BOSS ) ) }), a smaller prize` );
 	ok( bossPayout( M.hp, [], M.pool ).cash === 150000 && bossGen( M.cycleS * 3, M ) === 3, 'alone she pays $150,000; her own generations' );
 	ok( new Set( Object.values( BOSSES ).map( ( b ) => b.id ) ).size === 2 && BOSSES.kraken === BOSS, 'two bosses, each with its own id for the shared damage' );
 	ok( BOATS.wavecutter.length === 11.5 && Math.abs( BOATS.wavecutter.beam / BOATS.wavecutter.length - 2.46 / 8.5 ) < 0.002 && BOATS.wavecutter.hitHalf[ 2 ] > 5.5, 'the WaveCutter is 1.35x bigger (11.5 m), in proportion' );
