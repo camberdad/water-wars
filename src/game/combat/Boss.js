@@ -18,6 +18,7 @@ import { MissileBattery } from './Missiles.js';
 //   Crimson Corsair  (1.15) the mini boss of the Open Sea (tier 2): the old fishing launch's hull at 22 m,
 //                    crimson with a gold stripe, a twin machine gun on the wheelhouse and a bow chaser.
 //                    45,000 hp, $150,000 of plunder.
+//   Leviathan        (1.20) a sea monster, the night boss of the Deadwater: Leviathan.js (a Boss of her own kind)
 //
 // Each fires back at anyone who attacks her or comes too close. Shared in multiplayer with no host: her
 // course and her generation come from the wall clock (the same clock as the waves), so every player sees
@@ -189,8 +190,14 @@ const CSS = /* css */`
 	opacity: 0; transition: opacity 150ms; animation: ww-mblink 0.5s steps(2) infinite; }
 .ww-missile.is-on { opacity: 1; }
 @keyframes ww-mblink { 50% { background: rgba(120, 10, 5, 0.75); } }
+.ww-boss.is-monster { color: #b8ffd0; }
+.ww-boss.is-monster .ww-boss-bar { border-color: rgba(120, 255, 170, 0.4); }
+.ww-boss.is-monster .ww-boss-bar > span { background: linear-gradient(90deg, #0d5a3a, #4ae89a); }
+.gm-mk.is-monster > i { background: #0f9a5a; color: #e4ff7a; width: calc(20 * var(--tw-u)); height: calc(20 * var(--tw-u)); margin: calc(-10 * var(--tw-u)) 0 0 calc(-10 * var(--tw-u)); box-shadow: 0 0 8px rgba(80, 255, 150, 0.85); }
 .gm-mk.is-miniboss > i { background: #ff8a1a; color: #fff; width: calc(17 * var(--tw-u)); height: calc(17 * var(--tw-u)); margin: calc(-8.5 * var(--tw-u)) 0 0 calc(-8.5 * var(--tw-u)); box-shadow: 0 0 6px rgba(255, 140, 20, 0.8); }
 `;
+// (1.20: the Leviathan's mark: a slit eye)
+const EYE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5C6.5 5 2.4 9.3 1 12c1.4 2.7 5.5 7 11 7s9.6-4.3 11-7c-1.4-2.7-5.5-7-11-7Zm0 11.5c-1.1 0-1.6-2-1.6-4.5s.5-4.5 1.6-4.5 1.6 2 1.6 4.5-.5 4.5-1.6 4.5Z"/></svg>';
 const SKULL = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.4 0-8 3.1-8 7.2 0 2.4 1.2 4.4 3 5.6V19h2v-2h2v2h2v-2h2v2h2v-3.2c1.8-1.2 3-3.2 3-5.6C20 6.1 16.4 3 12 3Zm-3 9.5a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Zm6 0a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Z"/></svg>';
 let _css = false;
 
@@ -230,7 +237,7 @@ export class Boss {
 		g.name = 'boss-' + cfg.id;
 		g.visible = false;
 		this.app.scene.add( g );
-		loadBoatGeometry( 'boss-' + cfg.id, cfg.model ).then( ( geo ) => {
+		if ( cfg.model ) loadBoatGeometry( 'boss-' + cfg.id, cfg.model ).then( ( geo ) => {
 
 			if ( ! geo ) return;
 			const m = new Mesh( geo, boatModelMaterial() );
@@ -315,6 +322,23 @@ export class Boss {
 	get alive() {
 
 		return this.state === 'alive';
+
+	}
+
+	// how far from her middle a shot can hit her (cheap rejects in Combat)
+	get reach() {
+
+		return this.half.z;
+
+	}
+
+	// how far a shell bursting at point is from her hull (splash damage): from the nearest point of her
+	// centre line (her hull is long), less her half beam
+	splashDist( point ) {
+
+		const lx = point.x - this.pos.x, lz = point.z - this.pos.z, fx = Math.sin( this.yaw ), fz = Math.cos( this.yaw );
+		const along = Math.max( - this.half.z + 2, Math.min( this.half.z - 2, lx * fx + lz * fz ) );
+		return Math.max( 0, Math.hypot( lx - fx * along, lz - fz * along ) - this.half.x );
 
 	}
 
@@ -549,6 +573,14 @@ export class Boss {
 		const L = C.half.z * 0.8, W = C.half.x * 0.6;
 		for ( let i = 0; i < 4; i ++ ) fx.explosion( this.group.localToWorld( _w.set( rand( - W, W ), rand( 2, C.centerY * 2.2 ), rand( - L, L ) ) ), 1.6 );
 		this.combat.sfx.shot( this.pos, 'explosion', 1.6 );
+		this.pay( `☠ The ${ C.name } is going down!` );
+
+	}
+
+	// everyone who hit her shares the plunder (by the damage they did)
+	pay( headline ) {
+
+		const C = this.cfg;
 		const pay = bossPayout( this.myDmg, [ ...this.remote.values() ], C.pool );
 		const s = this.game.state;
 		if ( pay.cash > 0 ) {
@@ -558,9 +590,9 @@ export class Boss {
 			s.earn( pay.cash );
 			if ( this.app.audio && this.app.audio.coin ) this.app.audio.coin();
 			const crew = pay.captains > 1 ? ` · ${ Math.round( pay.share * 100 ) }% of the damage, shared with ${ pay.captains - 1 } other captain${ pay.captains > 2 ? 's' : '' }` : '';
-			this.game.toast( `☠ The ${ C.name } is going down! Plunder: $${ pay.cash.toLocaleString() }${ crew }`, 7000 );
+			this.game.toast( `${ headline } Plunder: $${ pay.cash.toLocaleString() }${ crew }`, 7000 );
 
-		} else if ( this.distToPlayer < 1500 ) this.game.toast( `☠ Other captains sank the ${ C.name }`, 4000 );
+		} else if ( this.distToPlayer < 1500 ) this.game.toast( `${ C.icon || '☠' } Other captains ${ C.model ? 'sank' : 'killed' } the ${ C.name }`, 4000 );
 
 	}
 
@@ -595,8 +627,8 @@ export class Boss {
 			const ui = this.app.ui && this.app.ui.ui;
 			const root = ui ? ( ui.hud || ui.root ) : document.body;
 			this.el = document.createElement( 'div' );
-			this.el.className = 'ww-boss tw-glass' + ( C.mapKind === 'miniboss' ? ' is-mini' : C.mapKind === 'boss2' ? ' is-tempest' : '' );
-			this.el.innerHTML = `<div class="ww-boss-name">☠ The ${ C.name }<small>${ C.label }</small></div><div class="ww-boss-bar"><i></i><span></span></div><div class="ww-boss-sub"></div>`;
+			this.el.className = 'ww-boss tw-glass' + ( C.hudClass ? ' ' + C.hudClass : C.mapKind === 'miniboss' ? ' is-mini' : C.mapKind === 'boss2' ? ' is-tempest' : '' );
+			this.el.innerHTML = `<div class="ww-boss-name">${ C.icon || '☠' } The ${ C.name }<small>${ C.label }</small></div><div class="ww-boss-bar"><i></i><span></span></div><div class="ww-boss-sub"></div>`;
 			root.append( this.el );
 			this.barEl = this.el.querySelector( '.ww-boss-bar > span' );
 			this.lagEl = this.el.querySelector( '.ww-boss-bar > i' );
@@ -604,7 +636,7 @@ export class Boss {
 
 		}
 
-		if ( ! this.mark && this.game.minimap && this.game.minimap.addMarker ) this.mark = this.game.minimap.addMarker( { id: 'boss-' + C.id, kind: C.mapKind, icon: SKULL, pos: () => this.alive ? this.pos : null } );
+		if ( ! this.mark && this.game.minimap && this.game.minimap.addMarker ) this.mark = this.game.minimap.addMarker( { id: 'boss-' + C.id, kind: C.mapKind, icon: C.mapKind === 'monster' ? EYE : SKULL, pos: () => this.alive ? this.pos : null } );
 		if ( this.missiles ) {
 
 			if ( ! this.warnEl ) {
@@ -630,7 +662,7 @@ export class Boss {
 
 		}
 
-		const on = this.state !== 'gone' && ( dist < 700 || this.lastHitT < 10 ) && this.combat.aboard;
+		const on = this.state !== 'gone' && this.shown !== false && ( dist < 700 || this.lastHitT < 10 ) && this.combat.aboard;
 		if ( this._on !== on ) {
 
 			this._on = on;

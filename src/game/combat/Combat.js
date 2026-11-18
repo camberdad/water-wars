@@ -10,6 +10,7 @@ import { CombatHUD } from './CombatHUD.js';
 import { hullOutline, placeOutline, hullContact, densify } from './HullContact.js';
 import { BOATS, berthX } from '../BoatCatalog.js';
 import { Boss, BOSSES } from './Boss.js';
+import { Leviathan } from './Leviathan.js';
 import { createBoatMesh, surfaceY, buildDeckMap, hullVolumeFor } from '../Boats.js';
 import { DANGER_TIERS, dangerZoneAt, randomInZone, buildDangerBuoys, HARBOUR, WORLD_RADIUS, harbourDistance } from '../DangerZones.js';
 import { STATIONS, SERVICE_RADIUS, safeZoneAt, stationNear, buildStations, buildDockKiosk, DOCK_KIOSK, buildDockFenders } from '../Harbours.js';
@@ -48,7 +49,8 @@ export class Combat {
 		this.fleet = new NPCFleet( app );
 		// the bosses (src/game/combat/Boss.js): the Iron Kraken in the Deadwater (1.14), the Crimson Corsair
 		// in the Open Sea (1.15)
-		this.bosses = [ new Boss( this, BOSSES.kraken ), new Boss( this, BOSSES.corsair ), new Boss( this, BOSSES.tempest ) ];
+		// (1.20: and the Leviathan, a sea monster that rises in the Deadwater at night: Leviathan.js)
+		this.bosses = [ new Boss( this, BOSSES.kraken ), new Boss( this, BOSSES.corsair ), new Boss( this, BOSSES.tempest ), new Leviathan( this ) ];
 		this.boss = this.bosses[ 0 ];
 		this.time = 0;
 
@@ -706,7 +708,7 @@ export class Combat {
 
 				if ( ! B.alive ) continue;
 				const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
-				if ( mx * mx + mz * mz > ( B.half.z + 3 + a.distanceTo( b ) ) ** 2 ) continue;
+				if ( mx * mx + mz * mz > ( B.reach + 3 + a.distanceTo( b ) ) ** 2 ) continue;
 				const t = B.intersect( a, b );
 				if ( t >= 0 ) {
 
@@ -758,7 +760,7 @@ export class Combat {
 
 				if ( ! B.alive ) continue;
 				const mx = ( a.x + b.x ) * 0.5 - B.pos.x, mz = ( a.z + b.z ) * 0.5 - B.pos.z;
-				if ( mx * mx + mz * mz < ( B.half.z + 3 + a.distanceTo( b ) ) ** 2 ) {
+				if ( mx * mx + mz * mz < ( B.reach + 3 + a.distanceTo( b ) ) ** 2 ) {
 
 					const t = B.intersect( a, b );
 					if ( t >= 0 && t < best ) {
@@ -849,10 +851,8 @@ export class Combat {
 				for ( const B of this.bosses ) {
 
 					if ( ! B.alive || B === target ) continue;
-					// (her hull is long: measured from the nearest point of her centre line)
-					const lx = point.x - B.pos.x, lz = point.z - B.pos.z, fx = Math.sin( B.yaw ), fz = Math.cos( B.yaw );
-					const along = Math.max( - B.half.z + 2, Math.min( B.half.z - 2, lx * fx + lz * fz ) );
-					const d = Math.max( 0, Math.hypot( lx - fx * along, lz - fz * along ) - B.half.x );
+					// (her hull is long: measured from the nearest point of her centre line; the Leviathan's tentacles)
+					const d = B.splashDist( point );
 					if ( d < p.splash ) {
 
 						const killed = B.damage( p.dmg * ( 1 - d / p.splash ) * 0.8, true, this._ctx );

@@ -7,6 +7,7 @@ import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
 import { BOSS, BOSSES, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
 import { MissileBattery } from '../src/game/combat/Missiles.js';
+import { Leviathan, LEVIATHAN, leviathanPose, isNight, tentacleJoints, slamHits } from '../src/game/combat/Leviathan.js';
 import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope, NET_DRAG, TOW_MAX } from '../src/game/Trawl.js';
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { BoatController } from '../src/player/BoatController.js';
@@ -1048,6 +1049,106 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	st.save();
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
 	ok( st2.load() && st2.diving.found[ 0 ] === 'w1-0' && st2.diving.opened[ 'w1-0-c0' ] === 123 && st2.diving.maps[ 0 ].id === 'tx', 'wrecks found, chests opened and treasure maps are saved' );
+
+}
+// ---- 1.20: the Leviathan, a sea monster that rises in the Deadwater at night
+{
+
+	const L = LEVIATHAN;
+	const gun = UPGRADES.gun.levels[ UPGRADES.gun.levels.length - 1 ];
+	const can = UPGRADES.cannon.levels[ UPGRADES.cannon.levels.length - 1 ];
+	const loader = UPGRADES.locker.levels[ UPGRADES.locker.levels.length - 1 ];
+	const dps = gun.gunDmg * gun.gunRate + can.canDmg * can.canRate * loader.canRateMul;
+	const pools = Object.values( BOSSES ).map( ( b ) => b.pool );
+	ok( L.hp / dps > 60 && L.pool > Math.max( ...pools ), `the Leviathan: ${ L.hp.toLocaleString() } hp (${ Math.round( L.hp / dps ) } s of the best guns), the biggest prize at sea ($${ L.pool.toLocaleString() })` );
+	let inTier3 = true, apart = Infinity;
+	for ( let t = 1.8e9; t < 1.8e9 + 3600; t += 7 ) {
+
+		const p = leviathanPose( t );
+		const z = dangerZoneAt( p.x, p.z );
+		if ( ! z || z.tier !== 3 ) inTier3 = false;
+		for ( const b of Object.values( BOSSES ) ) {
+
+			const q = bossPose( t, b );
+			apart = Math.min( apart, Math.hypot( p.x - q.x, p.z - q.z ) );
+
+		}
+
+	}
+
+	ok( inTier3 && apart > 1000, `she roams the north of the Deadwater (never nearer than ${ Math.round( apart ) } m to another boss)` );
+	ok( isNight( 22 ) && isNight( 3 ) && ! isNight( 12 ) && ! isNight( 19 ) && ! isNight( 6 ) && ! isNight( NaN ), 'she rises only at night (19:30 to 05:30)' );
+	const base = new Vector3( 10, - 2, 20 ), len = L.segs * L.segLen;
+	const upright = tentacleJoints( base, 0, new Array( L.segs ).fill( 0 ) );
+	const flat = tentacleJoints( base, Math.PI / 2, [ Math.PI / 2, ...new Array( L.segs - 1 ).fill( 0 ) ] );
+	const tip = flat[ flat.length - 1 ];
+	ok( Math.abs( upright[ L.segs ].y - ( - 2 + len ) ) < 1e-6 && Math.abs( tip.x - ( 10 + len ) ) < 1e-6 && Math.abs( tip.y + 2 ) < 1e-6 && Math.abs( tip.z - 20 ) < 1e-6, `a tentacle is ${ len.toFixed( 1 )} m of jointed segments, bending toward what it faces` );
+	ok( slamHits( base, 0, { x: 10, z: 32 }, 1.6, 4 ) && ! slamHits( base, 0, { x: 18, z: 32 }, 1.6, 4 ) && ! slamHits( base, 0, { x: 10, z: 5 }, 1.6, 4 ) && ! slamHits( base, 0, { x: 10, z: 50 }, 1.6, 4 ), 'a slam lands on a boat under it, not one that has steered 8 m off its line (or is beyond it)' );
+	// a night with her: a boat lying still near her head
+	const scene = new Group();
+	let hurt = 0;
+	const boat = { position: new Vector3(), velocity: new Vector3(), getYaw: () => 0 };
+	const fx = { splash() {}, explosion() {}, hit() {}, burn() {}, smoulder() {} };
+	const settings = { timeOfDay: 23 };
+	const combat = {
+		app: { scene, settings, boatCtl: boat, query: { allocate: () => 0, setPoint() {}, cpuValid: false }, camera: { position: new Vector3() } },
+		game: { toast() {}, state: { pirate: { piratesSunk: 0, bounties: 0 }, earn() {} } },
+		time: 0, fx, sfx: { shot() {} }, hitHalf: new Vector3( 1.6, 1, 4 ), aboard: true,
+		damagePlayer( d ) { hurt += d; },
+	};
+	const lev = new Leviathan( combat );
+	let now = 1.9e9;
+	lev.clock = () => now;
+	const P = leviathanPose( now );
+	boat.position.set( P.x + 60, 0, P.z );
+	combat.app.camera.position.copy( boat.position );
+	const ctx = { fx, playerPos: boat.position, playerVel: boat.velocity, playerSpeed: 0, playerAboard: true, playerSafe: false, playerDead: false, playerZoneLoose: dangerZoneAt( boat.position.x, boat.position.z ) };
+	let maxUp = 0;
+	const run = ( s ) => {
+
+		for ( let i = 0; i < s * 30; i ++ ) {
+
+			now += 1 / 30;
+			combat.time += 1 / 30;
+			// (lying still where she found it: her head swims on, about 90 m in the fight)
+			boat.position.set( P.x + 60, 0, P.z );
+			boat.velocity.set( 0, 0, 0 );
+			lev.update( 1 / 30, ctx );
+			maxUp = Math.max( maxUp, lev.tentacles.filter( ( t ) => t.up && t.state !== 'sink' ).length );
+
+		}
+
+	};
+
+	run( 40 );
+	// (about 40 hp/s to a boat that never moves: like the Kraken's guns, and a battleship-plated hull lasts
+	// a fight; a boat that steers out from under the slams takes far less)
+	ok( lev.alive && lev.hunting && maxUp >= 3 && hurt > 600 && hurt < 2200, `at night she surfaces and hunts a boat close by: ${ maxUp } tentacles up round it, ${ Math.round( hurt ) } damage in 40 s to a boat that never moved` );
+	// shoot a tentacle: the shot hits it, it's cut and sinks, and it all counts against her
+	const tt = lev.tentacles.find( ( t ) => t.state === 'sway' || t.state === 'lift' || t.state === 'rear' );
+	let cut = false, t0 = - 1;
+	if ( tt ) {
+
+		const j = tt.joints[ 4 ];
+		// (a short shot: a long one could pass through another tentacle first)
+		t0 = lev.intersect( new Vector3( j.x - 3, j.y, j.z - 0.1 ), new Vector3( j.x + 3, j.y, j.z + 0.1 ) );
+		lev.damage( L.severHp + 10, true, ctx );
+		cut = tt.state === 'sink' && tt.cut;
+
+	}
+
+	ok( t0 > 0.15 && t0 < 0.85 && cut && lev.myDmg === L.severHp + 10 && lev.intersect( new Vector3( P.x, 50, P.z ), new Vector3( P.x + 1, 49, P.z ) ) < 0, `a shot through a tentacle hits it (at ${ t0.toFixed( 2 ) }); enough fire cuts it, and every hit hurts her` );
+	// sunrise: she dives, and the tentacles go with her
+	settings.timeOfDay = 7;
+	run( 12 );
+	ok( ! lev.alive && ! lev.hunting && lev.tentacles.every( ( t ) => ! t.up ) && lev.myDmg === L.severHp + 10, 'at sunrise she dives (keeping her wounds) and her tentacles sink' );
+	// her death: everyone who hurt her is paid
+	settings.timeOfDay = 1;
+	run( 8 );
+	let paid = 0;
+	combat.game.state.earn = ( c ) => { paid += c; };
+	lev.damage( L.hp, true, ctx );
+	ok( lev.state === 'sinking' && paid === L.pool, `killed alone she pays $${ paid.toLocaleString() }` );
 
 }
 console.log( `value check ${ value }` );

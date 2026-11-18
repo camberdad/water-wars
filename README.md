@@ -87,6 +87,14 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
      (60,000 hp; the purple skull on the minimap) worth $1,000,000. She fires big, slow missiles (35 kn) that
      home on you and hit for up to 300 in a 15 m blast. Turn hard across a missile's path as it closes in,
      outrun it in a fast boat, or shoot it down with the deck gun; a boat that sits still takes the hit.
+     And at night a sea monster rises in the north of the Deadwater: **the Leviathan** (110,000 hp; the
+     green eye on the minimap, after dark only: 19:30 to 05:30 on the clock in the settings, or press `T` to
+     let the day run) worth $1,500,000, the biggest prize at sea. Come within 240 m of her head and her
+     23 m tentacles rise out of the sea round your boat. One rears up and leans back (a warning flashes),
+     then crashes down along its line for 180 damage: steer out from under it. Now and then one coils over
+     the gunwale and holds the boat while it crushes the hull: shoot it to break free. Shoot the tentacles
+     (enough fire cuts one, and another rises) or her head: all of it hurts her. More tentacles rise as she
+     weakens. At sunrise she dives again, keeping her wounds until her next generation.
   Past 2,400 m is the edge of the charted sea: the current turns you back.
   - *Coast guard* (grey, flashing lights) come after you once you're wanted.
 - **Wanted level.** Attacking fishers, traders or the coast guard earns you stars. From ★★ the coast guard
@@ -175,8 +183,9 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/combat/Combat.js` | Aiming and firing from the helm, hit tests, damage, ramming, sinking and respawn, wanted level, bounties, looting, harbour services |
 | `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
 | `src/game/Diving.js` | Treasure diving: the sunken wrecks (placed from the seabed, the same for everyone), their chests and loot, treasure maps, air and blackouts, the sharks, the air bar |
-| `src/game/combat/Boss.js` | The bosses (one class, a config each): the Iron Kraken (the fishing ship's hull at 34 m, tier 3) and the Crimson Corsair (the old launch's hull at 22 m, tier 2): clock-driven patrols, guns, shared health and plunder, health bars |
+| `src/game/combat/Boss.js` | The bosses (one class, a config each): the Iron Kraken (the fishing ship's hull at 34 m, tier 3), the Black Tempest (the WaveCutter's hull at 28 m, tier 3) and the Crimson Corsair (the old launch's hull at 22 m, tier 2): clock-driven patrols, guns, shared health and plunder, health bars |
 | `src/game/PauseMenu.js` | The Escape menu: resume, settings, return to the home dock, exit to the title screen |
+| `src/game/combat/Leviathan.js` | The Leviathan, the night boss of the Deadwater: a sea monster (a Boss of her own kind) whose head surfaces after dark, with jointed tentacles that rise round your boat to slam it or grab it; hits on the tentacles and her head, cutting tentacles |
 | `src/game/combat/Missiles.js` | The Black Tempest's missiles: launch racks, homing with a limited turn rate and a committed final run, proximity fuse, blast damage, shooting them down |
 | `src/game/combat/CombatFX.js` | Tracers, cannon shells, muzzle flashes, fire, smoke, splinters, water splashes (through the ocean's spray particles) |
 | `src/game/combat/WeaponModels.js` | Procedural deck guns, cannons, the pirate flag and the coast-guard light bar |
