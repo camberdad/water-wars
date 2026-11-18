@@ -105,6 +105,17 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   weapon and the harpoon, the fish finder, deck lights and stern rod holders are fitted to one boat (a new
   boat starts with the basics). Your tackle (rod, reel, line, bait, chum) goes with you onto every boat. You can walk the deck
   of every boat (its walkable deck is worked out from the model: rails, cabins and deck fittings are solid).
+- **Treasure diving.** Twelve sunken wrecks lie on the seabed in the danger tiers: four in the Shallows
+  (10 to 30 m), five in the Open Sea (25 to 55 m) and three in the Deadwater (55 to 89 m), in the same places for
+  every player. Your **fish finder** picks one up when you pass over it (the depth shows on the sonar readout) and
+  it goes on the minimap (an anchor); swimming close finds one too. Stop the boat, leave the helm and go over the
+  side (the anchor goes down), then dive with `C`. Each wreck has a chest or two beside it: `E` opens one for
+  gold (better the further out), now and then a piece of **rare gear** (a free level of your tackle or scuba gear)
+  or a **treasure map**: a gold X on the minimap where a buried chest worth about three times as much is waiting.
+  Opened chests fill again after half an hour. Watch your **air** (the bar at the bottom): it lasts as long as your
+  scuba gear allows, three times faster below its depth rating, and refills at the surface. Run out and you black
+  out and are hauled back aboard for a rescue fee. **Sharks** patrol the Open Sea and Deadwater wrecks (one and
+  two, and one more at buried treasure): they circle, then charge, and a bite costs you a fifth of your air.
 - **Upgrades** come from Marta at the chandlery, or from **harbour services** (`U` by the pier or at a sea station):
   - **Boat:** hull armour (up to battleship plating, 1,600 hp), engine (up to a hydrofoil jet drive), fish
     hold (up to 2,646 lb), fuel tank (up to 317 gal), damage control (up to a self-sealing nano hull), and
@@ -115,6 +126,9 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
   - **Fishing:** line (up to 400 lb titanium), reel (up to a hydraulic winch), rod (up to a pro offshore
     rod), fish finder, deck lights, **bait & lures** (up to twice the epic and legendary bites) and **chum**
     (fish bite up to twice as soon)
+  - **Diving:** scuba gear, your own kit like your tackle: holding your breath (35 s, rated 15 m) → mask,
+    snorkel and fins ($2,500) → scuba tank ($12,000, 2:30, 40 m) → twin tanks and a dive computer ($40,000,
+    5:00, 70 m) → closed-circuit rebreather ($120,000, 10:00, 100 m). Each level swims faster, too
   - **Services:** diesel, hull repairs, paying off fines; every service point also buys your catch
 
 | Key | Action |
@@ -125,6 +139,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | Left mouse | At the helm: fire the deck gun · on foot/deck: cast, strike, reel |
 | Right mouse | At the helm: fire the bow cannon · on foot/deck: reel in |
 | G | Loot a wreck alongside |
+| E (diving) | Open a treasure chest on the seabed, or dig up buried treasure |
 | Q | At the helm: fire the harpoon at a giant fish · hold to cut the tether |
 | U | Harbour services (alongside the pier in your boat, on foot at the kiosk on the end of the main dock, or at a sea station) |
 | V | Boat camera, 1st / 3rd person |
@@ -159,6 +174,7 @@ to the home screen, with a button that saves your progress and installs it. The 
 |---|---|
 | `src/game/combat/Combat.js` | Aiming and firing from the helm, hit tests, damage, ramming, sinking and respawn, wanted level, bounties, looting, harbour services |
 | `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
+| `src/game/Diving.js` | Treasure diving: the sunken wrecks (placed from the seabed, the same for everyone), their chests and loot, treasure maps, air and blackouts, the sharks, the air bar |
 | `src/game/combat/Boss.js` | The bosses (one class, a config each): the Iron Kraken (the fishing ship's hull at 34 m, tier 3) and the Crimson Corsair (the old launch's hull at 22 m, tier 2): clock-driven patrols, guns, shared health and plunder, health bars |
 | `src/game/PauseMenu.js` | The Escape menu: resume, settings, return to the home dock, exit to the title screen |
 | `src/game/combat/Missiles.js` | The Black Tempest's missiles: launch racks, homing with a limited turn rate and a committed final run, proximity fuse, blast damage, shooting them down |
@@ -262,7 +278,7 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | Mouse | Look (click to capture the mouse, Esc to release) |
 | Shift | Sprint / boat boost |
 | Space | Jump / swim up |
-| C | Crouch / dive |
+| C | Crouch / dive (swimming: down to the wrecks) |
 | E | Interact: board the boat, take or leave the helm, step ashore, trade with the fish buyer or the chandlery |
 | V | Boat camera at the helm (1st / 3rd person) |
 | R | Take out / put away the fishing rod |

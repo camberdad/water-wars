@@ -3,7 +3,7 @@ import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE,
 import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances, TIER_ODDS } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
 import { GameState } from '../src/game/GameState.js';
-import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack } from '../src/game/Gear.js';
+import { gearStats, defaultUpgrades, UPGRADES, FUEL_PRICE, fuelBurn, isBoatTrack, CATEGORIES } from '../src/game/Gear.js';
 import { BOATS, berthX } from '../src/game/BoatCatalog.js';
 import { BOSS, BOSSES, BOSS_MODEL, bossPose, bossGen, bossPayout } from '../src/game/combat/Boss.js';
 import { MissileBattery } from '../src/game/combat/Missiles.js';
@@ -11,6 +11,8 @@ import { rollNetItem, PROTECTED, TRAWL_IDS, protectedLeft, followRope, NET_DRAG,
 import { dangerZoneAt, DANGER_ZONES } from '../src/game/DangerZones.js';
 import { BoatController } from '../src/player/BoatController.js';
 import { BoatModel } from '../src/world/BoatModel.js';
+import { TerrainData } from '../src/world/TerrainData.js';
+import { placeWrecks, rollLoot, breathe, WRECK_PLAN, LOOT, MAP_MUL } from '../src/game/Diving.js';
 import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged, SharedWeather } from '../src/game/Weather.js';
@@ -210,7 +212,7 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	st.save();
 	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
 	ok( st2.load() && st2.wanted === 3 && st2.pirate.piratesSunk === 2 && st2.upgrades.armor === 1, 'combat state round-trips through the save' );
-	ok( Object.values( UPGRADES ).every( ( t ) => [ 'boat', 'weapons', 'fishing' ].includes( t.cat ) && t.levels[ 0 ].cost === 0 ), 'every upgrade track has a shop tab and a free first level' );
+	ok( Object.values( UPGRADES ).every( ( t ) => CATEGORIES.some( ( c ) => c.id === t.cat ) && t.levels[ 0 ].cost === 0 ), 'every upgrade track has a shop tab and a free first level' );
 
 }
 // ---- Water Wars: bought boats and the danger waters
@@ -998,6 +1000,54 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	}
 
 	ok( calls === 120 && panels >= 1 && panels <= 3, `the shared weather applies every frame (${ calls } in 2 s) and refreshes the settings sliders once a second (${ panels })` );
+
+}
+// ---- 1.19: treasure diving
+{
+
+	const T = new TerrainData();
+	const wrecks = placeWrecks( T ), again = placeWrecks( T );
+	const byTier = { 1: [], 2: [], 3: [] };
+	for ( const w of wrecks ) byTier[ w.tier ].push( w );
+	const okDepth = wrecks.every( ( w ) => {
+
+		const [ , , [ d0, d1 ] ] = WRECK_PLAN.find( ( p ) => p[ 0 ] === w.tier );
+		const z = dangerZoneAt( w.x, w.z );
+		return - w.y >= d0 && - w.y <= d1 && z && z.tier === w.tier && Math.abs( w.x ) <= 1010 && Math.abs( w.z ) <= 1010;
+
+	} );
+	ok( WRECK_PLAN.every( ( [ t, n ] ) => byTier[ t ].length === n ) && okDepth && JSON.stringify( wrecks ) === JSON.stringify( again ), `wrecks on the seabed: ${ WRECK_PLAN.map( ( [ t ] ) => byTier[ t ].map( ( w ) => Math.round( - w.y ) + ' m' ).join( ', ' ) ).join( ' | ' ) } (tiers 1 | 2 | 3), the same for every player` );
+	ok( wrecks.every( ( w ) => w.chests.length >= 1 && w.chests.every( ( c ) => Math.hypot( c.x - w.x, c.z - w.z ) < 10 ) ), 'each wreck has its chests beside it' );
+	// loot: better the further out; rare gear only for kit that isn't maxed
+	const avg = ( t ) => { let s = 0; for ( let i = 0; i < 400; i ++ ) s += rollLoot( t, defaultUpgrades(), rng ).cash; return s / 400; };
+	const a1 = avg( 1 ), a2 = avg( 2 ), a3 = avg( 3 );
+	const maxed = defaultUpgrades();
+	for ( const k of [ 'line', 'reel', 'rod', 'bait', 'chum', 'scuba' ] ) maxed[ k ] = UPGRADES[ k ].levels.length - 1;
+	let gearMaxed = 0;
+	for ( let i = 0; i < 400; i ++ ) if ( rollLoot( 3, maxed, rng ).gear ) gearMaxed ++;
+	ok( a1 < a2 && a2 < a3 && a3 > 50000 && gearMaxed === 0, `chests pay more the further out (${ Math.round( a1 ).toLocaleString() } / ${ Math.round( a2 ).toLocaleString() } / ${ Math.round( a3 ).toLocaleString() } on average), and never offer gear you've maxed` );
+	ok( rollLoot( 2, defaultUpgrades(), () => 0.999, MAP_MUL ).cash > LOOT[ 2 ].cash[ 1 ] * 2 && ! rollLoot( 2, defaultUpgrades(), () => 0, MAP_MUL ).map, 'a treasure-map chest pays about three times as much (and holds no further map)' );
+	// air: the gear's rating matters
+	let air = 150, deep = 150;
+	for ( let i = 0; i < 60; i ++ ) {
+
+		air = breathe( air, 150, 1, true, 30, 40 );
+		deep = breathe( deep, 150, 1, true, 60, 40 );
+
+	}
+
+	ok( air === 90 && deep === 0 && breathe( 0, 150, 1, false, 0, 40 ) > 30, 'air lasts its full time within the gear\'s depth rating, three times faster below it, and refills at the surface' );
+	ok( UPGRADES.scuba && UPGRADES.scuba.cat === 'diving' && ! isBoatTrack( 'scuba' ) && UPGRADES.scuba.levels.every( ( l, i, a ) => ! i || ( l.airS > a[ i - 1 ].airS && l.depthRating > a[ i - 1 ].depthRating ) ), 'scuba gear: your own kit (it goes with you), each level more air and a deeper rating' );
+	ok( UPGRADES.scuba.levels[ UPGRADES.scuba.levels.length - 1 ].depthRating >= Math.max( ...byTier[ 3 ].map( ( w ) => - w.y ) ), 'the best gear is rated for the deepest wreck' );
+	// the save
+	const m = new Map();
+	const st = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) } );
+	st.diving.found.push( 'w1-0' );
+	st.diving.opened[ 'w1-0-c0' ] = 123;
+	st.diving.maps.push( { id: 'tx', tier: 2, x: 1, y: - 30, z: 2 } );
+	st.save();
+	const st2 = new GameState( { getItem: ( k ) => m.get( k ) ?? null, setItem: () => {} } );
+	ok( st2.load() && st2.diving.found[ 0 ] === 'w1-0' && st2.diving.opened[ 'w1-0-c0' ] === 123 && st2.diving.maps[ 0 ].id === 'tx', 'wrecks found, chests opened and treasure maps are saved' );
 
 }
 console.log( `value check ${ value }` );

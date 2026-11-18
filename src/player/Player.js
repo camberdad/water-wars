@@ -318,7 +318,7 @@ export class Player {
 		if ( atSurface && wish.y > - 0.25 && ! inp.down( 'KeyC' ) ) wish.y = Math.max( wish.y, 0 );
 
 		const sprint = inp.down( 'ShiftLeft' ) || inp.down( 'ShiftRight' );
-		const speed = sprint ? 2.5 : 1.5;
+		const speed = ( sprint ? 2.5 : 1.5 ) * ( this.swimMul || 1 ); // (1.19: fins: Diving sets swimMul)
 		const k = 1 - Math.exp( - dt * 3.0 );
 		this.velocity.lerp( wish.multiplyScalar( speed ), k );
 
@@ -489,7 +489,9 @@ export class Player {
 		let best = side ? null : this.ashoreTarget();
 
 		const dock = WORLD.boatDock.position;
-		if ( b.position.distanceTo( dock ) < 14 && b.speed < 1.5 ) {
+		// at the dock she's tied up; at sea (1.19) the anchor goes down, so she's there when you come up
+		// from a dive
+		if ( ( b.position.distanceTo( dock ) < 14 || ! target ) && b.speed < 3 ) {
 
 			b.moored = true;
 			b.mooring.anchor.set( b.position.x, 0, b.position.z );

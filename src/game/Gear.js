@@ -72,6 +72,16 @@ export const UPGRADES = {
 		{ cost: 40000, label: 'Automatic chum dispenser', biteMul: 0.5 },
 	] },
 
+	// ---------------------------------------------------------------- diving (Water Wars 1.19: src/game/Diving.js)
+	// airS: seconds of air; diveMul: swimming speed x; depthRating: m, below which the air goes 3x as fast
+	scuba: { cat: 'diving', name: 'Scuba gear', levels: [
+		{ cost: 0, label: 'Holding your breath', airS: 35, diveMul: 1, depthRating: 15 },
+		{ cost: 2500, label: 'Mask, snorkel and fins', airS: 55, diveMul: 1.25, depthRating: 20 },
+		{ cost: 12000, label: 'Scuba tank', airS: 150, diveMul: 1.4, depthRating: 40 },
+		{ cost: 40000, label: 'Twin tanks and a dive computer', airS: 300, diveMul: 1.6, depthRating: 70 },
+		{ cost: 120000, label: 'Closed-circuit rebreather', airS: 600, diveMul: 1.8, depthRating: 100 },
+	] },
+
 	// ---------------------------------------------------------------- boat
 	armor: { cat: 'boat', name: 'Hull armour', levels: [
 		{ cost: 0, label: 'Fibreglass hull', hullHP: 100 },
@@ -181,6 +191,7 @@ export const CATEGORIES = [
 	{ id: 'boat', name: 'Boat' },
 	{ id: 'weapons', name: 'Weapons' },
 	{ id: 'fishing', name: 'Fishing' },
+	{ id: 'diving', name: 'Diving' },
 ];
 
 export const FUEL_PRICE = 20; // $ per litre of diesel (Water Wars 1.6: was $1.50)
@@ -206,7 +217,7 @@ export function nextLevel( upgrades, key ) {
 // Water Wars 1.11: everything fitted to a boat (engine, armour, hold, tanks, pumps, salvage gear, every
 // weapon, the fish finder, deck lights, stern rod holders) is bought for each boat separately; your own
 // tackle (rod, reel, line, bait, chum) goes with you onto every boat
-export const CAPTAIN_TRACKS = new Set( [ 'line', 'reel', 'rod', 'bait', 'chum' ] );
+export const CAPTAIN_TRACKS = new Set( [ 'line', 'reel', 'rod', 'bait', 'chum', 'scuba' ] );
 export const isBoatTrack = ( key ) => !! UPGRADES[ key ] && ! CAPTAIN_TRACKS.has( key );
 export const BOAT_TRACKS = Object.keys( UPGRADES ).filter( isBoatTrack );
 

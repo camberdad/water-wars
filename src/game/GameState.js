@@ -31,6 +31,8 @@ export class GameState {
 		this.pirate = PIRATE_STATS();
 		this.boat = 'lobster'; // the boat in use (BoatCatalog)
 		this.boats = [ 'lobster' ]; // boats owned
+		// treasure diving (1.19): { opened: { chest id: unix s }, found: [ wreck ids ], maps: [ { id, tier, x, y, z } ] }
+		this.diving = { opened: {}, found: [], maps: [] };
 		this._nextId = 1;
 		this.listeners = new Set();
 
@@ -318,7 +320,7 @@ export class GameState {
 	toJSON() {
 
 		this.stashBoatGear();
-		return { v: 1, money: this.money, earned: this.earned, furthest: this.furthest, boatGear: this.boatGear, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats };
+		return { v: 1, money: this.money, earned: this.earned, furthest: this.furthest, boatGear: this.boatGear, inventory: this.inventory, log: this.log, upgrades: this.upgrades, fuel: this.fuel, nextId: this._nextId, hull: this.hull, shells: this.shells, wanted: this.wanted, pirate: this.pirate, boat: this.boat, boats: this.boats, diving: this.diving };
 
 	}
 
@@ -340,6 +342,12 @@ export class GameState {
 		this.shells = Number.isFinite( d.shells ) ? d.shells : 5;
 		this.wanted = Number.isFinite( d.wanted ) ? d.wanted : 0;
 		this.pirate = { ...PIRATE_STATS(), ...( d.pirate && typeof d.pirate === 'object' ? d.pirate : {} ) };
+		const dv = d.diving && typeof d.diving === 'object' ? d.diving : {};
+		this.diving = {
+			opened: dv.opened && typeof dv.opened === 'object' ? dv.opened : {},
+			found: Array.isArray( dv.found ) ? dv.found.filter( ( x ) => typeof x === 'string' ) : [],
+			maps: Array.isArray( dv.maps ) ? dv.maps.filter( ( m ) => m && [ m.x, m.y, m.z, m.tier ].every( Number.isFinite ) ).slice( 0, 6 ) : [],
+		};
 		this.boats = Array.isArray( d.boats ) ? [ 'lobster', ...d.boats.filter( ( b ) => BOATS[ b ] && b !== 'lobster' ) ] : [ 'lobster' ];
 		this.boat = this.boats.includes( d.boat ) ? d.boat : 'lobster';
 		// each boat's own gear; a save from before 1.11 had one set for every boat: each boat you own keeps it
@@ -411,6 +419,7 @@ export class GameState {
 		this.pirate = PIRATE_STATS();
 		this.boat = 'lobster';
 		this.boats = [ 'lobster' ];
+		this.diving = { opened: {}, found: [], maps: [] };
 		this.save();
 		this.emit();
 

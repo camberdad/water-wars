@@ -19,6 +19,7 @@ import { Multiplayer } from './Multiplayer.js';
 import { SharedWeather } from './Weather.js';
 import { Trawl } from './Trawl.js';
 import { PauseMenu } from './PauseMenu.js';
+import { Diving } from './Diving.js';
 import { HighScores } from './HighScores.js';
 import { SternRods } from './SternRods.js';
 import { dangerZoneAt } from './DangerZones.js';
@@ -82,6 +83,8 @@ export class Game {
 		this.trawl = new Trawl( this );
 		// the Escape menu (1.15): resume, settings, back to the home dock, the title screen
 		this.pause = new PauseMenu( this );
+		// treasure diving (1.19): wrecks, chests, air, sharks
+		this.diving = new Diving( this );
 		// Space passes the catch cards and closes the cooler and shop panels (as E / Esc / a click do).
 		// Caught here, before the player sees it, so the same press doesn't also jump.
 		this._space = false;
@@ -229,6 +232,7 @@ export class Game {
 		// the stern rods first: grabbing one may take you from the helm to the deck with a fish on
 		this.sternRods.update( dt );
 		this.trawl.update( dt );
+		this.diving.update( dt );
 
 		const can = this.canFish;
 		if ( inp.hit( 'KeyR' ) && can && ! this.fight ) {
@@ -354,7 +358,7 @@ export class Game {
 		if ( this.hud && this.hud.portrait ) this.hud.portrait.update( dt );
 		if ( this.hud ) this.hud.update( {
 			fuel: aboard ? { litres: this.state.fuelL, tank: this.state.stats.fuelL } : null,
-			sonar: aboard && this.state.stats.finder ? this._sonar : null,
+			sonar: aboard && this.state.stats.finder && this._sonar ? { ...this._sonar, wreck: this._sonarWreck || null } : null,
 			fight: this.fight,
 			casting: rod.state === 'windup',
 			power: rod.power,

@@ -289,7 +289,8 @@ export class GameHUD {
 		this.sonarEl.classList.toggle( 'is-on', !! sonar );
 		if ( sonar ) {
 
-			this.sonarD.textContent = U.depth( sonar.depth );
+			// (1.19: a wreck on the seabed near the boat)
+			this.sonarD.textContent = U.depth( sonar.depth ) + ( sonar.wreck ? ` · ⚓ wreck ${ U.depth( sonar.wreck.depth ) } down` : '' );
 			const n = Math.round( sonar.fish * 4 );
 			this.sonarDots.textContent = '●'.repeat( n ) + '○'.repeat( 4 - n );
 
@@ -576,6 +577,7 @@ function describe( key, lv ) {
 		case 'bait': return lv.luck > 1 ? `rare fish ×${ lv.luck.toFixed( 2 ).replace( /0$/, '' ) }` : 'no bonus';
 		case 'rodHolders': return lv.sternRods ? `${ lv.sternRods } extra rod${ lv.sternRods > 1 ? 's' : '' } fishing astern in tiers 2-3 (B to grab a bite)` : 'no stern rods';
 		case 'trawl': return lv.trawlNet ? `up to ${ lv.netSize } a haul · fills ${ lv.netRate }× as fast (N at sea)` : 'no net';
+		case 'scuba': return `${ Math.floor( lv.airS / 60 ) }:${ String( lv.airS % 60 ).padStart( 2, '0' ) } of air · rated ${ lv.depthRating } m · swim ${ Math.round( lv.diveMul * 100 ) }%`;
 		case 'chum': return lv.biteMul < 1 ? `bites ${ Math.round( ( 1 / lv.biteMul - 1 ) * 100 ) }% sooner` : 'no chum';
 		case 'targeting': return lv.aimMul < 1 ? `${ Math.round( ( 1 - lv.aimMul ) * 100 ) }% tighter spread` : 'no aid';
 		case 'harpoon': return lv.harpoon ? `${ U.ft( lv.harpRange ) } · tires a giant ${ lv.harpPower }× as fast` : 'no harpoon';
