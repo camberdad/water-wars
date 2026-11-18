@@ -95,7 +95,7 @@ const CARDS = [
 			${ row( k( 'B' ), '<b>Grab a stern rod</b> when one bends over (the stern rod holder upgrade: extra rods fish astern while the boat is stopped)' ) }
 			${ row( k( 'N' ), '<b>Trawl net</b> out and in (the trawl net upgrade): tow it slowly, then sort the catch. Dolphins, seals, turtles and manatees go back into the sea' ) }
 			${ row( k( 'C' ), '<b>Dive</b> for treasure: the fish finder marks sunken wrecks in the danger tiers. Go over the side, dive, and press <b>E</b> by a chest. Watch your air (scuba gear in the Diving tab) and the sharks' ) }
-			${ row( k( 'Esc' ), '<b>Menu</b>: resume, settings, <b>return to the home dock</b> (your boat back at its berth, when you are out of a fight) or exit to the title screen' ) }
+			${ row( k( 'Esc' ), '<b>Menu</b>: resume, settings, <b>return to the home dock</b> (your boat back at its berth, when you are out of a fight) or exit to the title screen. Its <b>Audio</b> tab sets the volumes: the sea, your engine, fishing and the guns (M mutes)' ) }
 			${ row( k( 'K' ), '<b>High scores</b>: the live board of every captain, ranked by lifetime earnings' ) }
 			${ row( k( 'U' ), '<b>Harbour services</b> in your boat by the pier, on foot at the kiosk on the end of the main dock, or at the eight sea stations and outposts: repairs, upgrades, boats, sell your catch. All are <b>safe zones</b>' ) }
 		</div>

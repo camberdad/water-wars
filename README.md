@@ -148,6 +148,7 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 | Right mouse | At the helm: fire the bow cannon · on foot/deck: reel in |
 | G | Loot a wreck alongside |
 | E (diving) | Open a treasure chest on the seabed, or dig up buried treasure |
+| Esc | The menu: resume, settings, the home dock, the title screen, and the **Audio** tab: a master volume and one each for the sea & nature, your boat's engine, fishing & effects and guns & explosions, mute and reset (kept in this browser) |
 | Q | At the helm: fire the harpoon at a giant fish · hold to cut the tether |
 | U | Harbour services (alongside the pier in your boat, on foot at the kiosk on the end of the main dock, or at a sea station) |
 | V | Boat camera, 1st / 3rd person |
@@ -184,7 +185,8 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/combat/NPCBoats.js` | The other boats: factions, hull paint, AI (cruise, fish, flee, attack, circle), their guns, wrecks and sinking |
 | `src/game/Diving.js` | Treasure diving: the sunken wrecks (placed from the seabed, the same for everyone), their chests and loot, treasure maps, air and blackouts, the sharks, the air bar |
 | `src/game/combat/Boss.js` | The bosses (one class, a config each): the Iron Kraken (the fishing ship's hull at 34 m, tier 3), the Black Tempest (the WaveCutter's hull at 28 m, tier 3) and the Crimson Corsair (the old launch's hull at 22 m, tier 2): clock-driven patrols, guns, shared health and plunder, health bars |
-| `src/game/PauseMenu.js` | The Escape menu: resume, settings, return to the home dock, exit to the title screen |
+| `src/game/PauseMenu.js` | The Escape menu: resume, settings, return to the home dock, exit to the title screen; its Audio tab (the volumes) |
+| `src/audio/AudioSettings.js` | The player's sound settings: the master volume, a volume for each group of sounds (sea & nature, boat, fishing & effects, guns & explosions) and mute; saved in the browser, applied to the soundscape's groups |
 | `src/game/combat/Leviathan.js` | The Leviathan, the night boss of the Deadwater: a sea monster (a Boss of her own kind) whose head surfaces after dark, with jointed tentacles that rise round your boat to slam it or grab it; hits on the tentacles and her head, cutting tentacles |
 | `src/game/combat/Missiles.js` | The Black Tempest's missiles: launch racks, homing with a limited turn rate and a committed final run, proximity fuse, blast damage, shooting them down |
 | `src/game/combat/CombatFX.js` | Tracers, cannon shells, muzzle flashes, fire, smoke, splinters, water splashes (through the ocean's spray particles) |
@@ -297,7 +299,7 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | F | Free camera |
 | L | Flashlight |
 | T | Pause time |
-| M | Mute |
+| M | Mute (also in the Audio tab of the Esc menu) |
 | H | Settings panel |
 | P | Photo mode |
 | F1 or ? | All controls |

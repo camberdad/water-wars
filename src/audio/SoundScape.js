@@ -15,8 +15,9 @@
 // faint and dull from above), and one-shots on its real events - blow, breach, re-entry, fluke-up dive -
 // all only within 100 m of it.
 //
-// Signal flow
-//   one-shots + beds above water → above ─→ muffle LP ×2 ─→ aboveOut ─┐
+// Signal flow (Water Wars 1.21: every sound goes through one of the player's volume groups, src/audio/
+// AudioSettings.js: nature, boat, effects, combat; marked [nature] etc. below)
+//   one-shots + beds above water → [group] → above ─→ muffle LP ×2 ─→ aboveOut ─┐
 //     surf events → per event HRTF panner (+ air absorption) → above   │
 //     engine → engine LP ─┐                                            │
 //     hull / rush / slaps ┴→ boatSum ─┬→ HRTF panner (at the boat) → above   (from outside)
@@ -27,6 +28,7 @@
 //   whale song → HRTF panner (at the whale) → song LP + gain (open underwater) ─────┤
 //   underwater bed + strokes → under (× underwater) ──────────────────────┤
 //   submerge / emerge → near (unfiltered) ────────────────────────────────┤
+//   guns, explosions (CombatSFX) → near [combat] ──────────────────────────┤
 //   master (volume, mute) → safety limiter → destination ←────────────────┘
 //
 // Levels: every sound has a target loudness (LUFS, momentary) for its reference situation in MIX below;
@@ -136,6 +138,7 @@ export class SoundScape {
 		this._failed = false;
 		this._muted = false;
 		this._volume = 0.8;
+		this._bus = { nature: 1, boat: 1, effects: 1, combat: 1 }; // the player's volume groups (0..1)
 		this._buffers = new Map(); // name -> AudioBuffer
 		this._loading = new Map(); // name -> Promise
 		this._beds = new Map(); // name -> { src, gain, trim }
@@ -256,6 +259,21 @@ export class SoundScape {
 
 	}
 
+	// a volume group (AudioSettings.js: 'nature' | 'boat' | 'effects' | 'combat'), 0..1 (perceptual taper)
+	setBusVolume( id, v ) {
+
+		if ( ! ( id in this._bus ) ) return;
+		this._bus[ id ] = clamp( num( v, this._bus[ id ] ), 0, 1 );
+		this._applyVolume();
+
+	}
+
+	busVolume( id ) {
+
+		return id in this._bus ? this._bus[ id ] : 1;
+
+	}
+
 	// Per frame: listener pose, mixer ramps and surf / life events at ~30 Hz. Cheap.
 	update( dt, state ) {
 
@@ -297,27 +315,27 @@ export class SoundScape {
 	splash( strength ) {
 
 		const s = clamp( num( strength, 0.5 ), 0, 1 );
-		if ( s < 0.6 ) this._shot( 'swim', 'splash', this.above, MIX.splashSoft + s * 6, 0.9 + Math.random() * 0.1 );
-		else this._shot( 'splash', 'splash', this.above, MIX.splash - ( 1 - s ) * 8, 0.95 + Math.random() * 0.1 );
+		if ( s < 0.6 ) this._shot( 'swim', 'splash', this.busFx, MIX.splashSoft + s * 6, 0.9 + Math.random() * 0.1 );
+		else this._shot( 'splash', 'splash', this.busFx, MIX.splash - ( 1 - s ) * 8, 0.95 + Math.random() * 0.1 );
 
 	}
 
 	swimStroke() {
 
 		if ( this.env.u > 0.5 ) this._shot( 'uw_swim', 'swim', this.under, MIX.uwSwim + ( Math.random() - 0.5 ) * 3, 0.9 + Math.random() * 0.2 );
-		else this._shot( 'swim', 'swim', this.above, MIX.swim + ( Math.random() - 0.5 ) * 3, 0.92 + Math.random() * 0.16 );
+		else this._shot( 'swim', 'swim', this.busFx, MIX.swim + ( Math.random() - 0.5 ) * 3, 0.92 + Math.random() * 0.16 );
 
 	}
 
 	submerge() {
 
-		this._shot( 'submerge', 'trans', this.near, MIX.submerge, 0.95 + Math.random() * 0.1 );
+		this._shot( 'submerge', 'trans', this.fxNear, MIX.submerge, 0.95 + Math.random() * 0.1 );
 
 	}
 
 	emerge() {
 
-		this._shot( 'emerge', 'trans', this.near, MIX.emerge, 0.95 + Math.random() * 0.1 );
+		this._shot( 'emerge', 'trans', this.fxNear, MIX.emerge, 0.95 + Math.random() * 0.1 );
 
 	}
 
@@ -395,7 +413,7 @@ export class SoundScape {
 	// the landed fish flapping on the line in front of you
 	fishFlop() {
 
-		this._shot( 'fish_flop', 'rod', this.near, MIX.fishFlop, 0.9 + Math.random() * 0.2 );
+		this._shot( 'fish_flop', 'rod', this.fxNear, MIX.fishFlop, 0.9 + Math.random() * 0.2 );
 
 	}
 
@@ -408,7 +426,7 @@ export class SoundScape {
 	// paid at the fish stand
 	coin() {
 
-		this._shot( 'coins', 'coin', this.near, MIX.coins, 0.97 + Math.random() * 0.06 );
+		this._shot( 'coins', 'coin', this.fxNear, MIX.coins, 0.97 + Math.random() * 0.06 );
 
 	}
 
@@ -504,7 +522,6 @@ export class SoundScape {
 		this.limiter.release.value = 0.25;
 		this.limiter.connect( c.destination );
 		this.master = gain( 0, this.limiter );
-		this._applyVolume();
 
 		this.aboveOut = gain( 1, this.master );
 		const muffle2 = lowpass( 20000, 0.54, this.aboveOut );
@@ -512,42 +529,50 @@ export class SoundScape {
 		this.muffle = [ muffle1, muffle2 ];
 		this.above = gain( 1, muffle1 );
 		this.under = gain( 0, this.master );
-		this.near = gain( 1, this.master );
-		this.foot = gain( 1, this.above );
+		// the volume groups: above water each feeds 'above' (so it's muffled underwater with the rest)
+		this.busNature = gain( 1, this.above );
+		this.busBoat = gain( 1, this.above );
+		this.busFx = gain( 1, this.above );
+		this.natureDirect = gain( 1, this.master ); // (the whale's song, on its own path)
+		this.underBed = gain( 1, this.under ); // (the reef underwater)
+		this.fxNear = gain( 1, this.master ); // (submerging, a fish flopping on deck, coins)
+		this.near = gain( 1, this.master ); // guns and explosions (CombatSFX): the combat group
+		this.foot = gain( 1, this.busFx );
 
 		// distant surf: from the shore direction
-		this.surfPan = panner( this.above, 1, 0 );
+		this.surfPan = panner( this.busNature, 1, 0 );
 		this.surfFar = gain( 1, this.surfPan );
 
 		// the boat: positional from outside; at the helm it surrounds you (through the hull), unpanned
-		this.boatPan = panner( this.above, 3, 1 );
+		this.boatPan = panner( this.busBoat, 3, 1 );
 		this.boatOut = gain( 1, this.boatPan );
-		this.boatIn = gain( 0, this.above );
+		this.boatIn = gain( 0, this.busBoat );
 		this.boatSum = gain( 1, this.boatOut );
 		this.boatSum.connect( this.boatIn );
 		this.engineLP = lowpass( 1200, 0.6, this.boatSum );
-		this.pierPan = panner( this.above, 3, 1.3 );
-		this.windLP = lowpass( 1400, 0.5, this.above );
+		this.pierPan = panner( this.busNature, 3, 1.3 );
+		this.windLP = lowpass( 1400, 0.5, this.busNature );
 
 		// the rod and reel: held in front of you, a little to the right (the reel hangs lower right)
 		this.rodPan = c.createStereoPanner ? c.createStereoPanner() : null;
 		if ( this.rodPan ) {
 
 			this.rodPan.pan.value = 0.25;
-			this.rodPan.connect( this.above );
+			this.rodPan.connect( this.busFx );
 
 		}
 
-		this.rod = gain( 1, this.rodPan || this.above );
+		this.rod = gain( 1, this.rodPan || this.busFx );
 
 		// whale song: positional at the whale, its own path (open underwater, faint and dull from above)
-		this.songOut = gain( dB( - 20 ), this.master );
+		this.songOut = gain( dB( - 20 ), this.natureDirect );
 		this.songLP = lowpass( 420, 0.6, this.songOut );
 		this.songPan = panner( this.songLP, 30, 0.5 );
 
+		this._applyVolume();
 		this._dest = {
-			surf_far: this.surfFar, wind: this.windLP, palms: this.above, crickets: this.above, pier_lap: this.pierPan,
-			under_reef: this.under, birds_dawn: this.above, whale_song: this.songPan,
+			surf_far: this.surfFar, wind: this.windLP, palms: this.busNature, crickets: this.busNature, pier_lap: this.pierPan,
+			under_reef: this.underBed, birds_dawn: this.busNature, whale_song: this.songPan,
 			boat_engine: this.engineLP, boat_rush: this.boatSum, boat_lap: this.boatSum,
 			reel_wind: this.rod, reel_drag: this.rod, line_strain: this.rod,
 		};
@@ -559,6 +584,15 @@ export class SoundScape {
 		if ( ! this.master ) return;
 		const v = this._muted ? 0 : this._volume * this._volume;
 		this._ramp( this.master.gain, v, 0.05 );
+		// the groups (the same taper as the master)
+		const b = this._bus, t = ( x ) => x * x;
+		this._ramp( this.busNature.gain, t( b.nature ), 0.05 );
+		this._ramp( this.natureDirect.gain, t( b.nature ), 0.05 );
+		this._ramp( this.underBed.gain, t( b.nature ), 0.05 );
+		this._ramp( this.busBoat.gain, t( b.boat ), 0.05 );
+		this._ramp( this.busFx.gain, t( b.effects ), 0.05 );
+		this._ramp( this.fxNear.gain, t( b.effects ), 0.05 );
+		this._ramp( this.near.gain, t( b.combat ), 0.05 );
 
 	}
 
@@ -683,7 +717,8 @@ export class SoundScape {
 		if ( ! this.enabled || ! this._want( bank ) ) return null;
 		const c = this.ctx, e = this.env;
 		const d = Math.hypot( x - e.lx, y - e.ly, z - e.lz );
-		const p = this._panner( this.above, ref, rolloff );
+		// (fish splashing and plops are fishing effects; the rest placed in the world is the sea and its life)
+		const p = this._panner( cat === 'fish' ? this.busFx : this.busNature, ref, rolloff );
 		p.positionX.value = x;
 		p.positionY.value = y;
 		p.positionZ.value = z;

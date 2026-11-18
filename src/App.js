@@ -64,6 +64,7 @@ import { BoatSpray } from './player/BoatSpray.js';
 import { WakeSim } from './ocean/WakeSim.js';
 import { Vegetation } from './world/Vegetation.js';
 import { SoundScape } from './audio/SoundScape.js';
+import { loadAudioSettings, saveAudioSettings, applyAudio, readAudio, audioStorage } from './audio/AudioSettings.js';
 import { updateCameraVelocity, useStaticVelocity } from './post/CameraVelocity.js';
 
 const _up = new Vector3( 0, 1, 0 );
@@ -342,6 +343,8 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// ---------------------------------------------------------------- audio
 		// recorded field recordings (public/audio, credits in public/audio/CREDITS.md); ?noAudio turns it off
 		this.audio = qs.has( 'noAudio' ) ? null : new SoundScape();
+		// the player's volumes and mute, from the last visit (1.21: the Audio tab in the Escape menu)
+		applyAudio( this.audio, loadAudioSettings( audioStorage() ) );
 		this.player.audio = this.audio;
 		// the fishing game (rod, bites, catch, cooler, fish stand)
 		this.game = new Game( this );
@@ -622,6 +625,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		if ( this.input.hit( 'KeyM' ) && this.audio ) {
 
 			this.audio.setMuted( ! this.audio.muted );
+			saveAudioSettings( audioStorage(), readAudio( this.audio ) );
 			if ( this.ui ) this.ui.ui.toast( this.audio.muted ? 'Sound off' : 'Sound on' );
 
 		}

@@ -1,5 +1,6 @@
 // Synthesised gunfire for Water Wars (the field-recording bank has no guns): filtered noise bursts
-// with a low thump, routed into the soundscape's "near" bus so the master volume and mute apply.
+// with a low thump, routed into the soundscape's "near" bus (the Guns & explosions volume, 1.21) so the
+// master volume and mute apply.
 // Quietly does nothing until the soundscape has an AudioContext (after the first click).
 
 const PRESETS = {

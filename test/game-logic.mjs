@@ -18,6 +18,8 @@ import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged, SharedWeather } from '../src/game/Weather.js';
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
+import { AUDIO_GROUPS, AUDIO_BUSES, AUDIO_DEFAULTS, AUDIO_KEY, loadAudioSettings, saveAudioSettings, applyAudio, readAudio } from '../src/audio/AudioSettings.js';
+import { SoundScape } from '../src/audio/SoundScape.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -1149,6 +1151,88 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	combat.game.state.earn = ( c ) => { paid += c; };
 	lev.damage( L.hp, true, ctx );
 	ok( lev.state === 'sinking' && paid === L.pool, `killed alone she pays $${ paid.toLocaleString() }` );
+
+}
+// ---- 1.21: audio settings: a volume for each group of sounds, kept in the browser
+{
+
+	// saved and loaded; anything broken or missing falls back to the defaults
+	const m = new Map();
+	const store = { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) };
+	saveAudioSettings( store, { master: 0.5, nature: 0.2, boat: 0, effects: 0.75, combat: 1, muted: true } );
+	const back = loadAudioSettings( store );
+	m.set( AUDIO_KEY, '{"master":7,"boat":"loud","nature":-1}' );
+	const odd = loadAudioSettings( store );
+	m.set( AUDIO_KEY, 'not json' );
+	const junk = loadAudioSettings( store );
+	ok( back.master === 0.5 && back.nature === 0.2 && back.boat === 0 && back.effects === 0.75 && back.muted === true &&
+		odd.master === 1 && odd.boat === AUDIO_DEFAULTS.boat && odd.nature === 0 && ! odd.muted &&
+		JSON.stringify( junk ) === JSON.stringify( AUDIO_DEFAULTS ) && JSON.stringify( loadAudioSettings( null ) ) === JSON.stringify( AUDIO_DEFAULTS ),
+	'audio settings are saved and loaded; out-of-range, wrong or broken ones fall back safely' );
+	ok( AUDIO_GROUPS[ 0 ].id === 'master' && AUDIO_BUSES.join() === 'nature,boat,effects,combat', `five volumes: ${ AUDIO_GROUPS.map( ( g ) => g.name ).join( ', ' ) }` );
+
+	// the soundscape's graph, on a stand-in Web Audio context: every sound reaches the speakers through
+	// exactly one of the volume groups, and each group's volume sets its gain
+	const made = [];
+	const node = ( kind ) => {
+
+		const n = { kind, outs: [], connect( d ) { this.outs.push( d ); return d; }, disconnect() { this.outs = []; } };
+		const param = ( v ) => ( { value: v, setTargetAtTime( x ) { this.value = x; } } );
+		n.gain = param( 1 ); n.frequency = param( 1 ); n.Q = param( 1 ); n.pan = param( 0 );
+		n.threshold = param( 0 ); n.knee = param( 0 ); n.ratio = param( 1 ); n.attack = param( 0 ); n.release = param( 0 );
+		n.positionX = param( 0 ); n.positionY = param( 0 ); n.positionZ = param( 0 );
+		made.push( n );
+		return n;
+
+	};
+
+	const ctx = {
+		currentTime: 0, state: 'running', destination: node( 'destination' ),
+		createGain: () => node( 'gain' ), createBiquadFilter: () => node( 'filter' ), createPanner: () => node( 'panner' ),
+		createStereoPanner: () => node( 'stereo' ), createDynamicsCompressor: () => node( 'limiter' ),
+	};
+	const ss = new SoundScape( { baseUrl: '/' } );
+	applyAudio( ss, { master: 0.8, nature: 0.5, boat: 0.25, effects: 1, combat: 0 } );
+	ss.ctx = ctx;
+	ss._build();
+	const groups = new Map( [ [ ss.busNature, 'nature' ], [ ss.natureDirect, 'nature' ], [ ss.underBed, 'nature' ], [ ss.busBoat, 'boat' ], [ ss.busFx, 'effects' ], [ ss.fxNear, 'effects' ], [ ss.near, 'combat' ] ] );
+	// the groups a node's sound passes through on its way to the speakers
+	const via = ( n, seen = new Set() ) => {
+
+		if ( n === ctx.destination ) return [ [] ];
+		if ( seen.has( n ) ) return [];
+		seen.add( n );
+		const out = [];
+		for ( const d of n.outs ) for ( const p of via( d, seen ) ) out.push( groups.has( n ) ? [ groups.get( n ), ...p ] : p );
+		return out;
+
+	};
+
+	const want = {
+		surf_far: 'nature', wind: 'nature', palms: 'nature', crickets: 'nature', pier_lap: 'nature', under_reef: 'nature', birds_dawn: 'nature', whale_song: 'nature',
+		boat_engine: 'boat', boat_rush: 'boat', boat_lap: 'boat', reel_wind: 'effects', reel_drag: 'effects', line_strain: 'effects',
+	};
+	const bad = [];
+	for ( const [ name, g ] of Object.entries( want ) ) {
+
+		const paths = via( ss._dest[ name ] );
+		if ( ! paths.length || ! paths.every( ( p ) => p.length === 1 && p[ 0 ] === g ) ) bad.push( `${ name }: ${ JSON.stringify( paths ) }` );
+
+	}
+
+	for ( const [ n, g ] of [ [ ss.foot, 'effects' ], [ ss.boatSum, 'boat' ], [ ss.rod, 'effects' ], [ ss.near, 'combat' ], [ ss.fxNear, 'effects' ] ] ) {
+
+		const paths = via( n );
+		if ( ! paths.length || ! paths.every( ( p ) => p.length === 1 && p[ 0 ] === g ) ) bad.push( `${ g }: ${ JSON.stringify( paths ) }` );
+
+	}
+
+	ok( ! bad.length, `every sound reaches the speakers through one volume group (beds, the boat, the rod, footsteps, guns)${ bad.length ? ': ' + bad.join( '; ' ) : '' }` );
+	const g0 = [ ss.master.gain.value, ss.busNature.gain.value, ss.busBoat.gain.value, ss.busFx.gain.value, ss.near.gain.value ];
+	ss.setBusVolume( 'combat', 1 );
+	ss.setMuted( true );
+	ok( Math.abs( g0[ 0 ] - 0.64 ) < 1e-9 && g0[ 1 ] === 0.25 && g0[ 2 ] === 0.0625 && g0[ 3 ] === 1 && g0[ 4 ] === 0 && ss.near.gain.value === 1 && ss.master.gain.value === 0 && readAudio( ss ).combat === 1 && readAudio( ss ).muted,
+	'each volume sets its group\'s gain (on the same taper as the master), and mute silences it all' );
 
 }
 console.log( `value check ${ value }` );
