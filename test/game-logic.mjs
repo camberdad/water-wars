@@ -1,4 +1,5 @@
 // Plain-node tests of the fishing game logic (no GPU): bites, the catch fight, inventory, save.
+import { readFileSync } from 'node:fs';
 import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE, cutPrice } from '../src/game/FishTable.js';
 import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances, TIER_ODDS } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
@@ -17,7 +18,7 @@ import { placeWrecks, rollLoot, breathe, WRECK_PLAN, LOOT, MAP_MUL } from '../sr
 import { Vector3, Group } from '../src/engine/index.js';
 import { hullOutline, placeOutline, hullContact } from '../src/game/combat/HullContact.js';
 import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged, SharedWeather } from '../src/game/Weather.js';
-import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG } from '../src/game/HighScores.js';
+import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG, rowId } from '../src/game/HighScores.js';
 import { AUDIO_GROUPS, AUDIO_BUSES, AUDIO_DEFAULTS, AUDIO_KEY, loadAudioSettings, saveAudioSettings, applyAudio, readAudio } from '../src/audio/AudioSettings.js';
 import { SoundScape } from '../src/audio/SoundScape.js';
 
@@ -432,7 +433,7 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	ok( st.buy( 'rodHolders' ) && st.stats.sternRods === 1 && st.money === 0, 'buying the holder gives a stern rod' );
 
 }
-// ---- Water Wars 1.7: lifetime earnings and the shared high-score board (a fake jsonbin)
+// ---- Water Wars 1.7: lifetime earnings and the shared high-score board (1.22: Firebase, a stand-in database)
 {
 
 	const m = new Map();
@@ -454,32 +455,63 @@ ok( Object.keys( defaultUpgrades() ).length === Object.keys( UPGRADES ).length &
 	const merged = oneRunPerPlayer( [ sanitize( { name: 'Ahab', score: 100, fish: 9, t: 1 } ), sanitize( { name: 'ahab', score: 50, fish: 20, t: 2, active: true } ), sanitize( { name: 'Ishmael', score: 70 } ) ] );
 	ok( merged.length === 2 && merged[ 0 ].name === 'Ahab' && merged[ 0 ].score === 100 && merged[ 0 ].fish === 20, 'one row per captain with their best stats' );
 
-	// a fake jsonbin.io: GET returns the record, PUT stores it
-	let bin = { scores: [ { name: 'Ishmael', score: 70, t: Date.now() } ] }, puts = 0;
+	// a stand-in Firebase Realtime Database (REST): GET /scores.json (orderBy score, limitToLast), GET and
+	// PUT /scores/<id>.json, with the rules of firebase/database.rules.json (the fields checked; a row
+	// that lowers a captain's earnings or time at sea is refused, 401)
+	const RULES = JSON.parse( readFileSync( new URL( '../firebase/database.rules.json', import.meta.url ), 'utf8' ) ).rules.scores.$captain;
+	const FIELDS = Object.keys( RULES ).filter( ( k ) => k[ 0 ] !== '.' && k[ 0 ] !== '$' );
+	const db = { ishmael: sanitize( { name: 'Ishmael', score: 70, t: Date.now() } ) };
+	let puts = 0, refused = 0, lastQuery = '';
+	const DBURL = 'https://water-wars-test-default-rtdb.firebaseio.com';
 	const fakeFetch = async ( url, opt = {} ) => {
 
+		const u = new URL( url );
+		const m = u.pathname.match( /^\/scores(?:\/([^/]+))?\.json$/ );
+		if ( u.origin !== DBURL || ! m ) return { ok: false, status: 404, json: async () => null };
+		const id = m[ 1 ] ? decodeURIComponent( m[ 1 ] ) : null;
 		if ( opt.method === 'PUT' ) {
 
+			const row = JSON.parse( opt.body ), old = db[ id ];
+			const good = FIELDS.every( ( k ) => k in row ) && Object.keys( row ).every( ( k ) => FIELDS.includes( k ) ) &&
+				typeof row.name === 'string' && row.name.length <= 18 && typeof row.active === 'boolean' &&
+				( ! old || ( row.score >= old.score && row.timePlayed >= old.timePlayed ) );
+			if ( ! good ) {
+
+				refused ++;
+				return { ok: false, status: 401, json: async () => ( { error: 'Permission denied' } ) };
+
+			}
+
 			puts ++;
-			bin = JSON.parse( opt.body );
-			return { ok: true, json: async () => ( {} ) };
+			db[ id ] = row;
+			return { ok: true, status: 200, json: async () => row };
 
 		}
 
-		return { ok: true, json: async () => JSON.parse( JSON.stringify( bin ) ) };
+		if ( id ) return { ok: true, status: 200, json: async () => ( db[ id ] ? JSON.parse( JSON.stringify( db[ id ] ) ) : null ) };
+		lastQuery = u.search;
+		return { ok: true, status: 200, json: async () => JSON.parse( JSON.stringify( db ) ) };
 
 	};
 	const store = new Map();
-	const lb = new Leaderboard( { fetch: fakeFetch, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: ( k, v ) => store.set( k, v ) }, config: { ...LEADERBOARD_CONFIG, BIN_ID: 'test', MASTER_KEY: 'k' } } );
+	const cfg = { ...LEADERBOARD_CONFIG, DATABASE_URL: DBURL + '/' };
+	const lb = new Leaderboard( { fetch: fakeFetch, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: ( k, v ) => store.set( k, v ) }, config: cfg } );
+	ok( ! new Leaderboard( { fetch: fakeFetch, config: { ...LEADERBOARD_CONFIG, DATABASE_URL: '' } } ).configured() && lb.configured(), 'the board is online only with a database URL' );
 	for ( let i = 0; i < 9; i ++ ) lb.trackTime( 'Ahab', 1, () => ( { score: 1234 } ) );
 	ok( puts === 0, 'no sync before SYNC_SECONDS of play' );
 	lb.trackTime( 'Ahab', 1.5, () => ( { score: 1234, fish: 3 } ) );
 	await new Promise( ( r ) => setTimeout( r, 20 ) );
-	const row = bin.scores.find( ( r ) => r.name === 'Ahab' );
-	ok( puts === 1 && row && row.score === 1234 && row.active && row.timePlayed === 10, 'a sync writes the captain\'s row to the bin, active' );
+	const row = db[ rowId( 'Ahab' ) ];
+	ok( puts === 1 && row && row.score === 1234 && row.active && row.timePlayed === 10 && Object.keys( row ).sort().join() === FIELDS.slice().sort().join(), 'a sync writes the captain\'s own row to the database, active, with exactly the fields the rules allow' );
 	const board = await lb.fetchBoard();
-	ok( board.online && board.scores[ 0 ].name === 'Ahab' && board.scores.length === 2 && board.scores[ 0 ].active, 'the board reads back live, ranked' );
-	const offline = new Leaderboard( { fetch: async () => { throw new Error( 'down' ); }, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: () => {} }, config: { ...LEADERBOARD_CONFIG, BIN_ID: 'test', MASTER_KEY: 'k' } } );
+	ok( board.online && board.scores[ 0 ].name === 'Ahab' && board.scores.length === 2 && board.scores[ 0 ].active && lastQuery.includes( 'orderBy=%22score%22' ) && lastQuery.includes( 'limitToLast=100' ), 'the board reads back live, ranked (the top 100 by earnings)' );
+	// the same captain on another device, with less: the rules refuse it, and the row there is kept and merged
+	const lb2 = new Leaderboard( { fetch: fakeFetch, storage: { getItem: () => null, setItem: () => {} }, config: cfg } );
+	const res2 = await lb2.submit( { name: 'ahab', score: 900, fish: 7, timePlayed: 12, active: true, t: Date.now() } );
+	const after = db[ rowId( 'Ahab' ) ];
+	ok( res2.ok && refused === 1 && after.score === 1234 && after.fish === 7 && after.timePlayed === 12, 'a captain\'s row never goes backwards: a lower one from another device is merged with the best of both' );
+	ok( rowId( 'Ahab' ) === 'ahab' && rowId( 'Cap. J/Hook' ) === 'cap~2e~20j~2fhook' && ! /[.$#[\]/]/.test( rowId( 'a.b$c#d[e]f/g' ) ), 'captain names make safe database keys' );
+	const offline = new Leaderboard( { fetch: async () => { throw new Error( 'down' ); }, storage: { getItem: ( k ) => store.get( k ) ?? null, setItem: () => {} }, config: cfg } );
 	const ob = await offline.fetchBoard();
 	ok( ! ob.online && ob.scores.some( ( r ) => r.name === 'Ahab' ), 'offline, the board falls back to this device\'s copy' );
 

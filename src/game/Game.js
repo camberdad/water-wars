@@ -75,7 +75,7 @@ export class Game {
 		this.multiplayer = new Multiplayer( this );
 		// ...and its shared weather: every player online has the same sea and sky (1.13.4)
 		this.weather = new SharedWeather( this );
-		// the shared high-score board (jsonbin.io): K, or the start screen button
+		// the shared high-score board (the Firebase Realtime Database, 1.22): K, or the start screen button
 		this.highScores = new HighScores( this );
 		// extra rods in holders on the stern (the rod holder upgrade): B grabs a bent one
 		this.sternRods = new SternRods( this );

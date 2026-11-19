@@ -1,0 +1,27 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "scores": {
+      ".read": true,
+      ".indexOn": ["score"],
+      "$captain": {
+        ".write": "newData.exists() && $captain.length <= 160",
+        ".validate": "newData.hasChildren(['name', 'score', 'cash', 'fish', 'species', 'pirates', 'giants', 'furthest', 'boat', 'timePlayed', 'active', 't']) && (!data.exists() || (newData.child('score').val() >= data.child('score').val() && newData.child('timePlayed').val() >= data.child('timePlayed').val()))",
+        "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 18" },
+        "score": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
+        "cash": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
+        "fish": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
+        "species": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000" },
+        "pirates": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
+        "giants": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
+        "furthest": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3" },
+        "boat": { ".validate": "newData.isString() && newData.val().length <= 32" },
+        "timePlayed": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000" },
+        "active": { ".validate": "newData.isBoolean()" },
+        "t": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 600000" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

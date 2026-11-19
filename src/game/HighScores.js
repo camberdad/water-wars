@@ -2,36 +2,43 @@ import { FISH } from './FishTable.js';
 import { BOATS } from './BoatCatalog.js';
 import { DANGER_TIERS, dangerZoneAt } from './DangerZones.js';
 
-/* ============ Water Wars :: shared high-score board (jsonbin.io) ============ */
+/* ============ Water Wars :: shared high-score board (Firebase Realtime Database) ============ */
 /*
-  The same set-up as Castle Rangers: one jsonbin.io bin holding {"scores":[...]}, read and written
-  straight from the page with the account's master key.
+  The board lives in the game's own Firebase project (Water Wars 1.22: it was a jsonbin.io bin), in its
+  Realtime Database, read and written straight from the page over Firebase's REST API (no SDK):
 
-  While you play, your row is pushed to the bin every SYNC_SECONDS of active play (lifetime earnings,
-  cash, fish caught, pirates sunk, giants landed, the furthest danger tier reached, your boat and your
-  total time at sea), marked "active". A row counts as active for ACTIVE_MS after its last sync, so the
-  board shows who is out on the water right now. The High Scores screen (start screen button, or K in
-  game) re-reads the bin every 15 seconds while it is open.
+    /scores/<captain>   one row per captain: { name, score, cash, fish, species, pirates, giants, furthest,
+                        boat, timePlayed, active, t }   (<captain>: rowId( name ), the name lower-cased)
 
-  To point the game at a different bin: create one at https://jsonbin.io with the content
-  {"scores":[]}, then paste its BIN ID and your X-MASTER-KEY below. Leave either empty to run offline:
-  scores are still kept on this device and the board shows them.
+  While you play, your row is written every SYNC_SECONDS of active play, marked "active". A row counts as
+  active for ACTIVE_MS after its last sync, so the board shows who is out on the water right now. The
+  High Scores screen (start screen button, or K in game) re-reads the top MAX_ENTRIES every POLL_MS while
+  it is open.
 
-  SECURITY NOTE: the key is in the page source, so anyone could write junk rows. That is normal for a
-  static hobby game; sanitize() brackets every row so the worst case is a few bad rows, not a broken
-  board. Move to a serverless endpoint or a database with auth if that ever matters.
+  The database's rules (firebase/database.rules.json, set in the Firebase console) let anyone read the
+  board and write a row, but only a well-formed one (every field checked: types, lengths, ranges, no
+  extra fields), never a delete, and never one that lowers a captain's earnings or time at sea. A write
+  the rules turn down (this captain has a better row from another device) is merged with the row that's
+  there and written again.
+
+  To point the game at another database: put its URL below. Leave it empty to run offline: scores are
+  still kept on this device and the board shows them.
 */
 export const LEADERBOARD_CONFIG = {
-	BIN_ID: '6af93ee7ac6210605a88b680',
-	MASTER_KEY: '$2a$10$OmxbDlh.OurDTGKaYwqizutCuGS/Y4YXOfRUOAOW.IGybb1zV9bfu',
-	MAX_ENTRIES: 200, // keep the bin from growing forever
+	// the Water Wars Firebase project's Realtime Database (Firebase console: Build > Realtime Database)
+	DATABASE_URL: 'https://water-wars-a96d2-default-rtdb.firebaseio.com',
+	PATH: 'scores',
+	MAX_ENTRIES: 100, // the board shows (and reads) the top 100
 	MAX_MONEY: 1e11,
-	SYNC_SECONDS: 10, // push your row this often while playing (each push is a read and a write)
-	ACTIVE_MS: 45000, // a row is "active" this long after its last push
-	POLL_MS: 15000, // the open board re-reads the bin this often
+	SYNC_SECONDS: 10, // write your row this often while playing
+	ACTIVE_MS: 45000, // a row is "active" this long after its last write
+	POLL_MS: 15000, // the open board re-reads this often
 };
 
-const BASE = 'https://api.jsonbin.io/v3/b/';
+// a captain's key in the database: their name lower-cased, anything but a-z 0-9 _ - spelled out as ~hex
+// (keys can't hold . $ # [ ] /; one key per name, as the board has always merged names case-blind)
+export const rowId = ( name ) => playerKey( name ).replace( /[^a-z0-9_-]/g, ( c ) => '~' + c.codePointAt( 0 ).toString( 16 ) );
+
 const LOCAL_KEY = 'waterwars.highscores';
 const TIME_KEY = 'waterwars.playtime';
 
@@ -55,7 +62,7 @@ export function sanitize( e, now = Date.now(), cfg = LEADERBOARD_CONFIG ) {
 		boat: String( e.boat || '' ).slice( 0, 32 ),
 		timePlayed: e.timePlayed == null ? 0 : int( e.timePlayed, 1e9 ),
 		active: !! e.active && now - t < cfg.ACTIVE_MS,
-		t,
+		t: Math.floor( t ),
 	};
 
 }
@@ -99,7 +106,8 @@ export function oneRunPerPlayer( list ) {
 
 }
 
-const scoresOf = ( d ) => d && d.record && Array.isArray( d.record.scores ) ? d.record.scores : ( d && Array.isArray( d.scores ) ? d.scores : [] );
+// the rows of a database read: { key: row, ... } (or null when there are none)
+const scoresOf = ( d ) => d && typeof d === 'object' ? Object.values( d ).filter( ( r ) => r && typeof r === 'object' ) : [];
 
 function safeStorage() {
 
@@ -138,7 +146,7 @@ export class Leaderboard {
 
 	configured() {
 
-		return !! ( this.cfg.BIN_ID && this.cfg.MASTER_KEY && this.fetch );
+		return !! ( this.cfg.DATABASE_URL && this.fetch );
 
 	}
 
@@ -180,23 +188,40 @@ export class Leaderboard {
 
 	}
 
-	_headers() {
+	// the REST URL of the board, or of one captain's row; query: extra search parameters
+	_url( id = null, query = '' ) {
 
-		return { 'Content-Type': 'application/json', 'X-Bin-Meta': 'false', 'X-Master-Key': this.cfg.MASTER_KEY };
-
-	}
-
-	_url() {
-
-		return BASE + encodeURIComponent( this.cfg.BIN_ID );
+		const base = String( this.cfg.DATABASE_URL ).replace( /\/+$/, '' );
+		return `${ base }/${ this.cfg.PATH }${ id ? '/' + encodeURIComponent( id ) : '' }.json${ query ? '?' + query : '' }`;
 
 	}
 
+	// the top MAX_ENTRIES rows by earnings
 	async _get() {
 
-		const r = await this.fetch( this._url(), { headers: this._headers(), cache: 'no-store' } );
+		const q = `orderBy=${ encodeURIComponent( '"score"' ) }&limitToLast=${ this.cfg.MAX_ENTRIES }`;
+		const r = await this.fetch( this._url( null, q ), { cache: 'no-store' } );
 		if ( ! r.ok ) throw new Error( 'http ' + r.status );
 		return scoresOf( await r.json() );
+
+	}
+
+	async _getRow( id ) {
+
+		const r = await this.fetch( this._url( id ), { cache: 'no-store' } );
+		if ( ! r.ok ) throw new Error( 'http ' + r.status );
+		const v = await r.json();
+		return v && typeof v === 'object' ? v : null;
+
+	}
+
+	// write a captain's row; false if the database's rules turned it down
+	async _put( row ) {
+
+		const r = await this.fetch( this._url( rowId( row.name ) ), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( row ) } );
+		if ( r.status === 401 || r.status === 403 ) return false;
+		if ( ! r.ok ) throw new Error( 'http ' + r.status );
+		return true;
 
 	}
 
@@ -258,8 +283,9 @@ export class Leaderboard {
 
 	}
 
-	// Submit a row: 1. into the local board, always; 2. if configured, read the shared board, merge,
-	// de-dupe, cap and write it back (one write at a time). Resolves { ok, scores, reason }.
+	// Submit a row: 1. into the local board, always; 2. if configured, write the captain's row (the best of
+	// it and this device's copy) to the database; if the rules turn it down (a better row is there, from
+	// another device), merge with that one and write again. One write at a time. Resolves { ok, scores, reason }.
 	submit( entry ) {
 
 		entry = sanitize( entry, this.now(), this.cfg );
@@ -269,12 +295,18 @@ export class Leaderboard {
 
 		const job = async () => {
 
-			let scores = ( await this._get() ).map( ( s ) => sanitize( s, this.now(), this.cfg ) );
-			scores.push( { ...entry } );
-			scores = oneRunPerPlayer( scores ).slice( 0, this.cfg.MAX_ENTRIES );
-			const r = await this.fetch( this._url(), { method: 'PUT', headers: this._headers(), body: JSON.stringify( { scores } ) } );
-			if ( ! r.ok ) throw new Error( 'http ' + r.status );
-			return scores;
+			const mine = local.find( ( s ) => playerKey( s.name ) === playerKey( entry.name ) ) || entry;
+			let row = { ...mine, name: entry.name, active: entry.active, t: entry.t, boat: entry.boat || mine.boat };
+			if ( ! ( await this._put( row ) ) ) {
+
+				const there = await this._getRow( rowId( entry.name ) );
+				row = oneRunPerPlayer( [ sanitize( there, this.now(), this.cfg ), row ] )[ 0 ];
+				row = { ...row, name: entry.name, active: entry.active, t: entry.t };
+				if ( ! ( await this._put( row ) ) ) throw new Error( 'rejected' );
+
+			}
+
+			return oneRunPerPlayer( [ ...local.filter( ( s ) => playerKey( s.name ) !== playerKey( entry.name ) ), row ] ).slice( 0, this.cfg.MAX_ENTRIES );
 
 		};
 

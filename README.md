@@ -161,14 +161,18 @@ You need a browser with WebGPU (recent Chrome or Edge). The first load compiles 
 
 ## High scores
 
-A shared, live high-score board, the same set-up as Castle Rangers: one [jsonbin.io](https://jsonbin.io) bin
-read and written straight from the page. Captains are ranked by **lifetime earnings** (fish sold, bounties
+A shared, live high-score board in the game's own [Firebase](https://firebase.google.com) project: its
+Realtime Database holds one row per captain (`/scores/<captain>`), read and written straight from the page
+over Firebase's REST API (no SDK). Captains are ranked by **lifetime earnings** (fish sold, bounties
 and plunder; spending doesn't lower it), with their fish caught, pirates sunk, giants landed, the furthest
 danger tier they reached, their boat and their total time at sea. While you play, your row syncs about every
 10 seconds and is marked active, so the board shows who is at sea right now (green rows). Open it with the
 **High Scores** button on the start screen or **K** in game; it refreshes every 15 seconds while open. If the
-bin can't be reached the board shows this device's scores. The bin ID and key are at the top of
-`src/game/HighScores.js`.
+database can't be reached the board shows this device's scores. The database URL is at the top of
+`src/game/HighScores.js`. Its security rules are in `firebase/database.rules.json` (paste them into the
+Firebase console: Realtime Database > Rules): anyone may read the board and write a row, but every field is
+checked (types, lengths, ranges, no extra fields), rows can't be deleted, and a captain's earnings and time at
+sea can never go down. (Until 1.22 the board was a [jsonbin.io](https://jsonbin.io) bin.)
 
 ## Live updates
 
@@ -198,7 +202,8 @@ to the home screen, with a button that saves your progress and installs it. The 
 | `src/game/Harbours.js` | Safe zones and the eight sea stations |
 | `src/game/Giants.js` | Giant fish: surfacing, the stern harpoon, the tether, towing and landing |
 | `src/game/FishTable.js`, `Bites.js` | The 40 species, rarity tiers, values and bite odds |
-| `src/game/HighScores.js` | The shared high-score board (jsonbin.io) and its screen |
+| `src/game/HighScores.js` | The shared high-score board (the Firebase Realtime Database) and its screen |
+| `firebase/database.rules.json` | The Firebase Realtime Database's security rules for the high-score board |
 | `src/game/Multiplayer.js` | Open-world multiplayer: joining, sending your boat, drawing other players |
 | `src/version.js` | The version shown on the start screen |
 | `tools/boats/convert.mjs` | Converts the boat models (OBJ/FBX) into `public/models/boats/` (`node tools/boats/convert.mjs`) |
