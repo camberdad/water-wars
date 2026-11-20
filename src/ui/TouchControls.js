@@ -11,6 +11,8 @@
 //   Use                       E: board, take the helm, talk, open chests
 //   ▲ / ▼                     Space and C, held: jump / swim up, crouch / dive
 //   ☰ (top left)              Escape: the menu (resume, settings, audio, home dock)
+//   ⛶ (top left)              full screen (1.24: src/core/Fullscreen.js; on an iPhone, how to add it to the
+//                             Home Screen); not shown when the game already runs as a Home Screen app
 //   ⋯ (top left)              more: cooler, harbour services, loot, harpoon, trawl net, stern rod, rod,
 //                             camera, high scores, flashlight, right the boat, and Controls (the help sheet,
 //                             its touch version: src/ui/UI.js _buildHelp)
@@ -79,12 +81,13 @@ const MORE = [
 
 export class TouchControls {
 
-	constructor( { input, canvas, root, isBlocked = () => false } ) {
+	constructor( { input, canvas, root, isBlocked = () => false, onFullscreen = null } ) {
 
 		this.input = input;
 		this.canvas = canvas;
 		this.root = root;
 		this.isBlocked = isBlocked;
+		this.onFullscreen = onFullscreen;
 		this.enabled = false;
 		this.down = new Set(); // keys held by the touch controls
 		this.stick = null; // { id, x0, y0, keys }
@@ -96,6 +99,7 @@ export class TouchControls {
 
 	_build() {
 
+		const onFullscreen = this.onFullscreen;
 		const el = this.el = document.createElement( 'div' );
 		el.className = 'ww-touch';
 		el.hidden = true;
@@ -106,6 +110,7 @@ export class TouchControls {
 			<div class="ww-touch-top">
 				<button type="button" class="ww-tb is-small" data-key="Escape" aria-label="Menu"><b>☰</b></button>
 				<button type="button" class="ww-tb is-small" data-more aria-label="More actions" aria-expanded="false"><b>⋯</b></button>
+				<button type="button" class="ww-tb is-small" data-fs aria-label="Full screen"${ onFullscreen ? '' : ' hidden' }><b>⛶</b></button>
 			</div>
 			<div class="ww-touch-more" hidden>${ MORE.map( btn ).join( '' ) }</div>
 			<div class="ww-touch-main">${ MAIN.map( btn ).join( '' ) }</div>`;
@@ -117,6 +122,21 @@ export class TouchControls {
 
 		// the buttons: pressed while a finger is on them (pointer capture keeps it if the finger slides)
 		for ( const b of el.querySelectorAll( '.ww-tb' ) ) {
+
+			if ( b.hasAttribute( 'data-fs' ) ) {
+
+				b.addEventListener( 'click', ( e ) => {
+
+					// (a click, not pointerdown: browsers only allow fullscreen from a completed tap)
+					e.preventDefault();
+					e.stopPropagation();
+					if ( this.onFullscreen ) this.onFullscreen();
+
+				} );
+				b.addEventListener( 'pointerdown', ( e ) => e.stopPropagation() );
+				continue;
+
+			}
 
 			if ( b.hasAttribute( 'data-more' ) ) {
 

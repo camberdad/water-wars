@@ -24,6 +24,7 @@ import { SoundScape } from '../src/audio/SoundScape.js';
 import { readCaps, looksMobile, resolveMode, DeviceMode, MODE_KEY } from '../src/core/DeviceMode.js';
 import { PROFILES, profileFor, outputDpr } from '../src/core/GraphicsProfile.js';
 import { stickKeys, promptAction } from '../src/ui/TouchControls.js';
+import { fullscreenSupport } from '../src/core/Fullscreen.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -1333,6 +1334,27 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( M.renderScale < D.renderScale && M.renderScale >= 0.5 && M.shadowSize < D.shadowSize && M.oceanGrid < D.oceanGrid && M.refractionScale < D.refractionScale && ! M.ssr && M.shafts === 0 && M.motionBlur === 0 && profileFor( 'mobile' ) === M && profileFor( 'x' ) === D,
 		`the mobile profile is lighter everywhere (render ${ M.renderScale * 100 }%, shadows ${ M.shadowSize }, ocean grid ${ M.oceanGrid }, no reflections, shafts or motion blur)` );
 	ok( outputDpr( M, 3 ) === 1 && outputDpr( D, 2 ) === 1 && outputDpr( M, 0.75 ) === 0.75, 'the output is capped at 1 pixel per CSS pixel on high-density screens' );
+
+}
+// ---- 1.24: full screen on phones: the Fullscreen API where there is one, else (iPhone) the Home Screen
+{
+
+	const w = ( { ua, api = true, mode = null, standalone } ) => ( {
+		navigator: { userAgent: ua, standalone },
+		document: { fullscreenEnabled: api, documentElement: api ? { requestFullscreen() {} } : {} },
+		matchMedia: ( q ) => ( { matches: mode !== null && q === `(display-mode: ${ mode })` } ),
+	} );
+	const iphone = fullscreenSupport( w( { ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 Version/26.1 Mobile/15E148 Safari/604.1', api: false } ) );
+	const iphoneApp = fullscreenSupport( w( { ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X)', api: false, standalone: true } ) );
+	const android = fullscreenSupport( w( { ua: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/142 Mobile Safari/537.36' } ) );
+	const ipad = fullscreenSupport( w( { ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/26.1 Safari/605.1.15' } ) );
+	const installed = fullscreenSupport( w( { ua: 'Mozilla/5.0 (Linux; Android 15)', mode: 'fullscreen' } ) );
+	ok( iphone.homeScreen && ! iphone.api && ! iphoneApp.homeScreen && iphoneApp.app && android.api && ! android.homeScreen && ipad.api && installed.app,
+		'full screen: Android and iPad use the Fullscreen API; an iPhone in Safari is pointed to the Home Screen; a Home Screen app is already full screen' );
+	const m = JSON.parse( readFileSync( new URL( '../public/manifest.webmanifest', import.meta.url ), 'utf8' ) );
+	const html = readFileSync( new URL( '../index.html', import.meta.url ), 'utf8' );
+	ok( m.display === 'fullscreen' && m.orientation === 'landscape' && m.icons.length >= 2 && /apple-mobile-web-app-capable" content="yes"/.test( html ) && /rel="manifest"/.test( html ) && /apple-touch-icon/.test( html ),
+		'the game installs to the Home Screen as a full-screen, landscape web app' );
 
 }
 console.log( `value check ${ value }` );

@@ -250,6 +250,12 @@ to touch controls when you touch the screen and back when you use the mouse or k
 **Auto / Mobile / Desktop** in Settings > Performance > Device (kept in the browser), or add `?mode=mobile`,
 `?mode=desktop` or `?mode=auto` to the URL.
 
+**Full screen.** On Android and iPad the game goes full screen (and turns sideways) when you tap **Tap to set
+sail**, and the **⛶** button in the touch controls toggles it. iPhone Safari only lets videos go full screen, so on
+an iPhone add the game to your Home Screen (Share > **Add to Home Screen**) and open it from there: it runs as a
+web app with no browser bars (a note on the start screen says so until you dismiss it). The loading and start
+screens also fit a phone held sideways under the browser's bar. (`src/core/Fullscreen.js`, `public/manifest.webmanifest`)
+
 The mobile graphics profile (`src/core/GraphicsProfile.js`) renders at 60% internal resolution (the temporal
 upscaler rebuilds the output), with 1024 instead of 2048 shadow maps, a coarser ocean mesh, a half-resolution
 refraction pass, and no water reflections, sun shafts or motion blur. The output is capped at one pixel per CSS
@@ -394,7 +400,7 @@ Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.y
 | `src/player/` | Walking, swimming, the boat and the free camera |
 | `src/audio/` | The sample-based soundscape |
 | `src/ui/` | Settings panel, loading screen and HUD; `TouchControls.js` and `mobile.css`: the touch controls and the small-screen HUD |
-| `src/core/DeviceMode.js`, `GraphicsProfile.js` | Mobile or desktop: detection, live switching and the override; the two graphics profiles |
+| `src/core/DeviceMode.js`, `GraphicsProfile.js`, `Fullscreen.js` | Mobile or desktop: detection, live switching and the override; the two graphics profiles; full screen (the Fullscreen API, or the Home Screen on iPhone) |
 | `tools/` | Scripts that fetch and convert the characters, stall props and fishing sounds |
 | `test/` | Headless engine smoke test and game-logic tests (`npm test`), and HUD / loader dev pages |
 

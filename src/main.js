@@ -77,6 +77,8 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 	const onSail = app.onSail = () => {
 
 		app.input.requestLock();
+		// (1.24) on a phone or tablet: full screen, from this tap
+		app.fullscreenOnSail();
 		if ( app.audio ) app.audio.resume();
 		// "Multiplayer": join the open sea with everyone else online (src/game/Multiplayer.js)
 		if ( ui.startMode === 'multi' && app.game && app.game.multiplayer ) app.game.multiplayer.start( ui.startName );
