@@ -241,7 +241,7 @@ unchanged.
 | **Use** | E: board, take the helm, talk, open chests |
 | **▲ / ▼** | Space / C, held: jump or swim up, crouch or dive |
 | **☰** | The menu (resume, settings, audio, the home dock) |
-| **⋯** | More: cooler, harbour services, loot, harpoon, trawl net, stern rod, rod, camera, right the boat, high scores, light |
+| **⋯** | More: cooler, harbour services, loot, harpoon, trawl net, stern rod, rod, camera, right the boat, high scores, light, and **Controls**: the help sheet, in its touch version on a phone (F1 on a computer shows the keys) |
 | The prompt | Tap the "E  Board boat" style prompt at the bottom to press its key |
 
 How it decides: a finger as the main pointer (`pointer: coarse`, no hover), or touch points on a phone-sized

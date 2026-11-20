@@ -12,7 +12,8 @@
 //   ▲ / ▼                     Space and C, held: jump / swim up, crouch / dive
 //   ☰ (top left)              Escape: the menu (resume, settings, audio, home dock)
 //   ⋯ (top left)              more: cooler, harbour services, loot, harpoon, trawl net, stern rod, rod,
-//                             camera, high scores, flashlight, right the boat
+//                             camera, high scores, flashlight, right the boat, and Controls (the help sheet,
+//                             its touch version: src/ui/UI.js _buildHelp)
 //   the prompt                tap the "E  Board boat" style prompt at the bottom to press its key
 //
 // Keys are sent as keyboard events on the document (so the HUD's own key handlers, the Escape menu and the
@@ -73,6 +74,7 @@ const MORE = [
 	{ label: 'Right boat', key: 'KeyX' },
 	{ label: 'Scores', key: 'KeyK' },
 	{ label: 'Light', key: 'KeyL' },
+	{ label: 'Controls', key: 'F1' },
 ];
 
 export class TouchControls {

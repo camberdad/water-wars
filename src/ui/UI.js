@@ -2126,6 +2126,9 @@ export class UI {
 		const row = ( keys, text ) => `<div class="tw-help-row"><span class="tw-keys">${ keys }</span><span class="tw-help-text">${ text }</span></div>`;
 		const wasd = '<span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>';
 		const mouse = `<kbd class="tw-kbd-ico" aria-label="Mouse">${ icon( 'mouse' ) }</kbd>`;
+		// (Water Wars 1.23.1) the touch controls' buttons, as chips: shown instead of the keys in mobile mode
+		// (src/ui/mobile.css shows .is-touch and hides .is-keys under html.is-mobile)
+		const t = ( ...labels ) => labels.map( ( x ) => `<kbd class="tw-tch">${ x }</kbd>` ).join( '' );
 
 		const el = this.helpEl = h( 'div', 'tw-help tw-interactive', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tw-help-title', hidden: true } );
 		el.innerHTML = `
@@ -2133,11 +2136,49 @@ export class UI {
 				<header class="tw-help-head">
 					<div>
 						<h2 id="tw-help-title">Controls</h2>
-						<p>Click the view to capture the mouse. Esc releases it.</p>
+						<p class="is-keys">Click the view to capture the mouse. Esc releases it.</p>
+						<p class="is-touch">Touch controls. Keyboard and mouse: Settings &gt; Performance &gt; Device.</p>
 					</div>
 					<button type="button" class="tw-icon-btn tw-help-close" aria-label="Close" data-tip="Close (F1)">${ icon( 'close' ) }</button>
 				</header>
-				<div class="tw-help-grid">
+				<div class="tw-help-grid is-touch">
+					<section>
+						<h3>Move</h3>
+						${ row( t( 'Left side' ), 'Move<small>A joystick where your thumb lands: walk, swim, throttle and steer. Push to the rim to run / boost</small>' ) }
+						${ row( t( 'Right side' ), 'Look around and aim<small>Drag</small>' ) }
+						${ row( t( '▲' ), 'Jump, swim up<small>Hold</small>' ) }
+						${ row( t( '▼' ), 'Crouch, dive<small>Hold</small>' ) }
+					</section>
+					<section>
+						<h3>Interact</h3>
+						${ row( t( 'Use' ), 'Interact<small>Board, helm, step ashore, trade, open chests</small>' ) }
+						${ row( t( 'Action' ), 'Cast, strike, reel<small>Hold to wind up / reel</small>' ) }
+						${ row( t( 'Alt' ), 'Reel in an empty line' ) }
+						${ row( t( 'Prompt' ), 'Tap the prompt at the bottom<small>It presses the key it shows</small>' ) }
+						${ row( t( '☰' ), 'Menu<small>Resume, settings, audio, the home dock, the title screen</small>' ) }
+					</section>
+					<section>
+						<h3>Combat (at the helm)</h3>
+						${ row( t( 'Action' ), 'Deck gun<small>Hold to fire, watch the heat</small>' ) }
+						${ row( t( 'Alt' ), 'Bow cannon<small>Lobs a shell at the crosshair</small>' ) }
+						${ row( t( '⋯', 'Loot' ), 'Loot a wreck alongside' ) }
+						${ row( t( '⋯', 'Harpoon' ), 'Harpoon a giant fish<small>Hold it to cut the tether</small>' ) }
+						${ row( t( '⋯', 'Right boat' ), 'Right a capsized boat' ) }
+					</section>
+					<section>
+						<h3>More (⋯)</h3>
+						${ row( t( 'Cooler' ), 'Cooler and fish log' ) }
+						${ row( t( 'Services' ), 'Harbour services<small>Pier or sea station: repair, upgrades, boats</small>' ) }
+						${ row( t( 'Trawl net' ), 'Trawl net out / in (at sea)' ) }
+						${ row( t( 'Stern rod' ), 'Grab a bent stern rod' ) }
+						${ row( t( 'Rod' ), 'Fishing rod<small>Take out / put away</small>' ) }
+						${ row( t( 'Camera' ), 'Boat camera<small>1st / 3rd person</small>' ) }
+						${ row( t( 'Scores' ), 'High scores (live board)' ) }
+						${ row( t( 'Light' ), 'Flashlight' ) }
+						${ row( t( 'Controls' ), 'This sheet' ) }
+					</section>
+				</div>
+				<div class="tw-help-grid is-keys">
 					<section>
 						<h3>Move</h3>
 						${ row( wasd, 'Move' ) }
@@ -2181,7 +2222,8 @@ export class UI {
 					</section>
 				</div>
 				<div class="tw-help-guide">
-					<span><b>How to play:</b> fish and sell to Joe, or turn pirate: shoot boats, loot the wrecks, collect pirate bounties. Spend it on armour, engines, guns and gear from Marta or the harbour (U by the pier). Joe and Marta are on the map (lower right).</span>
+					<span class="is-keys"><b>How to play:</b> fish and sell to Joe, or turn pirate: shoot boats, loot the wrecks, collect pirate bounties. Spend it on armour, engines, guns and gear from Marta or the harbour (U by the pier). Joe and Marta are on the map (lower right).</span>
+					<span class="is-touch"><b>How to play:</b> fish and sell to Joe, or turn pirate: shoot boats, loot the wrecks, collect pirate bounties. Spend it on armour, engines, guns and gear from Marta or the harbour (⋯ &gt; Services by the pier). Joe and Marta are on the map (top right).</span>
 					<button type="button" class="gm-btn is-ghost tw-help-replay">Replay the guide</button>
 				</div>
 			</div>`;

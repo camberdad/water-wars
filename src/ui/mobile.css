@@ -335,3 +335,55 @@ html.is-mobile .tw-start-cta svg {
 	font: 600 14px 'Inter', system-ui, sans-serif;
 	cursor: pointer;
 }
+
+/* ── the help sheet (F1, or ⋯ > Controls): the touch version in mobile mode, the keys on desktop ── */
+.tw-help .is-touch {
+	display: none;
+}
+
+html.is-mobile .tw-help .is-keys {
+	display: none;
+}
+
+html.is-mobile .tw-help .is-touch {
+	display: block;
+}
+
+html.is-mobile .tw-help .tw-help-grid.is-touch {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+html.is-mobile .tw-help {
+	padding: var(--tw-3);
+}
+
+html.is-mobile .tw-help-card {
+	max-height: 100%;
+	overscroll-behavior: contain;
+	touch-action: pan-y;
+}
+
+/* a touch button, as a chip in the sheet */
+.tw-tch {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 28px;
+	height: 24px;
+	padding: 0 9px;
+	border-radius: 999px;
+	background: rgba(95, 227, 212, 0.16);
+	border: 1px solid rgba(95, 227, 212, 0.55);
+	color: var(--tw-ink, #eef6f8);
+	font: 600 11px var(--tw-font, system-ui);
+	white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+
+	html.is-mobile .tw-help .tw-help-grid.is-touch {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+}
