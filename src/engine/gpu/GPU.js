@@ -27,9 +27,17 @@ export const GPU = {
 
 	async init( { canvas = null, requiredLimits = {}, headless = false } = {} ) {
 
-		if ( ! navigator.gpu ) throw new Error( 'WebGPU is not available in this browser.' );
-		const adapter = await navigator.gpu.requestAdapter( { powerPreference: 'high-performance' } );
-		if ( ! adapter ) throw new Error( 'No WebGPU adapter found.' );
+		if ( ! navigator.gpu ) throw Object.assign( new Error( 'WebGPU is not available in this browser.' ), { code: 'no-webgpu' } );
+		// (Water Wars 1.23) a phone or a browser with one GPU may not offer a high-performance adapter: then any
+		let adapter = null;
+		try {
+
+			adapter = await navigator.gpu.requestAdapter( { powerPreference: 'high-performance' } );
+
+		} catch ( e ) { /* tried again below */ }
+
+		if ( ! adapter ) adapter = await navigator.gpu.requestAdapter();
+		if ( ! adapter ) throw Object.assign( new Error( 'No WebGPU adapter found.' ), { code: 'no-adapter' } );
 		this.adapter = adapter;
 
 		const L = adapter.limits;
@@ -50,6 +58,9 @@ export const GPU = {
 		};
 		const limits = {};
 		for ( const k in want ) if ( L[ k ] !== undefined ) limits[ k ] = Math.min( want[ k ], L[ k ] );
+		// (1.23) what this GPU can't give (phones often have lower limits): asked for less, noted for bug reports
+		this.shortfall = Object.keys( want ).filter( ( k ) => L[ k ] !== undefined && L[ k ] < want[ k ] ).map( ( k ) => `${ k } ${ L[ k ] } (wanted ${ want[ k ] })` );
+		if ( this.shortfall.length ) console.info( 'WebGPU: this GPU has lower limits:', this.shortfall.join( ', ' ) );
 
 		const optional = [ 'float32-filterable', 'timestamp-query', 'rg11b10ufloat-renderable', 'float32-blendable', 'shader-f16', 'clip-distances' ];
 		const requiredFeatures = optional.filter( ( f ) => adapter.features.has( f ) );
@@ -61,7 +72,14 @@ export const GPU = {
 		this.device = device;
 		this.queue = device.queue;
 		this.limits = device.limits;
-		device.lost.then( ( info ) => console.error( 'WebGPU device lost:', info.message ) );
+		// (1.23) a lost device (a phone reclaiming the GPU while the game was in the background, a driver reset):
+		// onLost lets the page offer a reload instead of a frozen canvas
+		device.lost.then( ( info ) => {
+
+			console.error( 'WebGPU device lost:', info.message );
+			if ( this.onLost && info.reason !== 'destroyed' ) this.onLost( info );
+
+		} );
 		device.addEventListener && device.addEventListener( 'uncapturederror', ( e ) => console.error( 'WebGPU:', e.error.message.split( '\n' ).slice( 0, 6 ).join( '\n' ) ) );
 
 		if ( canvas && ! headless ) {

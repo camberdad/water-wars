@@ -4,6 +4,7 @@ import { UI } from './ui/UI.js';
 import { AppUI } from './ui/AppUI.js';
 import { VERSION } from './version.js';
 import { reloadIfStale, startUpdateWatch } from './core/UpdateCheck.js';
+import { GPU } from './engine/gpu/GPU.js';
 
 // live updates: an old cached copy of the page reloads itself into the newest release before loading
 // (not for the ?bench automation)
@@ -20,12 +21,30 @@ if ( /[?&]bench\b/.test( location.search ) ) {
 
 const ui = new UI();
 const app = new App();
+// (1.23) the GPU lost (a phone reclaimed it in the background, a driver reset): offer a reload
+GPU.onLost = () => {
+
+	if ( document.querySelector( '.ww-lost' ) ) return;
+	const d = document.createElement( 'div' );
+	d.className = 'ww-lost';
+	d.innerHTML = '<div><b>The graphics stopped</b><span>Your device took the GPU back (often after switching apps). Your progress is saved.</span><button type="button">Reload the game</button></div>';
+	d.querySelector( 'button' ).addEventListener( 'click', () => location.reload() );
+	document.body.append( d );
+	try {
+
+		if ( app.game && app.game.state ) app.game.state.save();
+
+	} catch ( e ) { /* best effort */ }
+
+};
 window.__ui = ui;
 window.__app = app; // debugging / automation
 
 app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async () => {
 
 	app.ui = new AppUI( app, ui );
+	// (1.23) touch controls, the small-screen HUD and the mobile graphics profile when on a phone or tablet
+	app.initMobile();
 	ui.setLoading( 1, 'Ready' );
 	await ui.hideLoader();
 	// frame-time benchmark and reference shots (see core/Bench.js): it drives the frames itself
@@ -70,6 +89,8 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 } ).catch( ( e ) => {
 
 	console.error( e );
-	ui.setLoadingError( 'Something went wrong: ' + e.message );
+	// (1.23) no WebGPU: say which browsers have it, phones included
+	if ( e && ( e.code === 'no-webgpu' || e.code === 'no-adapter' ) ) ui.setLoadingError( `Water Wars needs WebGPU, which ${ e.code === 'no-webgpu' ? 'this browser doesn\'t have' : 'this device\'s graphics can\'t provide here' }. Try the latest Chrome or Edge (on a computer or an Android phone, Android 12 or newer) or Safari on iOS / iPadOS 26 or macOS 26 and newer.` );
+	else ui.setLoadingError( 'Something went wrong: ' + e.message );
 
 } );

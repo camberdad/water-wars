@@ -64,6 +64,9 @@ import { BoatSpray } from './player/BoatSpray.js';
 import { WakeSim } from './ocean/WakeSim.js';
 import { Vegetation } from './world/Vegetation.js';
 import { SoundScape } from './audio/SoundScape.js';
+import { DeviceMode } from './core/DeviceMode.js';
+import { profileFor, outputDpr, readLive, applyLive } from './core/GraphicsProfile.js';
+import { TouchControls } from './ui/TouchControls.js';
 import { loadAudioSettings, saveAudioSettings, applyAudio, readAudio, audioStorage } from './audio/AudioSettings.js';
 import { updateCameraVelocity, useStaticVelocity } from './post/CameraVelocity.js';
 
@@ -81,6 +84,9 @@ export class App {
 			renderScale: 1, // internal resolution (the temporal upscaler reconstructs the output), Performance tab
 		};
 		this.qs = new URLSearchParams( location.search );
+		// (1.23) mobile or desktop: controls, HUD and the graphics profile (src/core/DeviceMode.js)
+		this.device = new DeviceMode().watch();
+		this.profile = profileFor( this.device.mode );
 
 	}
 
@@ -97,6 +103,8 @@ export class App {
 		await progress( 0.02, 'Starting WebGPU…' );
 		const engine = this.engine = new Engine( document.getElementById( 'app' ) );
 		await engine.init();
+		// output pixels per CSS pixel, capped by the profile (1: the canvas renders at CSS resolution)
+		engine.setRenderScale( outputDpr( this.profile, window.devicePixelRatio ) );
 		// systems take `renderer` first as in the three.js version: it is the Engine now (GPU access is global)
 		const renderer = engine;
 		const { scene, camera } = engine;
@@ -128,7 +136,7 @@ export class App {
 		// contact-hardening filter sized by the sun's disc on the near cascade. Each cascade's depth range
 		// is its light margin (200 m) + its extent, which keeps the depth bias small in metres.
 		// Shadows come from the opaque and the late (transparent-pass) layers.
-		this.csm = this.shadows = new SunShadows( { size: 2048, splits: [ 10, 60, 400 ], lightMargin: 200, normalBias: [ 0.015, 0.06, 0.3 ], bias: 0.00002 } );
+		this.csm = this.shadows = new SunShadows( { size: this.profile.shadowSize, splits: [ 10, 60, 400 ], lightMargin: 200, normalBias: [ 0.015, 0.06, 0.3 ], bias: 0.00002 } );
 		this.shadows.layerMask = ( 1 << LAYERS.OPAQUE ) | ( 1 << LAYERS.TRANSPARENT );
 
 		this.environment = new Environment( renderer, scene, this.sky );
@@ -178,7 +186,7 @@ export class App {
 		this.fft.clock = () => ( Date.now() / 1000 ) % 8192;
 		if ( this.reef.setOcean ) this.reef.setOcean( this.fft ); // coral / sea fan sway follows the simulated swell
 		this.foamTexture = createFoamTexture( renderer );
-		this.oceanLOD = new CDLOD( { gridSize: Number( qs.get( 'G' ) || 32 ), leafSize: 8, levels: 12, minY: - 25, maxY: 25 } );
+		this.oceanLOD = new CDLOD( { gridSize: Number( qs.get( 'G' ) || this.profile.oceanGrid ), leafSize: 8, levels: 12, minY: - 25, maxY: 25 } );
 		this.surface = new WaterSurface( { fft: this.fft, cdlod: this.oceanLOD, foamTexture: this.foamTexture } );
 		this.surface.terrain = this.terrainGPU;
 		this.seaDetail = new SeaDetail();
@@ -231,7 +239,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		installGroundBounce( { terrain: this.terrainGPU, clouds: this.clouds } );
 		this.sceneRenderer = new SceneRenderer( engine.meshRenderer, scene, camera );
 		// the water's refraction source: the scene below the water only, half resolution
-		this.refraction = new RefractionPass( { meshRenderer: engine.meshRenderer, scene, camera, sceneRenderer: this.sceneRenderer, scale: 0.5 } );
+		this.refraction = new RefractionPass( { meshRenderer: engine.meshRenderer, scene, camera, sceneRenderer: this.sceneRenderer, scale: this.profile.refractionScale } );
 		this.sceneRenderer.onBeforeWater = () => this.refraction.render( G.seaLevel.value );
 		if ( this.sky.background ) this.sceneRenderer.background = this.sky.background;
 		// lanterns, lamp posts, path lights, lit windows, the boat's cabin / navigation lights and the
@@ -338,6 +346,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.post = new PostFX( renderer, { sceneRenderer: this.sceneRenderer, camera, underwater: this.underwater, clouds: this.clouds, sunDir: this.atmosphere.sunDir, haze: this.haze } );
 		G.exposure.value = this.settings.exposure;
 		if ( qs.has( 'scale' ) ) this.settings.renderScale = Number( qs.get( 'scale' ) ) || 1;
+		else this.settings.renderScale = this.profile.renderScale;
 		this.setRenderScale( this.settings.renderScale );
 
 		// ---------------------------------------------------------------- audio
@@ -635,6 +644,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		if ( this.freeCam ) this.fly.update( dt );
 		else this.player.update( dt );
 		this.game.update( dt );
+		if ( this.touch ) this.touch.update();
 		this.updateSun();
 
 		this.atmosphere.update( dt, this.camera.position.y );
@@ -707,6 +717,67 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.updateAudio( dt );
 		if ( this.ui ) this.ui.update( dt );
 		this.input.endFrame();
+
+	}
+
+	// ---- mobile mode (1.23): call once the HUD exists (main.js). Touch controls, the HUD for small screens
+	// (the is-mobile class on <html>, src/ui/mobile.css), the live graphics settings; and it follows the mode
+	// as it changes (a touch, a mouse, the override in the settings).
+	initMobile() {
+
+		const ui = this.ui.ui, device = this.device;
+		const game = () => this.game;
+		// the desktop live settings to go back to (a mobile start already set the mobile render scale)
+		this._desktopLive = { ...readLive( this ), ...( device.isMobile ? { renderScale: this.qs.has( 'scale' ) ? this.settings.renderScale : profileFor( 'desktop' ).renderScale } : {} ) };
+		const blocked = () => {
+
+			const g = game(), h = g && g.hud;
+			if ( ! h || ui._start || ui._panelOpen || ui._help || ui._menu || ui._photo || this.freeCam ) return true;
+			return !! ( h.invOpen || h.standOpen || h.sortOpen || ( g.pause && g.pause.open ) || ( g.highScores && g.highScores.isOpen ) );
+
+		};
+
+		// browser gestures that would fight the controls: pinch zoom, the iOS gesture zoom, double-tap zoom
+		// (the canvas has touch-action: none in mobile.css; panels keep their own scrolling)
+		document.addEventListener( 'touchmove', ( e ) => {
+
+			if ( device.isMobile && e.touches && e.touches.length > 1 ) e.preventDefault();
+
+		}, { passive: false } );
+		document.addEventListener( 'gesturestart', ( e ) => device.isMobile && e.preventDefault() );
+		// tap the prompt ("E  Board boat") to press its key
+		if ( ui.promptEl ) ui.promptEl.addEventListener( 'pointerdown', ( e ) => {
+
+			if ( ! device.isMobile || ! this.touch ) return;
+			e.preventDefault();
+			e.stopPropagation();
+			this.touch.tapPrompt( ui._pKey );
+
+		} );
+
+		const apply = ( mode, why ) => {
+
+			const mobile = mode === 'mobile';
+			this.input.touchMode = mobile;
+			if ( mobile && ! this.touch ) this.touch = new TouchControls( { input: this.input, canvas: this.engine.domElement, root: ui.root, isBlocked: blocked } );
+			if ( this.touch ) this.touch.enable( mobile );
+			// the start screen's button: "Tap to set sail" on a phone
+			const cta = document.querySelector( '.tw-start-cta span:last-child' );
+			if ( cta ) cta.textContent = mobile ? 'Tap to set sail' : 'Click to set sail';
+			if ( mobile && document.pointerLockElement && document.exitPointerLock ) document.exitPointerLock();
+			if ( why ) {
+
+				// a switch while playing: the live graphics settings follow (mobile's, or the desktop ones as they were)
+				if ( mobile ) this._desktopLive = readLive( this );
+				applyLive( this, mobile ? profileFor( 'mobile' ) : this._desktopLive );
+				ui.toast( mobile ? 'Touch controls on · lighter graphics (shadows and the ocean mesh change after a reload)' : 'Keyboard and mouse controls', 3500 );
+
+			} else if ( mobile ) applyLive( this, this.profile );
+
+		};
+
+		device.onChange( apply );
+		apply( device.mode, null );
 
 	}
 

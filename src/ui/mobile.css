@@ -1,0 +1,337 @@
+/* ==========================================================================
+   Water Wars 1.23: mobile mode (src/core/DeviceMode.js puts .is-mobile on <html>)
+   The touch controls (src/ui/TouchControls.js), and the HUD for small screens and
+   safe areas (notches, rounded corners, the home bar). Nothing here applies on desktop.
+   ========================================================================== */
+
+/* ── no browser gestures over the game: scrolling, pull-to-refresh, double-tap zoom, callouts ── */
+html.is-mobile,
+html.is-mobile body {
+	overscroll-behavior: none;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+html.is-mobile canvas {
+	touch-action: none;
+}
+
+/* ── the HUD inside the safe area ── */
+html.is-mobile .tw-root {
+	inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* desktop-only bits: the frame-rate panel, keyboard hints, the settings rail (Settings is in the ☰ menu) */
+html.is-mobile .tw-stats,
+html.is-mobile .tw-brand-name,
+html.is-mobile .tw-start-keys,
+html.is-mobile .tw-rail {
+	display: none !important;
+}
+
+/* the minimap: top right, under the purse, smaller (the action buttons have the bottom right) */
+html.is-mobile .gm-map {
+	top: calc(var(--tw-edge) + 44px);
+	bottom: auto;
+	width: 100px;
+	height: 100px;
+}
+
+/* hull / gun / wanted: top left under the mode chip, smaller (the minimap has the top right) */
+html.is-mobile .ww-status {
+	top: calc(var(--tw-edge) + 40px);
+	left: var(--tw-edge);
+	right: auto;
+	width: 200px;
+	transform: scale(0.85);
+	transform-origin: left top;
+}
+
+/* the boat's gauges: smaller in the bottom left (the joystick floats wherever the thumb lands) */
+html.is-mobile .tw-boat {
+	transform: scale(0.72);
+	transform-origin: left bottom;
+}
+
+/* the prompt can be tapped (it presses its key) */
+html.is-mobile .tw-prompt {
+	pointer-events: auto;
+	bottom: calc(var(--tw-edge) + 8px);
+	cursor: pointer;
+	touch-action: none;
+}
+
+html.is-mobile .tw-prompt::after {
+	content: 'tap';
+	margin-left: 8px;
+	font-size: 10px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--tw-aqua);
+	opacity: 0.8;
+}
+
+/* panels and menus: more of the short screen */
+html.is-mobile .gm-panel {
+	max-height: calc(100% - 2 * var(--tw-edge));
+	max-width: 94vw;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-y;
+}
+
+/* "Tap to set sail" (main.js sets the words), without the mouse icon */
+html.is-mobile .tw-start-cta svg {
+	display: none;
+}
+
+/* ── the touch controls ── */
+.ww-touch {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 5;
+}
+
+.ww-touch.is-blocked {
+	display: none;
+}
+
+.ww-tb {
+	pointer-events: auto;
+	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	background: rgba(12, 18, 26, 0.45);
+	border: 1.5px solid rgba(170, 215, 235, 0.32);
+	color: var(--tw-ink, #eef6f8);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+	transition: transform 80ms ease, background 80ms ease;
+	font-family: var(--tw-font, system-ui);
+}
+
+.ww-tb b {
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.ww-tb small {
+	margin-top: 3px;
+	font-size: 8px;
+	letter-spacing: 0;
+	opacity: 0.7;
+	white-space: nowrap;
+}
+
+.ww-tb.is-down,
+.ww-tb.is-on {
+	background: rgba(95, 227, 212, 0.45);
+	border-color: rgba(95, 227, 212, 0.9);
+	transform: scale(0.94);
+}
+
+/* the main cluster, bottom right: Action big, Alt and Use above it, ▲ ▼ to its left */
+.ww-touch-main {
+	position: absolute;
+	right: calc(var(--tw-edge, 16px) + 4px);
+	bottom: calc(var(--tw-edge, 16px) + 4px);
+	width: 212px;
+	height: 196px;
+}
+
+.ww-tb.is-big {
+	right: 0;
+	bottom: 0;
+	width: 88px;
+	height: 88px;
+	background: rgba(255, 122, 133, 0.32);
+	border-color: rgba(255, 160, 168, 0.7);
+}
+
+.ww-tb.is-big b {
+	font-size: 17px;
+}
+
+.ww-tb[data-id='alt'] { right: 0; bottom: 104px; }
+.ww-tb[data-id='use'] { right: 76px; bottom: 120px; background: rgba(95, 227, 212, 0.22); border-color: rgba(95, 227, 212, 0.6); }
+.ww-tb[data-id='up'] { right: 104px; bottom: 52px; width: 52px; height: 52px; }
+.ww-tb[data-id='down'] { right: 104px; bottom: -6px; width: 52px; height: 52px; }
+.ww-tb[data-id='up'] b,
+.ww-tb[data-id='down'] b { font-size: 13px; }
+
+/* menu and more: in the top row, after the mode chip (the left side is the joystick's) */
+.ww-touch-top {
+	position: absolute;
+	left: calc(var(--tw-edge, 16px) + 186px);
+	top: calc(var(--tw-edge, 16px) - 4px);
+	display: flex;
+	gap: 10px;
+}
+
+.ww-tb.is-small {
+	position: relative;
+	display: flex;
+	width: 42px;
+	height: 42px;
+}
+
+.ww-tb.is-small b {
+	font-size: 18px;
+}
+
+/* the drawer of other actions */
+.ww-touch-more {
+	position: absolute;
+	left: calc(var(--tw-edge, 16px) + 186px);
+	top: calc(var(--tw-edge, 16px) + 48px);
+	display: grid;
+	grid-template-columns: repeat(3, auto);
+	gap: 8px;
+	padding: 10px;
+	border-radius: 16px;
+	background: rgba(12, 18, 26, 0.72);
+	border: 1px solid rgba(170, 215, 235, 0.2);
+	pointer-events: auto;
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+}
+
+.ww-touch-more[hidden] {
+	display: none;
+}
+
+.ww-touch-more .ww-tb {
+	position: relative;
+	width: auto;
+	min-width: 74px;
+	height: 40px;
+	padding: 0 12px;
+	border-radius: 999px;
+}
+
+.ww-touch-more .ww-tb b {
+	font-size: 12px;
+}
+
+/* the floating joystick (fixed: placed at the touch point in viewport coordinates) */
+.ww-stick {
+	position: fixed;
+	width: 112px;
+	height: 112px;
+	margin: -56px 0 0 -56px;
+	border-radius: 50%;
+	border: 2px solid rgba(170, 215, 235, 0.35);
+	background: rgba(12, 18, 26, 0.18);
+	opacity: 0;
+	transition: opacity 120ms ease;
+	pointer-events: none;
+}
+
+.ww-stick.is-on {
+	opacity: 1;
+}
+
+.ww-stick i {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: rgba(95, 227, 212, 0.55);
+	border: 2px solid rgba(95, 227, 212, 0.95);
+	transform: translate(-50%, -50%);
+}
+
+/* held upright: a hint to turn the phone (it fades on its own) */
+.ww-rotate {
+	display: none;
+}
+
+@media (orientation: portrait) and (max-width: 640px) {
+
+	html.is-mobile .ww-rotate {
+		display: block;
+		position: absolute;
+		left: 50%;
+		top: calc(var(--tw-edge, 16px) + 52px);
+		transform: translateX(-50%);
+		padding: 8px 14px;
+		border-radius: 999px;
+		background: rgba(12, 18, 26, 0.78);
+		color: var(--tw-ink, #eef6f8);
+		font: 500 12px var(--tw-font, system-ui);
+		white-space: nowrap;
+		pointer-events: none;
+		animation: ww-rotate-fade 9s ease forwards;
+	}
+
+	/* upright, the cluster is a little smaller */
+	html.is-mobile .ww-touch-main {
+		transform: scale(0.86);
+		transform-origin: right bottom;
+	}
+
+}
+
+@keyframes ww-rotate-fade {
+	0%, 80% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+/* ── the GPU was lost (any mode): a reload screen ── */
+.ww-lost {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(4, 8, 12, 0.82);
+	font: 500 14px 'Inter', system-ui, sans-serif;
+	color: #eef6fb;
+}
+
+.ww-lost > div {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-width: min(360px, 88vw);
+	padding: 20px 22px;
+	border-radius: 16px;
+	background: rgba(12, 18, 26, 0.92);
+	border: 1px solid rgba(170, 215, 235, 0.2);
+	text-align: center;
+}
+
+.ww-lost b {
+	font-size: 16px;
+}
+
+.ww-lost span {
+	color: rgba(222, 236, 242, 0.76);
+}
+
+.ww-lost button {
+	margin-top: 6px;
+	padding: 10px 16px;
+	border: 0;
+	border-radius: 999px;
+	background: #5fe3d4;
+	color: #0b1418;
+	font: 600 14px 'Inter', system-ui, sans-serif;
+	cursor: pointer;
+}

@@ -21,6 +21,9 @@ import { weatherAt, spellKind, WEATHER, WEATHER_KEYS, SPELL_S, spectrumChanged, 
 import { Leaderboard, sanitize, oneRunPerPlayer, snapshotOf, LEADERBOARD_CONFIG, rowId } from '../src/game/HighScores.js';
 import { AUDIO_GROUPS, AUDIO_BUSES, AUDIO_DEFAULTS, AUDIO_KEY, loadAudioSettings, saveAudioSettings, applyAudio, readAudio } from '../src/audio/AudioSettings.js';
 import { SoundScape } from '../src/audio/SoundScape.js';
+import { readCaps, looksMobile, resolveMode, DeviceMode, MODE_KEY } from '../src/core/DeviceMode.js';
+import { PROFILES, profileFor, outputDpr } from '../src/core/GraphicsProfile.js';
+import { stickKeys, promptAction } from '../src/ui/TouchControls.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -1265,6 +1268,71 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ss.setMuted( true );
 	ok( Math.abs( g0[ 0 ] - 0.64 ) < 1e-9 && g0[ 1 ] === 0.25 && g0[ 2 ] === 0.0625 && g0[ 3 ] === 1 && g0[ 4 ] === 0 && ss.near.gain.value === 1 && ss.master.gain.value === 0 && readAudio( ss ).combat === 1 && readAudio( ss ).muted,
 	'each volume sets its group\'s gain (on the same taper as the master), and mute silences it all' );
+
+}
+// ---- 1.23: mobile mode: detection, live switching, the override, touch controls' keys, the graphics profile
+{
+
+	// a stand-in window: media queries, touch points, a viewport
+	const fakeWin = ( { touch = 0, coarse = false, fine = true, hover = true, w = 1600, h = 900, ua = 'Mozilla/5.0 (Windows NT 10.0)', search = '', store = new Map() } = {} ) => {
+
+		const listeners = {};
+		const cls = new Set();
+		return {
+			navigator: { maxTouchPoints: touch, userAgent: ua },
+			matchMedia: ( q ) => ( { matches: q === '(pointer: coarse)' ? coarse : q === '(any-pointer: fine)' ? fine : q === '(hover: hover)' ? hover : false, addEventListener() {} } ),
+			innerWidth: w, innerHeight: h,
+			location: { search },
+			localStorage: { getItem: ( k ) => store.get( k ) ?? null, setItem: ( k, v ) => store.set( k, v ) },
+			document: { documentElement: { classList: { toggle: ( c, on ) => ( on ? cls.add( c ) : cls.delete( c ) ), contains: ( c ) => cls.has( c ) } } },
+			addEventListener: ( t, fn ) => ( listeners[ t ] = listeners[ t ] || [] ).push( fn ),
+			fire: ( t, e ) => ( listeners[ t ] || [] ).forEach( ( fn ) => fn( e ) ),
+			cls,
+		};
+
+	};
+
+	const desktop = readCaps( fakeWin() );
+	const phone = readCaps( fakeWin( { touch: 5, coarse: true, fine: false, hover: false, w: 844, h: 390, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)' } ) );
+	const tablet = readCaps( fakeWin( { touch: 5, coarse: true, fine: false, hover: false, w: 1180, h: 820 } ) );
+	const touchLaptop = readCaps( fakeWin( { touch: 10, coarse: false, fine: true, hover: true, w: 1536, h: 864 } ) );
+	const oddPhone = readCaps( fakeWin( { touch: 5, coarse: false, fine: false, hover: false, w: 412, h: 915 } ) ); // reports no coarse pointer
+	ok( ! looksMobile( desktop ) && looksMobile( phone ) && looksMobile( tablet ) && ! looksMobile( touchLaptop ) && looksMobile( oddPhone ),
+		'detection: a phone, a tablet and a phone that misreports its pointer are mobile; a desktop and a touch-screen laptop with a mouse are not' );
+	ok( resolveMode( 'mobile', desktop ) === 'mobile' && resolveMode( 'desktop', phone ) === 'desktop' && resolveMode( 'auto', touchLaptop, 'touch' ) === 'mobile' && resolveMode( 'auto', phone, 'mouse' ) === 'desktop' && resolveMode( 'junk', phone ) === 'mobile',
+		'the override wins (auto | mobile | desktop); in auto the input actually used decides' );
+	// the mode object: live switching, listeners, <html> classes, the saved override
+	const store = new Map();
+	const win = fakeWin( { touch: 10, coarse: false, fine: true, hover: true, store } );
+	const dm = new DeviceMode( { win } ).watch();
+	const seen = [];
+	dm.onChange( ( m, why ) => seen.push( m + ':' + why ) );
+	const start = dm.mode;
+	win.fire( 'pointerdown', { pointerType: 'touch' } );
+	const afterTouch = dm.mode;
+	win.fire( 'pointerdown', { pointerType: 'mouse' } );
+	const afterMouse = dm.mode;
+	dm.setOverride( 'mobile' );
+	win.fire( 'pointerdown', { pointerType: 'mouse' } );
+	ok( start === 'desktop' && afterTouch === 'mobile' && afterMouse === 'desktop' && dm.mode === 'mobile' && win.cls.has( 'is-mobile' ) && ! win.cls.has( 'is-desktop' ) &&
+		seen.join() === 'mobile:touch,desktop:mouse,mobile:override' && store.get( MODE_KEY ) === 'mobile',
+		'a touch-screen laptop switches to touch controls on a touch and back on a mouse click; a forced mode holds, is kept, and marks <html>' );
+	const dm2 = new DeviceMode( { win: fakeWin( { store } ) } );
+	const dm3 = new DeviceMode( { win: fakeWin( { search: '?mode=desktop', touch: 5, coarse: true, fine: false, hover: false, w: 844, h: 390 } ) } );
+	ok( dm2.override === 'mobile' && dm2.isMobile && dm3.override === 'desktop' && ! dm3.isMobile, 'the override is remembered, and ?mode= in the URL sets it' );
+	// the joystick and the prompt
+	const keys = ( x, y ) => [ ...stickKeys( x, y ) ].sort().join();
+	ok( keys( 0.1, 0.1 ) === '' && keys( 0, - 0.6 ) === 'KeyW' && keys( 0.5, 0.5 ) === 'KeyD,KeyS' && keys( - 1, 0 ) === 'KeyA,ShiftLeft' && keys( 0, 0.95 ) === 'KeyS,ShiftLeft',
+		'the joystick: a dead zone, the four directions and diagonals, Shift at the rim' );
+	ok( promptAction( 'E' ).key === 'KeyE' && promptAction( 'Space' ).key === 'Space' && promptAction( 'LMB' ).mouse === 'left' && promptAction( 'RMB' ).mouse === 'right' && promptAction( 'Q' ).key === 'KeyQ' && promptAction( '!' ) === null,
+		'tapping a prompt presses its key (or mouse button)' );
+	// the graphics profiles
+	const D = PROFILES.desktop, M = PROFILES.mobile;
+	ok( D.renderScale === 1 && D.shadowSize === 2048 && D.oceanGrid === 32 && D.refractionScale === 0.5 && D.ssr === true && D.shafts === null && D.motionBlur === null,
+		'the desktop profile is the game as it was' );
+	ok( M.renderScale < D.renderScale && M.renderScale >= 0.5 && M.shadowSize < D.shadowSize && M.oceanGrid < D.oceanGrid && M.refractionScale < D.refractionScale && ! M.ssr && M.shafts === 0 && M.motionBlur === 0 && profileFor( 'mobile' ) === M && profileFor( 'x' ) === D,
+		`the mobile profile is lighter everywhere (render ${ M.renderScale * 100 }%, shadows ${ M.shadowSize }, ocean grid ${ M.oceanGrid }, no reflections, shafts or motion blur)` );
+	ok( outputDpr( M, 3 ) === 1 && outputDpr( D, 2 ) === 1 && outputDpr( M, 0.75 ) === 0.75, 'the output is capped at 1 pixel per CSS pixel on high-density screens' );
 
 }
 console.log( `value check ${ value }` );

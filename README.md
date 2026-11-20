@@ -226,9 +226,42 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 
 ![The beach in the late afternoon](docs/screenshot-beach.jpg)
 
+## Phones and tablets
+
+On a phone or tablet the game switches itself into **mobile mode**: on-screen touch controls, a HUD laid out
+for small screens (inside the notch and home-bar safe areas) and a lighter graphics profile. Desktop play is
+unchanged.
+
+| Touch | Does |
+|---|---|
+| Left half of the screen | A joystick where your thumb lands: walk, swim, throttle and steer. Push to the rim to run / boost |
+| Right half | Drag to look and aim |
+| **Action** (big, red) | The left mouse button, held: cast and reel, fire the deck gun |
+| **Alt** | The right mouse button, held: reel in, fire the bow cannon |
+| **Use** | E: board, take the helm, talk, open chests |
+| **▲ / ▼** | Space / C, held: jump or swim up, crouch or dive |
+| **☰** | The menu (resume, settings, audio, the home dock) |
+| **⋯** | More: cooler, harbour services, loot, harpoon, trawl net, stern rod, rod, camera, right the boat, high scores, light |
+| The prompt | Tap the "E  Board boat" style prompt at the bottom to press its key |
+
+How it decides: a finger as the main pointer (`pointer: coarse`, no hover), or touch points on a phone-sized
+screen without a mouse, means mobile; then the input you actually use wins, so a touch-screen laptop switches
+to touch controls when you touch the screen and back when you use the mouse or keyboard. To force one, pick
+**Auto / Mobile / Desktop** in Settings > Performance > Device (kept in the browser), or add `?mode=mobile`,
+`?mode=desktop` or `?mode=auto` to the URL.
+
+The mobile graphics profile (`src/core/GraphicsProfile.js`) renders at 60% internal resolution (the temporal
+upscaler rebuilds the output), with 1024 instead of 2048 shadow maps, a coarser ocean mesh, a half-resolution
+refraction pass, and no water reflections, sun shafts or motion blur. The output is capped at one pixel per CSS
+pixel on high-density screens, as on desktop. Switching mode while playing changes the live settings at once;
+the shadow maps and the ocean mesh follow on the next load. If the browser has no WebGPU the loading screen
+says which browsers do, and if the phone takes the GPU back (often after switching apps) the game offers a
+reload instead of freezing (your progress is saved).
+
 ## Requirements
 
-- A browser with WebGPU: a recent Chrome, Edge or Safari.
+- A browser with WebGPU: a recent Chrome, Edge or Safari (on phones: Chrome on Android 12 or newer, Safari
+  on iOS / iPadOS 26).
 - A capable GPU. It targets 60 fps at 2560×1267 on an Apple M5 Pro, and dynamic resolution scales
   the render down on slower machines.
 - The first load compiles several hundred shaders, which can take a minute or more. Later visits are
@@ -335,6 +368,7 @@ Add these to the URL, for example `?fly&noAudio`:
 | `noCaustics` | Skip caustics |
 | `noVeg` | Skip vegetation |
 | `noSim` | Skip the swash (shallow-water) simulation |
+| `mode=mobile` / `mode=desktop` / `mode=auto` | Force mobile mode (touch controls, the small-screen HUD, the lighter graphics) or desktop mode, or go back to choosing by itself (kept in the browser) |
 
 ## Running locally
 
@@ -359,7 +393,8 @@ Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.y
 | `src/materials/` | Shared lighting: shadow filtering, bounce light, contact shadows, local lights, LOD fades |
 | `src/player/` | Walking, swimming, the boat and the free camera |
 | `src/audio/` | The sample-based soundscape |
-| `src/ui/` | Settings panel, loading screen and HUD |
+| `src/ui/` | Settings panel, loading screen and HUD; `TouchControls.js` and `mobile.css`: the touch controls and the small-screen HUD |
+| `src/core/DeviceMode.js`, `GraphicsProfile.js` | Mobile or desktop: detection, live switching and the override; the two graphics profiles |
 | `tools/` | Scripts that fetch and convert the characters, stall props and fishing sounds |
 | `test/` | Headless engine smoke test and game-logic tests (`npm test`), and HUD / loader dev pages |
 

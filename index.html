@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 	<!-- always revalidate the page itself (the scripts and assets are content-hashed); the game also checks
 	     version.json and reloads into a new release by itself (src/core/UpdateCheck.js) -->
 	<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
@@ -13,6 +13,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Caveat+Brush&family=Kalam:wght@400;700&display=swap" rel="stylesheet" />
 	<link rel="stylesheet" href="/src/ui/ui.css" />
+	<link rel="stylesheet" href="/src/ui/mobile.css" />
 	<style>
 		html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
 		#app, #app canvas { display: block; }
@@ -75,6 +76,7 @@
 						<p class="loader-tip">A <b>trawl net</b> fills with fish, crabs and lobster while you tow it slowly. Press <kbd>N</kbd> to haul it in, and set any dolphins, seals, turtles or manatees free before you keep the rest.</p>
 						<p class="loader-tip">Sunken <b>wrecks</b> lie on the seabed out in the danger tiers. Your fish finder spots them; go over the side, dive with <kbd>C</kbd> and press <kbd>E</kbd> to open the chests. Better <b>scuba gear</b> means more air, and look out for sharks.</p>
 						<p class="loader-tip">Too loud, or can't hear the sea for the engine? Press <kbd>Esc</kbd> and open the <b>Audio</b> tab: a volume for the sea and nature, your boat, fishing and the guns. <kbd>M</kbd> mutes it all.</p>
+						<p class="loader-tip">On a phone or tablet: the left of the screen is a joystick, drag on the right to look, and the buttons fire, reel and use. <b>⋯</b> has the rest. Turn your phone sideways for the best view.</p>
 						<p class="loader-tip">Press <kbd>I</kbd> for your cooler and the fish log. Deck lights from Marta let you fish after dark.</p>
 					</div>
 					<script>

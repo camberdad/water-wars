@@ -283,6 +283,15 @@ export class AppUI {
 
 		} } );
 		quality.addToggle( { label: 'Shadows', object: s, key: 'shadows', onChange: ( v ) => { app.shadows.enabled = v; } } );
+		// (Water Wars 1.23) mobile or desktop controls, layout and graphics: src/core/DeviceMode.js
+		if ( app.device ) {
+
+			const dev = perf.addFolder( 'Device', { icon: 'layers' } );
+			s.deviceMode = app.device.override;
+			dev.addSelect( { label: 'Controls & layout', object: s, key: 'deviceMode', tooltip: 'Auto picks touch controls and lighter graphics on phones and tablets, and switches when you touch the screen or use a mouse. Mobile or Desktop forces one (kept in this browser).', options: [ { label: 'Auto', value: 'auto' }, { label: 'Mobile (touch)', value: 'mobile' }, { label: 'Desktop', value: 'desktop' } ], onChange: ( v ) => app.device.setOverride( v ) } );
+			dev.addInfo( { label: 'Now', get: () => app.device.isMobile ? 'Mobile · touch controls' : 'Desktop · keyboard and mouse' } );
+
+		}
 		s.ssr = true;
 		quality.addToggle( { label: 'Water reflections', object: s, key: 'ssr', tooltip: 'Screen-space reflections of the pier, boats and hills on the water.', onChange: ( v ) => { app.waterMaterial.params.ssr.value = v ? 1 : 0; } } );
 

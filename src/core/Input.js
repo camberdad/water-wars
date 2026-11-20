@@ -12,6 +12,11 @@ export class Input {
 		this.rightDown = false;
 		this.locked = false;
 		this.enabled = true;
+		// (Water Wars 1.23) mobile mode: the touch controls (src/ui/TouchControls.js) drive this same input;
+		// no pointer lock, and the mouse events a tap makes afterwards are ignored
+		this.touchMode = false;
+		this.lastTouch = - 1e9;
+		const fromTouch = () => performance.now() - this.lastTouch < 800;
 
 		window.addEventListener( 'keydown', ( e ) => {
 
@@ -26,12 +31,14 @@ export class Input {
 
 		dom.addEventListener( 'mousedown', ( e ) => {
 
+			if ( fromTouch() ) return;
 			if ( e.button === 0 ) this.mouseDown = true;
 			if ( e.button === 2 ) this.rightDown = true;
 
 		} );
 		window.addEventListener( 'mouseup', ( e ) => {
 
+			if ( fromTouch() ) return;
 			if ( e.button === 0 ) this.mouseDown = false;
 			if ( e.button === 2 ) this.rightDown = false;
 
@@ -39,7 +46,7 @@ export class Input {
 		dom.addEventListener( 'contextmenu', ( e ) => e.preventDefault() );
 		window.addEventListener( 'mousemove', ( e ) => {
 
-			if ( this.locked || this.mouseDown || this.rightDown ) {
+			if ( ! fromTouch() && ( this.locked || this.mouseDown || this.rightDown ) ) {
 
 				this.look.x += e.movementX;
 				this.look.y += e.movementY;
@@ -64,7 +71,7 @@ export class Input {
 
 	requestLock() {
 
-		if ( ! this.locked ) this.dom.requestPointerLock?.()?.catch?.( () => {} );
+		if ( ! this.locked && ! this.touchMode ) this.dom.requestPointerLock?.()?.catch?.( () => {} );
 
 	}
 
