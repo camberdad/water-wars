@@ -26,6 +26,7 @@ import { PROFILES, profileFor, outputDpr } from '../src/core/GraphicsProfile.js'
 import { stickKeys, promptAction, buttonLabels } from '../src/ui/TouchControls.js';
 import { fullscreenSupport } from '../src/core/Fullscreen.js';
 import { cappedSize, shrinkRGBA } from '../src/engine/gpu/GPU.js';
+import { LoadPlan, STAGES, TYPICAL, LOAD_TIMES_KEY } from '../src/core/LoadPlan.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -1377,6 +1378,48 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( s.width === 2 && s.height === 1 && s.data.length === 8 && s.data[ 0 ] === 150 && shrinkRGBA( img, 8 ) === img,
 		'the whale\'s PNG maps are box-filtered down on phones, untouched on desktop' );
 	ok( PROFILES.mobile.maxImageSize === 512 && PROFILES.desktop.maxImageSize === Infinity, 'phones load image textures at 512 px at most; desktops at full size' );
+
+}
+// ---- 1.24.2: the loading bar's percentage follows the expected time of each stage, learnt per device
+{
+
+	let t = 0;
+	const m = new Map();
+	const store = { getItem: ( k ) => m.get( k ) ?? null, setItem: ( k, v ) => m.set( k, v ) };
+	const phone = new LoadPlan( 'mobile', store, () => t );
+	const starts = STAGES.map( ( s ) => phone.begin( s ).p );
+	const warm = phone.begin( 'warmup1' );
+	ok( starts.every( ( p, i ) => ! i || p >= starts[ i - 1 ] ) && starts[ 0 ] === 0 && warm.p < 0.5 && warm.until > 0.6 && warm.ms === TYPICAL.mobile.warmup1 * 1000,
+		`on a phone the warm-up (where an iPhone does its real compiling) gets most of the bar: ${ Math.round( warm.p * 100 ) }% to ${ Math.round( warm.until * 100 ) }%, not the last 4%` );
+	const desk = new LoadPlan( 'desktop', null, () => t ).begin( 'compile' );
+	ok( desk.until - desk.p > 0.5, `on a desktop compiling the shaders is most of it (${ Math.round( ( desk.until - desk.p ) * 100 ) }% of the bar)` );
+	// a load on this phone: the times it really took are kept, and the next load's bar follows them
+	t = 0;
+	const run = new LoadPlan( 'mobile', store, () => t );
+	for ( const s of STAGES ) {
+
+		run.begin( s );
+		t += s === 'warmup1' ? 40000 : s === 'compile' ? 2000 : 1000;
+
+	}
+
+	run.finish();
+	const next = new LoadPlan( 'mobile', store, () => t );
+	const kept = JSON.parse( m.get( LOAD_TIMES_KEY ) ).mobile;
+	ok( kept.warmup1 === 40 && kept.compile === 2 && next.expect.warmup1 === 40 && Math.abs( next.total - ( 40 + 2 + 10 ) ) < 1e-9,
+		'the stages\' real times on this device are kept, and the next load\'s bar follows them' );
+	t = 0;
+	const again = new LoadPlan( 'mobile', store, () => t );
+	for ( const s of STAGES ) {
+
+		again.begin( s );
+		t += s === 'warmup1' ? 20000 : 1000;
+
+	}
+
+	again.finish();
+	ok( JSON.parse( m.get( LOAD_TIMES_KEY ) ).mobile.warmup1 === 30 && new LoadPlan( 'desktop', store ).expect.compile === TYPICAL.desktop.compile,
+		'blended with the last time (one slow load does not skew it for good), and kept apart per mode' );
 
 }
 console.log( `value check ${ value }` );

@@ -65,6 +65,7 @@ import { WakeSim } from './ocean/WakeSim.js';
 import { Vegetation } from './world/Vegetation.js';
 import { SoundScape } from './audio/SoundScape.js';
 import { DeviceMode } from './core/DeviceMode.js';
+import { LoadPlan } from './core/LoadPlan.js';
 import { profileFor, outputDpr, readLive, applyLive } from './core/GraphicsProfile.js';
 import { TouchControls } from './ui/TouchControls.js';
 import { fullscreenSupport, isFullscreen, enterFullscreen, exitFullscreen, HINT_KEY, HOME_SCREEN_TEXT } from './core/Fullscreen.js';
@@ -72,6 +73,8 @@ import { loadAudioSettings, saveAudioSettings, applyAudio, readAudio, audioStora
 import { updateCameraVelocity, useStaticVelocity } from './post/CameraVelocity.js';
 
 const _up = new Vector3( 0, 1, 0 );
+// (1.24.2) the longest the loading screen waits for the GPU to finish a warm-up frame (ms)
+const WARM_WAIT = 30000;
 
 export class App {
 
@@ -94,14 +97,32 @@ export class App {
 	async init( onProgress = () => {} ) {
 
 		const qs = this.qs;
-		// report a stage, then let the page paint it before the (synchronous) stage work starts
-		const progress = async ( p, text, until ) => {
+		// report a stage, then let the page paint it before the (synchronous) stage work starts.
+		// (1.24.2) each stage's share of the bar is its expected time on this device: src/core/LoadPlan.js
+		const plan = this.loadPlan = new LoadPlan( this.device.mode, ( () => {
 
-			onProgress( p, text, until );
+			try {
+
+				return localStorage;
+
+			} catch ( e ) {
+
+				return null;
+
+			}
+
+		} )() );
+		this._loadStage = '';
+		const progress = async ( stage, text ) => {
+
+			const { p, until, ms } = plan.begin( stage );
+			this._loadStage = text;
+			this._loadStageT = performance.now();
+			onProgress( p, text, until, ms );
 			if ( typeof requestAnimationFrame === 'function' ) await new Promise( ( r ) => requestAnimationFrame( () => setTimeout( r, 0 ) ) );
 
 		};
-		await progress( 0.02, 'Starting WebGPU…' );
+		await progress( 'webgpu', 'Starting WebGPU…' );
 		const engine = this.engine = new Engine( document.getElementById( 'app' ) );
 		await engine.init();
 		// output pixels per CSS pixel, capped by the profile (1: the canvas renders at CSS resolution)
@@ -123,7 +144,7 @@ export class App {
 		this.fly.setPose( new Vector3( 20, 6, - 20 ), Math.PI * 0.9, - 0.12 );
 
 		// ---------------------------------------------------------------- sky
-		await progress( 0.04, 'Building the atmosphere…' );
+		await progress( 'atmosphere', 'Building the atmosphere…' );
 		this.atmosphere = new Atmosphere( renderer );
 		this.sky = new Sky( this.atmosphere );
 		if ( ! qs.has( 'noClouds' ) ) {
@@ -145,22 +166,22 @@ export class App {
 		this.environment = new Environment( renderer, scene, this.sky );
 
 		// ---------------------------------------------------------------- island
-		await progress( 0.06, 'Shaping the island…' );
+		await progress( 'island', 'Shaping the island…' );
 		this.terrainData = new TerrainData();
 		this.colliders = new Colliders();
 		// the village flattens building pads into the heightmap: build it before any terrain
 		// data is derived (shore field, GPU textures, meshes)
-		await progress( 0.12, 'Building the village…' );
+		await progress( 'village', 'Building the village…' );
 		this.village = new Village( { scene, terrain: this.terrainData, colliders: this.colliders } );
 		if ( ! qs.has( 'noVeg' ) ) {
 
-			await progress( 0.14, 'Planting the island…' );
+			await progress( 'planting', 'Planting the island…' );
 			this.vegetation = new Vegetation( { scene, terrain: this.terrainData, village: this.village } );
 			useStaticVelocity( this.vegetation.group );
 
 		}
 
-		await progress( 0.19, 'Rolling in the swell…' );
+		await progress( 'swell', 'Rolling in the swell…' );
 		this.shoreField = computeShoreField( this.terrainData, { res: 512, swellDir: [ WORLD.swellDir.x, WORLD.swellDir.y ] } );
 		this.terrainGPU = new TerrainGPU( this.terrainData, this.shoreField );
 		// terrain and rocks apply the heightfield sun shadow (long hill shadows) in their own lighting
@@ -172,7 +193,7 @@ export class App {
 		this.terrain.mesh.material.appliesHillShadow = true;
 		this.rocks.material.appliesHillShadow = true;
 
-		await progress( 0.23, 'Growing the reef…' );
+		await progress( 'reef', 'Growing the reef…' );
 		this.reef = new Reef( { scene, terrain: this.terrainData, shoreField: this.shoreField } );
 
 		this.boat = new BoatModel();
@@ -181,7 +202,7 @@ export class App {
 		this.boat.group.rotation.y = WORLD.boatDock.heading;
 
 		// ---------------------------------------------------------------- ocean
-		await progress( 0.3, 'Simulating the ocean…' );
+		await progress( 'ocean', 'Simulating the ocean…' );
 		this.fft = new OceanFFT( renderer );
 		// Water Wars 1.13.2: the waves run on the wall clock (the same seed and the same time on every
 		// computer: every player sees the same swell, so the boats of others sit on your water as on theirs).
@@ -333,7 +354,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.freeCam = qs.has( 'fly' );
 
 		// ---------------------------------------------------------------- post
-		await progress( 0.34, 'Preparing the shaders…' );
+		await progress( 'prep', 'Preparing the shaders…' );
 		this.underwater = new Underwater( {
 			depthTexture: this.sceneRenderer.sceneRT.depthTexture, maskTexture: this.sceneRenderer.waterMaskTexture,
 			query: this.query, caustics: this.caustics, fft: this.fft,
@@ -392,13 +413,50 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// ---- compile pipelines asynchronously (keeps the page responsive), then prime a few
 		// frames behind the loading screen so any remaining first-use stalls happen there
 		// stage weights: in the browser the pipeline compile below takes far longer than everything before it
-		await progress( 0.36, 'Compiling shaders…', 0.95 );
+		await progress( 'compile', 'Compiling shaders…' );
+		this._pipeBase = GPU.pipelinesSettled;
 		await this.precompile();
-		await progress( 0.96, 'Warming up…' );
+		// (1.24.2) the first frames: where a phone's browser does its real compiling (a minute on an iPhone).
+		// Each waits for the GPU at most WARM_WAIT ms: a GPU that never answers (it crashed, or hung) must not
+		// leave the game on the loading screen for ever; then it starts and finishes compiling as it plays
 		for ( let i = 0; i < 2; i ++ ) {
 
+			await progress( i ? 'warmup2' : 'warmup1', `Warming up ${ i + 1 } of 2…` );
 			this.frame( 1 / 60 );
-			await GPU.queue.onSubmittedWorkDone();
+			const done = await Promise.race( [ GPU.queue.onSubmittedWorkDone().then( () => true ), new Promise( ( r ) => setTimeout( () => r( false ), WARM_WAIT ) ) ] );
+			if ( ! done ) console.warn( `Warm-up frame ${ i + 1 }: the GPU didn't finish in ${ WARM_WAIT / 1000 } s; starting anyway` );
+
+		}
+
+		plan.finish();
+		this._loadStage = '';
+
+	}
+
+	// (1.24.2) what a slow load is waiting on, for the loading screen (shown after a stage runs 30 s): the stage,
+	// the GPU memory asked for, the pipelines compiled, and a GPU error or a lost GPU
+	loadingDiag() {
+
+		if ( ! this._loadStage ) return '';
+		const mb = Math.round( ( ( GPU.bufferBytes || 0 ) + ( GPU.textureBytes || 0 ) ) / 1048576 );
+		const bits = [ `GPU memory ${ mb } MB`, `pipelines ${ GPU.pipelinesSettled || 0 } / ${ GPU.pipelinesMade || 0 }` ];
+		if ( GPU.lostInfo ) bits.push( 'GPU lost: ' + GPU.lostInfo );
+		else if ( GPU.lastError ) bits.push( 'GPU error: ' + GPU.lastError );
+		return bits.join( ' · ' );
+
+	}
+
+	// pipelines compiling: wait, showing how many are done in this stage (report: false for the first, small
+	// wait, before the precompile frame has asked for most of them: the total isn't known yet)
+	async waitPipelines( report = true ) {
+
+		const base = this._pipeBase || 0;
+		for ( ;; ) {
+
+			const ready = await Promise.race( [ GPU.pipelinesReady().then( () => true ), new Promise( ( r ) => setTimeout( () => r( false ), 200 ) ) ] );
+			const total = ( GPU.pipelinesMade || 0 ) - base, done = ( GPU.pipelinesSettled || 0 ) - base;
+			if ( report && total > 0 && this.onLoadDetail ) this.onLoadDetail( done, total );
+			if ( ready ) return;
 
 		}
 
@@ -422,7 +480,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		}
 
-		await GPU.pipelinesReady();
+		await this.waitPipelines( false );
 		mr.precompiling = true;
 		this.refraction.enabled = true;
 		const sr = this.sceneRenderer, hm = sr.hullMaskRT;
@@ -449,7 +507,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.waterMaterial.hullOverride = null;
 		mr.precompiling = false;
 		this.refraction.enabled = refr;
-		await GPU.pipelinesReady();
+		await this.waitPipelines();
 		await GPU.queue.onSubmittedWorkDone();
 
 	}

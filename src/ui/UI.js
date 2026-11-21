@@ -3325,7 +3325,9 @@ export class UI {
 	// scripts run. setLoadingDetail( done, total ): sub-progress of the current stage (e.g. pipelines
 	// compiled / total), mapped between p and `until`. setLoadingError( message ).
 
-	setLoading( progress01, status, until ) {
+	// (Water Wars 1.24.2) expectedMs: how long the stage should take (src/core/LoadPlan.js); the bar creeps
+	// across the stage at that pace (not reaching its end until the next stage starts)
+	setLoading( progress01, status, until, expectedMs ) {
 
 		const L = document.getElementById( 'loader' );
 		if ( ! L ) return;
@@ -3336,7 +3338,8 @@ export class UI {
 			ld.from = Math.max( p, ld.shown );
 			ld.until = clamp( typeof until === 'number' ? until : p + 0.05, ld.from, p >= 1 ? 1 : 0.995 );
 			ld.stageT = performance.now();
-			ld.tau = typeof until === 'number' ? 40000 : 6000;
+			ld.tau = expectedMs > 0 ? Math.max( 300, expectedMs * 0.6 ) : typeof until === 'number' ? 40000 : 6000;
+			ld.diagT = 0;
 			ld.detail = - 1;
 			if ( p >= 1 ) ld.shown = 1;
 
@@ -3415,6 +3418,22 @@ export class UI {
 		ld.shown += ( Math.max( goal, ld.shown ) - ld.shown ) * ( dt > 0 ? 1 - Math.exp( - dt * 9 ) : 0 );
 		if ( ld.fill ) ld.fill.style.transform = `scaleX(${ Math.max( 0.02, ld.shown ).toFixed( 4 ) })`;
 		if ( ld.pct ) ld.pct.textContent = Math.floor( ld.shown * 100 ) + '%';
+		// (1.24.2) a stage running long: say what it's waiting on, once a second
+		if ( this.loadingDiag && ld.statusEl && ! ld.stopped && now - ld.stageT > 30000 && now - ( ld.diagT || 0 ) > 1000 ) {
+
+			ld.diagT = now;
+			let d = '';
+			try {
+
+				d = this.loadingDiag() || '';
+
+			} catch ( e ) { /* none */ }
+
+			const txt = d ? `${ ld.status.replace( /…$/, '' ) } · ${ Math.round( ( now - ld.stageT ) / 1000 ) } s · ${ d }` : ld.status;
+			if ( ld.statusEl.textContent !== txt ) ld.statusEl.textContent = txt;
+
+		}
+
 		if ( ld.time ) {
 
 			const s = Math.floor( ( now - ld.t0 ) / 1000 );

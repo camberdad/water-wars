@@ -140,10 +140,17 @@ export const GPU = {
 		device.lost.then( ( info ) => {
 
 			console.error( 'WebGPU device lost:', info.message );
+			this.lostInfo = String( info.message || info.reason || 'lost' ).slice( 0, 120 );
 			if ( this.onLost && info.reason !== 'destroyed' ) this.onLost( info );
 
 		} );
-		device.addEventListener && device.addEventListener( 'uncapturederror', ( e ) => console.error( 'WebGPU:', e.error.message.split( '\n' ).slice( 0, 6 ).join( '\n' ) ) );
+		device.addEventListener && device.addEventListener( 'uncapturederror', ( e ) => {
+
+			console.error( 'WebGPU:', e.error.message.split( '\n' ).slice( 0, 6 ).join( '\n' ) );
+			// (1.24.2) the last one, for the loading screen's diagnostics
+			this.lastError = String( e.error.message || '' ).split( '\n' )[ 0 ].slice( 0, 120 );
+
+		} );
 
 		if ( canvas && ! headless ) {
 
@@ -239,6 +246,8 @@ export const GPU = {
 		const h = { pipeline: null, label: desc.label, desc, kind, failed: false };
 		// started after the current task: a kernel dispatched right after it was made (a one-off bake)
 		// compiles once, synchronously, instead of twice
+		// (Water Wars 1.24.2) counted for the loading screen: made, and settled (compiled or failed)
+		this.pipelinesMade = ( this.pipelinesMade || 0 ) + 1;
 		const p = Promise.resolve().then( () => {
 
 			if ( h.pipeline ) return;
@@ -255,7 +264,12 @@ export const GPU = {
 
 			} );
 
-		} ).finally( () => this._pending.delete( p ) );
+		} ).finally( () => {
+
+			this._pending.delete( p );
+			this.pipelinesSettled = ( this.pipelinesSettled || 0 ) + 1;
+
+		} );
 		this._pending.add( p );
 		return h;
 

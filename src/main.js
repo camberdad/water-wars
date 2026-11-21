@@ -40,7 +40,11 @@ GPU.onLost = () => {
 window.__ui = ui;
 window.__app = app; // debugging / automation
 
-app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async () => {
+// (1.24.2) the bar: each stage's share and expected time (src/core/LoadPlan.js), real counts while shaders
+// compile, and what a slow stage is waiting on
+app.onLoadDetail = ( done, total ) => ui.setLoadingDetail( done, total );
+ui.loadingDiag = () => app.loadingDiag();
+app.init( ( p, text, until, ms ) => ui.setLoading( p, text, until, ms ) ).then( async () => {
 
 	app.ui = new AppUI( app, ui );
 	// (1.23) touch controls, the small-screen HUD and the mobile graphics profile when on a phone or tablet
