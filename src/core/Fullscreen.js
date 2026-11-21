@@ -1,45 +1,16 @@
-// Full screen on phones and tablets (Water Wars 1.24).
-//
-// Two ways, because browsers differ:
-//
-//   the Fullscreen API   Android (Chrome, Edge, Samsung Internet), iPad Safari, desktops: the page asks for it
-//                        (only from a tap), and on a phone also locks the screen to landscape. Mobile mode goes
-//                        fullscreen when you tap "Tap to set sail"; the ⛶ button in the touch controls toggles it.
-//   a Home Screen app    iPhone Safari lets only videos go fullscreen. Added to the Home Screen (Share > Add to
-//                        Home Screen), the game opens as a web app with no browser bars at all (index.html:
-//                        apple-mobile-web-app-capable, manifest.webmanifest display: fullscreen). The ⛶ button
-//                        and a one-time hint on the start screen say how.
-//
-// Everything is wrapped in try/catch: a browser that refuses just stays as it is.
-
-export const HINT_KEY = 'waterwars.homescreenHint';
+// Full screen on phones and tablets (Water Wars 1.24), with the Fullscreen API: Android (Chrome, Edge, Samsung
+// Internet), iPad Safari, desktops. The page asks for it (only from a tap), and on a phone also locks the screen to
+// landscape. Mobile mode goes fullscreen when you tap "Tap to set sail"; the ⛶ button in the touch controls toggles
+// it. iPhone Safari lets only videos go fullscreen: there the ⛶ button isn't shown. (1.24.4: no Home Screen web app
+// any more.) Everything is wrapped in try/catch: a browser that refuses just stays as it is.
 
 // what this browser can do, from a window-like object (testable)
 export function fullscreenSupport( w = globalThis ) {
 
 	const d = w.document || {};
 	const el = d.documentElement || {};
-	const nav = w.navigator || {};
-	const ua = nav.userAgent || '';
-	const mq = ( q ) => {
-
-		try {
-
-			return !! ( w.matchMedia && w.matchMedia( q ).matches );
-
-		} catch ( e ) {
-
-			return false;
-
-		}
-
-	};
-
 	const api = !! ( ( d.fullscreenEnabled || d.webkitFullscreenEnabled ) && ( el.requestFullscreen || el.webkitRequestFullscreen ) );
-	// an installed web app (from the Home Screen): already without browser bars
-	const app = mq( '(display-mode: fullscreen)' ) || mq( '(display-mode: standalone)' ) || nav.standalone === true;
-	const iphone = /iPhone|iPod/.test( ua );
-	return { api, app, iphone, homeScreen: ! api && ! app && iphone };
+	return { api };
 
 }
 
@@ -87,5 +58,3 @@ export async function exitFullscreen( d = globalThis.document ) {
 	} catch ( e ) { /* already out */ }
 
 }
-
-export const HOME_SCREEN_TEXT = 'For full screen on iPhone: tap Share, then Add to Home Screen, and open Water Wars from your Home Screen';

@@ -13,8 +13,8 @@
 //   Use                       E: board, take the helm, talk, open chests
 //   ▲ / ▼                     Space and C, held: jump / swim up, crouch / dive
 //   ☰ (top left)              Escape: the menu (resume, settings, audio, home dock)
-//   ⛶ (top left)              full screen (1.24: src/core/Fullscreen.js; on an iPhone, how to add it to the
-//                             Home Screen); not shown when the game already runs as a Home Screen app
+//   ⛶ (top left)              full screen (1.24: src/core/Fullscreen.js); not shown where the browser can't
+//                             (iPhone Safari)
 //   ⋯ (top left)              more: cooler, harbour services, loot, harpoon, trawl net, stern rod, rod,
 //                             camera, high scores, flashlight, right the boat, and Controls (the help sheet,
 //                             its touch version: src/ui/UI.js _buildHelp)

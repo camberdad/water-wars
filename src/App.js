@@ -68,7 +68,7 @@ import { DeviceMode } from './core/DeviceMode.js';
 import { LoadPlan } from './core/LoadPlan.js';
 import { profileFor, outputDpr, readLive, applyLive } from './core/GraphicsProfile.js';
 import { TouchControls } from './ui/TouchControls.js';
-import { fullscreenSupport, isFullscreen, enterFullscreen, exitFullscreen, HINT_KEY, HOME_SCREEN_TEXT } from './core/Fullscreen.js';
+import { fullscreenSupport, isFullscreen, enterFullscreen, exitFullscreen } from './core/Fullscreen.js';
 import { loadAudioSettings, saveAudioSettings, applyAudio, readAudio, audioStorage } from './audio/AudioSettings.js';
 import { updateCameraVelocity, useStaticVelocity } from './post/CameraVelocity.js';
 
@@ -788,9 +788,8 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		const ui = this.ui.ui, device = this.device;
 		const game = () => this.game;
-		// (1.24) full screen: the Fullscreen API where there is one, else (iPhone) the Home Screen
+		// (1.24) full screen: the Fullscreen API where there is one (not on an iPhone: no ⛶ button there)
 		const fs = this.fullscreen = fullscreenSupport( window );
-		this.showHomeScreenHint();
 		// the desktop live settings to go back to (a mobile start already set the mobile render scale)
 		this._desktopLive = { ...readLive( this ), ...( device.isMobile ? { renderScale: this.qs.has( 'scale' ) ? this.settings.renderScale : profileFor( 'desktop' ).renderScale } : {} ) };
 		const blocked = () => {
@@ -823,7 +822,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 			const mobile = mode === 'mobile';
 			this.input.touchMode = mobile;
-			if ( mobile && ! this.touch ) this.touch = new TouchControls( { input: this.input, canvas: this.engine.domElement, root: ui.root, isBlocked: blocked, onFullscreen: fs.app ? null : () => this.toggleFullscreen(),
+			if ( mobile && ! this.touch ) this.touch = new TouchControls( { input: this.input, canvas: this.engine.domElement, root: ui.root, isBlocked: blocked, onFullscreen: fs.api ? () => this.toggleFullscreen() : null,
 				// (1.24.1) the Cast / Fire and Reel / Cannon words: aboard a boat, and the rod out
 				context: () => ( { aboard: this.player.mode === 'boat' || this.player.mode === 'deck', rod: !! ( this.game && this.game.rod && this.game.rod.equipped ) } ) } );
 			if ( this.touch ) this.touch.enable( mobile );
@@ -851,12 +850,9 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 	toggleFullscreen() {
 
 		const fs = this.fullscreen || fullscreenSupport( window );
-		if ( fs.api ) {
-
-			if ( isFullscreen() ) exitFullscreen();
-			else enterFullscreen( window );
-
-		} else if ( fs.homeScreen && this.ui ) this.ui.ui.toast( HOME_SCREEN_TEXT, 8000 );
+		if ( ! fs.api ) return;
+		if ( isFullscreen() ) exitFullscreen();
+		else enterFullscreen( window );
 
 	}
 
@@ -864,37 +860,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 	fullscreenOnSail() {
 
 		const fs = this.fullscreen;
-		if ( fs && fs.api && ! fs.app && this.device.isMobile && ! isFullscreen() ) enterFullscreen( window );
-
-	}
-
-	// an iPhone in the browser: on the start screen, a note on how to play full screen (until dismissed)
-	showHomeScreenHint() {
-
-		const fs = this.fullscreen, ui = this.ui && this.ui.ui;
-		if ( ! fs || ! fs.homeScreen || ! ui || ! ui.startEl ) return;
-		try {
-
-			if ( localStorage.getItem( HINT_KEY ) ) return;
-
-		} catch ( e ) { /* show it */ }
-
-		const el = document.createElement( 'div' );
-		el.className = 'ww-homescreen tw-interactive';
-		el.innerHTML = `<span>⛶ ${ HOME_SCREEN_TEXT }.</span><button type="button" aria-label="Dismiss">✕</button>`;
-		el.querySelector( 'button' ).addEventListener( 'click', ( e ) => {
-
-			e.stopPropagation();
-			el.remove();
-			try {
-
-				localStorage.setItem( HINT_KEY, '1' );
-
-			} catch ( err ) { /* not kept */ }
-
-		} );
-		for ( const t of [ 'pointerdown', 'mousedown', 'click' ] ) el.addEventListener( t, ( e ) => e.stopPropagation() );
-		ui.startEl.append( el );
+		if ( fs && fs.api && this.device.isMobile && ! isFullscreen() ) enterFullscreen( window );
 
 	}
 

@@ -434,42 +434,6 @@ html.is-mobile .tw-help-card {
 
 }
 
-/* the iPhone's how-to-go-full-screen note on the start screen */
-.ww-homescreen {
-	display: none;
-}
-
-html.is-mobile .ww-homescreen {
-	position: absolute;
-	left: 50%;
-	top: max(10px, env(safe-area-inset-top, 0px));
-	transform: translateX(-50%);
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	max-width: min(560px, 92vw);
-	padding: 8px 8px 8px 14px;
-	border-radius: 14px;
-	background: rgba(12, 18, 26, 0.82);
-	border: 1px solid rgba(95, 227, 212, 0.45);
-	color: #eef6f8;
-	font: 500 12.5px/1.35 'Inter', system-ui, sans-serif;
-	pointer-events: auto;
-	z-index: 5;
-}
-
-.ww-homescreen button {
-	flex: none;
-	width: 28px;
-	height: 28px;
-	border-radius: 50%;
-	border: 0;
-	background: rgba(170, 215, 235, 0.14);
-	color: #eef6f8;
-	font-size: 13px;
-	cursor: pointer;
-}
-
 /* ⛶ shows it's on */
 html:fullscreen .ww-tb[data-fs] {
 	background: rgba(95, 227, 212, 0.35);

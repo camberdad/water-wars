@@ -1,5 +1,5 @@
 // Plain-node tests of the fishing game logic (no GPU): bites, the catch fight, inventory, save.
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { FISH, FISH_IDS, fishValue, fishLengthCm, TIERS, TIER_IDS, TROPHY_VALUE, cutPrice } from '../src/game/FishTable.js';
 import { habitatAt, pickSpecies, rollWeight, biteDelay, tierChances, TIER_ODDS } from '../src/game/Bites.js';
 import { CatchMinigame } from '../src/game/CatchMinigame.js';
@@ -1338,25 +1338,14 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	ok( outputDpr( M, 3 ) === 1 && outputDpr( D, 2 ) === 1 && outputDpr( M, 0.75 ) === 0.75, 'the output is capped at 1 pixel per CSS pixel on high-density screens' );
 
 }
-// ---- 1.24: full screen on phones: the Fullscreen API where there is one, else (iPhone) the Home Screen
+// ---- 1.24: full screen on phones with the Fullscreen API (1.24.4: no Home Screen web app)
 {
 
-	const w = ( { ua, api = true, mode = null, standalone } ) => ( {
-		navigator: { userAgent: ua, standalone },
-		document: { fullscreenEnabled: api, documentElement: api ? { requestFullscreen() {} } : {} },
-		matchMedia: ( q ) => ( { matches: mode !== null && q === `(display-mode: ${ mode })` } ),
-	} );
-	const iphone = fullscreenSupport( w( { ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 Version/26.1 Mobile/15E148 Safari/604.1', api: false } ) );
-	const iphoneApp = fullscreenSupport( w( { ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X)', api: false, standalone: true } ) );
-	const android = fullscreenSupport( w( { ua: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/142 Mobile Safari/537.36' } ) );
-	const ipad = fullscreenSupport( w( { ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/26.1 Safari/605.1.15' } ) );
-	const installed = fullscreenSupport( w( { ua: 'Mozilla/5.0 (Linux; Android 15)', mode: 'fullscreen' } ) );
-	ok( iphone.homeScreen && ! iphone.api && ! iphoneApp.homeScreen && iphoneApp.app && android.api && ! android.homeScreen && ipad.api && installed.app,
-		'full screen: Android and iPad use the Fullscreen API; an iPhone in Safari is pointed to the Home Screen; a Home Screen app is already full screen' );
-	const m = JSON.parse( readFileSync( new URL( '../public/manifest.webmanifest', import.meta.url ), 'utf8' ) );
+	const w = ( api ) => ( { document: { fullscreenEnabled: api, documentElement: api ? { requestFullscreen() {} } : {} } } );
+	ok( fullscreenSupport( w( true ) ).api && ! fullscreenSupport( w( false ) ).api, 'full screen where the browser allows it (Android, iPad); none on iPhone Safari' );
 	const html = readFileSync( new URL( '../index.html', import.meta.url ), 'utf8' );
-	ok( m.display === 'fullscreen' && m.orientation === 'landscape' && m.icons.length >= 2 && /apple-mobile-web-app-capable" content="yes"/.test( html ) && /rel="manifest"/.test( html ) && /apple-touch-icon/.test( html ),
-		'the game installs to the Home Screen as a full-screen, landscape web app' );
+	ok( ! /rel="manifest"|apple-mobile-web-app|apple-touch-icon/.test( html ) && ! existsSync( new URL( '../public/manifest.webmanifest', import.meta.url ) ),
+		'no Home Screen web app: no manifest, no Apple Home Screen tags' );
 
 }
 // ---- 1.24.1: the touch buttons say what they do: Cast / Reel ashore, Fire / Cannon aboard
