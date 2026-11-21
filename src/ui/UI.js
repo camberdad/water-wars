@@ -2152,15 +2152,15 @@ export class UI {
 					<section>
 						<h3>Interact</h3>
 						${ row( t( 'Use' ), 'Interact<small>Board, helm, step ashore, trade, open chests</small>' ) }
-						${ row( t( 'Action' ), 'Cast, strike, reel<small>Hold to wind up / reel</small>' ) }
-						${ row( t( 'Alt' ), 'Reel in an empty line' ) }
+						${ row( t( 'Cast' ), 'Cast, strike, reel<small>Hold to wind up / reel. On a boat it says Fire (Cast under it once the rod is out)</small>' ) }
+						${ row( t( 'Reel' ), 'Reel in an empty line<small>On a boat it says Cannon (Reel under it)</small>' ) }
 						${ row( t( 'Prompt' ), 'Tap the prompt at the bottom<small>It presses the key it shows</small>' ) }
 						${ row( t( '☰' ), 'Menu<small>Resume, settings, audio, the home dock, the title screen</small>' ) }
 					</section>
 					<section>
 						<h3>Combat (at the helm)</h3>
-						${ row( t( 'Action' ), 'Deck gun<small>Hold to fire, watch the heat</small>' ) }
-						${ row( t( 'Alt' ), 'Bow cannon<small>Lobs a shell at the crosshair</small>' ) }
+						${ row( t( 'Fire' ), 'Deck gun<small>Hold to fire, watch the heat</small>' ) }
+						${ row( t( 'Cannon' ), 'Bow cannon<small>Lobs a shell at the crosshair</small>' ) }
 						${ row( t( '⋯', 'Loot' ), 'Loot a wreck alongside' ) }
 						${ row( t( '⋯', 'Harpoon' ), 'Harpoon a giant fish<small>Hold it to cut the tether</small>' ) }
 						${ row( t( '⋯', 'Right boat' ), 'Right a capsized boat' ) }

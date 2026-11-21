@@ -6,8 +6,10 @@
 //   left half of the screen   a floating joystick where the thumb lands: W A S D (walk, swim, throttle and
 //                             steer at the helm); pushed to the rim it adds Shift (run / boost)
 //   right half                drag to look and aim (the mouse's movement)
-//   Action (big)              the left mouse button, held: cast and reel, fire the deck gun
-//   Alt                       the right mouse button, held: reel in, fire the bow cannon
+//   Cast / Fire (big)         the left mouse button, held: cast and reel; aboard, fire the deck gun
+//   Reel / Cannon             the right mouse button, held: reel in; aboard, fire the bow cannon
+//                             (1.24.1) their words follow what they do: ashore Cast and Reel; aboard a boat Fire
+//                             (Cast under it, small, once the rod is out) and Cannon (Reel under it): buttonLabels()
 //   Use                       E: board, take the helm, talk, open chests
 //   ▲ / ▼                     Space and C, held: jump / swim up, crouch / dive
 //   ☰ (top left)              Escape: the menu (resume, settings, audio, home dock)
@@ -56,9 +58,19 @@ export function promptAction( label ) {
 
 }
 
+// what the two mouse buttons say: { action: { label, sub }, alt: { label, sub } } (sub '' for none).
+// aboard: at the helm or on deck; rod: the fishing rod is out
+export function buttonLabels( { aboard = false, rod = false } = {} ) {
+
+	return aboard
+		? { action: { label: 'Fire', sub: rod ? 'Cast' : '' }, alt: { label: 'Cannon', sub: 'Reel' } }
+		: { action: { label: 'Cast', sub: '' }, alt: { label: 'Reel', sub: '' } };
+
+}
+
 const MAIN = [
-	{ id: 'action', label: 'Action', sub: 'cast · fire', mouse: 'left', cls: 'is-big' },
-	{ id: 'alt', label: 'Alt', sub: 'reel·cannon', mouse: 'right' },
+	{ id: 'action', label: 'Cast', sub: '', mouse: 'left', cls: 'is-big', always: true },
+	{ id: 'alt', label: 'Reel', sub: '', mouse: 'right', always: true },
 	{ id: 'use', label: 'Use', sub: 'E', key: 'KeyE' },
 	{ id: 'up', label: '▲', sub: 'jump · up', key: 'Space' },
 	{ id: 'down', label: '▼', sub: 'dive', key: 'KeyC' },
@@ -81,13 +93,15 @@ const MORE = [
 
 export class TouchControls {
 
-	constructor( { input, canvas, root, isBlocked = () => false, onFullscreen = null } ) {
+	constructor( { input, canvas, root, isBlocked = () => false, onFullscreen = null, context = null } ) {
 
 		this.input = input;
 		this.canvas = canvas;
 		this.root = root;
 		this.isBlocked = isBlocked;
 		this.onFullscreen = onFullscreen;
+		this.context = context; // () => { aboard, rod }: the buttons' words (buttonLabels)
+		this._labelKey = '';
 		this.enabled = false;
 		this.down = new Set(); // keys held by the touch controls
 		this.stick = null; // { id, x0, y0, keys }
@@ -103,7 +117,7 @@ export class TouchControls {
 		const el = this.el = document.createElement( 'div' );
 		el.className = 'ww-touch';
 		el.hidden = true;
-		const btn = ( b ) => `<button type="button" class="ww-tb ${ b.cls || '' }" data-id="${ b.id || '' }"${ b.key ? ` data-key="${ b.key }"` : '' }${ b.mouse ? ` data-mouse="${ b.mouse }"` : '' } aria-label="${ b.label }${ b.sub ? ' (' + b.sub + ')' : '' }"><b>${ b.label }</b>${ b.sub ? `<small>${ b.sub }</small>` : '' }</button>`;
+		const btn = ( b ) => `<button type="button" class="ww-tb ${ b.cls || '' }" data-id="${ b.id || '' }"${ b.key ? ` data-key="${ b.key }"` : '' }${ b.mouse ? ` data-mouse="${ b.mouse }"` : '' } aria-label="${ b.label }${ b.sub ? ' (' + b.sub + ')' : '' }"><b>${ b.label }</b>${ b.sub || b.always ? `<small${ b.sub ? '' : ' hidden' }>${ b.sub }</small>` : '' }</button>`;
 		el.innerHTML = `
 			<div class="ww-stick" aria-hidden="true"><i></i></div>
 			<div class="ww-rotate">Turn your phone sideways for the best view</div>
@@ -368,6 +382,7 @@ export class TouchControls {
 	update() {
 
 		if ( ! this.enabled ) return;
+		this.updateLabels();
 		const blocked = !! this.isBlocked();
 		if ( blocked === this._blocked ) return;
 		this._blocked = blocked;
@@ -376,6 +391,34 @@ export class TouchControls {
 
 			this.releaseAll();
 			this.toggleMore( false );
+
+		}
+
+	}
+
+	// the Cast / Fire and Reel / Cannon words, from where you are (only when they change)
+	updateLabels() {
+
+		const ctx = this.context ? this.context() : null;
+		const L = buttonLabels( ctx || {} );
+		const key = `${ L.action.label }|${ L.action.sub }|${ L.alt.label }|${ L.alt.sub }`;
+		if ( key === this._labelKey ) return;
+		this._labelKey = key;
+		for ( const id of [ 'action', 'alt' ] ) {
+
+			const b = this.el.querySelector( `[data-id="${ id }"]` );
+			if ( ! b ) continue;
+			const { label, sub } = L[ id ];
+			b.querySelector( 'b' ).textContent = label;
+			const s = b.querySelector( 'small' );
+			if ( s ) {
+
+				s.textContent = sub;
+				s.hidden = ! sub;
+
+			}
+
+			b.setAttribute( 'aria-label', sub ? `${ label } (${ sub })` : label );
 
 		}
 

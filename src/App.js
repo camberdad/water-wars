@@ -106,6 +106,8 @@ export class App {
 		await engine.init();
 		// output pixels per CSS pixel, capped by the profile (1: the canvas renders at CSS resolution)
 		engine.setRenderScale( outputDpr( this.profile, window.devicePixelRatio ) );
+		// (1.24.1) image textures no bigger than the profile allows (phones: far less GPU memory)
+		GPU.maxImageSize = this.profile.maxImageSize;
 		// systems take `renderer` first as in the three.js version: it is the Engine now (GPU access is global)
 		const renderer = engine;
 		const { scene, camera } = engine;
@@ -763,7 +765,9 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 			const mobile = mode === 'mobile';
 			this.input.touchMode = mobile;
-			if ( mobile && ! this.touch ) this.touch = new TouchControls( { input: this.input, canvas: this.engine.domElement, root: ui.root, isBlocked: blocked, onFullscreen: fs.app ? null : () => this.toggleFullscreen() } );
+			if ( mobile && ! this.touch ) this.touch = new TouchControls( { input: this.input, canvas: this.engine.domElement, root: ui.root, isBlocked: blocked, onFullscreen: fs.app ? null : () => this.toggleFullscreen(),
+				// (1.24.1) the Cast / Fire and Reel / Cannon words: aboard a boat, and the rod out
+				context: () => ( { aboard: this.player.mode === 'boat' || this.player.mode === 'deck', rod: !! ( this.game && this.game.rod && this.game.rod.equipped ) } ) } );
 			if ( this.touch ) this.touch.enable( mobile );
 			// the start screen's button: "Tap to set sail" on a phone
 			const cta = document.querySelector( '.tw-start-cta span:last-child' );

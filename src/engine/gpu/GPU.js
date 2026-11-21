@@ -17,6 +17,10 @@ export const GPU = {
 	canvas: null,
 	format: 'bgra8unorm',
 	features: new Set(),
+	// (Water Wars 1.24.1) the largest image texture to load, in texels a side (images bigger than this are
+	// halved until they fit): Infinity on desktops, smaller on phones (src/core/GraphicsProfile.js), whose
+	// browsers give a page far less GPU memory
+	maxImageSize: Infinity,
 	limits: null,
 	hasTimestamp: false,
 	hasFloat32Filterable: false,
@@ -70,6 +74,65 @@ export const GPU = {
 
 		const device = await adapter.requestDevice( { requiredFeatures, requiredLimits: limits } );
 		this.device = device;
+		// (Water Wars 1.24.1) buffer bookkeeping: the bytes asked for and the largest buffers (GPU.bufferStats(),
+		// for phones with little memory), and a failed allocation names the buffer and its size (an iPhone's
+		// "Unable to create buffer" otherwise says neither)
+		this.bufferBytes = 0;
+		this.bigBuffers = [];
+		const create = device.createBuffer.bind( device );
+		device.createBuffer = ( desc ) => {
+
+			const size = Number( desc && desc.size ) || 0;
+			let b;
+			try {
+
+				b = create( desc );
+
+			} catch ( e ) {
+
+				const mb = ( size / 1048576 ).toFixed( 1 );
+				throw Object.assign( new Error( `${ e.message } (the "${ ( desc && desc.label ) || 'unnamed' }" buffer, ${ mb } MB, after ${ ( this.bufferBytes / 1048576 ).toFixed( 0 ) } MB of buffers)` ), { cause: e, code: 'buffer' } );
+
+			}
+
+			this.bufferBytes += size;
+			if ( size >= 4 * 1048576 ) {
+
+				this.bigBuffers.push( { label: ( desc && desc.label ) || 'unnamed', mb: + ( size / 1048576 ).toFixed( 1 ) } );
+				this.bigBuffers.sort( ( x, y ) => y.mb - x.mb );
+				this.bigBuffers.length = Math.min( this.bigBuffers.length, 24 );
+
+			}
+
+			return b;
+
+		};
+		// and the textures (an estimate: format bytes x texels x layers, a third more with mips)
+		this.textureBytes = 0;
+		this.bigTextures = [];
+		const createT = device.createTexture.bind( device );
+		const bpp = ( f ) => /32float|32uint|32sint/.test( f ) ? ( /^rgba/.test( f ) ? 16 : /^rg/.test( f ) ? 8 : 4 ) : /16float|16uint|16sint|16unorm/.test( f ) ? ( /^rgba/.test( f ) ? 8 : /^rg/.test( f ) ? 4 : 2 ) : /^r8|stencil8$/.test( f ) ? 1 : /^rg8/.test( f ) ? 2 : /bc|etc|astc/.test( f ) ? 1 : 4;
+		device.createTexture = ( desc ) => {
+
+			const t = createT( desc );
+			try {
+
+				const s = desc.size, w = s.width ?? s[ 0 ] ?? 1, h = s.height ?? s[ 1 ] ?? 1, d = s.depthOrArrayLayers ?? s[ 2 ] ?? 1;
+				const bytes = w * h * d * bpp( String( desc.format ) ) * ( ( desc.mipLevelCount || 1 ) > 1 ? 4 / 3 : 1 ) * ( desc.sampleCount || 1 );
+				this.textureBytes += bytes;
+				if ( bytes >= 4 * 1048576 ) {
+
+					this.bigTextures.push( { label: desc.label || 'unnamed', mb: + ( bytes / 1048576 ).toFixed( 1 ), size: `${ w }x${ h }x${ d } ${ desc.format }` } );
+					this.bigTextures.sort( ( x, y ) => y.mb - x.mb );
+					this.bigTextures.length = Math.min( this.bigTextures.length, 30 );
+
+				}
+
+			} catch ( e ) { /* bookkeeping only */ }
+
+			return t;
+
+		};
 		this.queue = device.queue;
 		this.limits = device.limits;
 		// (1.23) a lost device (a phone reclaiming the GPU while the game was in the background, a driver reset):
@@ -266,5 +329,42 @@ export function sampleTypeOf( format ) {
 	const t = formatInfo( format ).sample;
 	if ( t === 'unfilterable-float' && GPU.hasFloat32Filterable ) return 'float';
 	return t;
+
+}
+
+// (Water Wars 1.24.1) an image's size after halving until both sides fit max (keeps power-of-two sizes)
+export function cappedSize( width, height, max = Infinity ) {
+
+	let w = width, h = height;
+	while ( ( w > max || h > max ) && w > 1 && h > 1 ) {
+
+		w = Math.max( 1, w >> 1 );
+		h = Math.max( 1, h >> 1 );
+
+	}
+
+	return { width: w, height: h };
+
+}
+
+// halve RGBA8 pixels (a 2 x 2 box filter) until both sides fit max
+export function shrinkRGBA( img, max = Infinity ) {
+
+	let { width: w, height: h, data: d } = img;
+	while ( ( w > max || h > max ) && w > 1 && h > 1 ) {
+
+		const nw = w >> 1, nh = h >> 1, out = new Uint8Array( nw * nh * 4 );
+		for ( let y = 0; y < nh; y ++ ) for ( let x = 0; x < nw; x ++ ) {
+
+			const a = ( ( y * 2 ) * w + x * 2 ) * 4, b = a + w * 4, o = ( y * nw + x ) * 4;
+			for ( let c = 0; c < 4; c ++ ) out[ o + c ] = ( d[ a + c ] + d[ a + 4 + c ] + d[ b + c ] + d[ b + 4 + c ] + 2 ) >> 2;
+
+		}
+
+		w = nw; h = nh; d = out;
+
+	}
+
+	return w === img.width ? img : { ...img, width: w, height: h, data: d };
 
 }

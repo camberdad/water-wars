@@ -23,8 +23,9 @@ import { AUDIO_GROUPS, AUDIO_BUSES, AUDIO_DEFAULTS, AUDIO_KEY, loadAudioSettings
 import { SoundScape } from '../src/audio/SoundScape.js';
 import { readCaps, looksMobile, resolveMode, DeviceMode, MODE_KEY } from '../src/core/DeviceMode.js';
 import { PROFILES, profileFor, outputDpr } from '../src/core/GraphicsProfile.js';
-import { stickKeys, promptAction } from '../src/ui/TouchControls.js';
+import { stickKeys, promptAction, buttonLabels } from '../src/ui/TouchControls.js';
 import { fullscreenSupport } from '../src/core/Fullscreen.js';
+import { cappedSize, shrinkRGBA } from '../src/engine/gpu/GPU.js';
 
 let fails = 0;
 const ok = ( c, msg ) => {
@@ -1355,6 +1356,27 @@ ok( DANGER_ZONES.every( ( z ) => z.aggro <= 90 && z.chase > z.aggro * 2 ), 'pira
 	const html = readFileSync( new URL( '../index.html', import.meta.url ), 'utf8' );
 	ok( m.display === 'fullscreen' && m.orientation === 'landscape' && m.icons.length >= 2 && /apple-mobile-web-app-capable" content="yes"/.test( html ) && /rel="manifest"/.test( html ) && /apple-touch-icon/.test( html ),
 		'the game installs to the Home Screen as a full-screen, landscape web app' );
+
+}
+// ---- 1.24.1: the touch buttons say what they do: Cast / Reel ashore, Fire / Cannon aboard
+{
+
+	const s = ( o ) => { const L = buttonLabels( o ); return `${ L.action.label }/${ L.action.sub }|${ L.alt.label }/${ L.alt.sub }`; };
+	ok( s( {} ) === 'Cast/|Reel/' && s( { rod: true } ) === 'Cast/|Reel/' && s( { aboard: true } ) === 'Fire/|Cannon/Reel' && s( { aboard: true, rod: true } ) === 'Fire/Cast|Cannon/Reel',
+		'touch buttons: Cast and Reel ashore; aboard Fire (Cast under it once the rod is out) and Cannon (Reel under it)' );
+
+}
+// ---- 1.24.1: image textures fit a phone's GPU memory (an iPhone failed to load with them full size)
+{
+
+	const c = ( w, h, m ) => { const r = cappedSize( w, h, m ); return r.width + 'x' + r.height; };
+	ok( c( 4096, 2048, 512 ) === '512x256' && c( 1024, 1024, 512 ) === '512x512' && c( 512, 512, 512 ) === '512x512' && c( 2048, 1024, Infinity ) === '2048x1024' && c( 3, 600, 512 ) === '1x300',
+		'image textures are halved until they fit the cap (none on desktop)' );
+	const img = { width: 4, height: 2, data: new Uint8Array( 4 * 2 * 4 ).map( ( _, i ) => ( i % 4 === 0 ? ( i < 16 ? 100 : 200 ) : 0 ) ) };
+	const s = shrinkRGBA( img, 2 );
+	ok( s.width === 2 && s.height === 1 && s.data.length === 8 && s.data[ 0 ] === 150 && shrinkRGBA( img, 8 ) === img,
+		'the whale\'s PNG maps are box-filtered down on phones, untouched on desktop' );
+	ok( PROFILES.mobile.maxImageSize === 512 && PROFILES.desktop.maxImageSize === Infinity, 'phones load image textures at 512 px at most; desktops at full size' );
 
 }
 console.log( `value check ${ value }` );

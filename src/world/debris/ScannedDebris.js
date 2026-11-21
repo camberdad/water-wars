@@ -1,3 +1,4 @@
+import { GPU, cappedSize } from '../../engine/gpu/GPU.js';
 import {
 	Vector3, Quaternion, Euler, Matrix4, Frustum, Sphere, BufferGeometry, Float32BufferAttribute, Uint16BufferAttribute,
 	Uint32BufferAttribute, InstancedBufferAttribute, InstancedMesh, DynamicDrawUsage,
@@ -40,16 +41,20 @@ async function loadBytes( url ) {
 }
 
 // RGBA8 pixels of an image (top row first). The headless test runner may provide a decoder.
-async function loadPixels( url ) {
+// (1.24.1) maxSize: halve a bigger one until it fits (phones: the 2 x 2 atlas is GPU.maxImageSize at most)
+async function loadPixels( url, maxSize = Infinity ) {
 
 	if ( globalThis.__debrisImage ) return globalThis.__debrisImage( url );
 	const blob = await ( await fetch( url ) ).blob();
 	const bmp = await createImageBitmap( blob );
-	const cv = new OffscreenCanvas( bmp.width, bmp.height );
+	const { width, height } = cappedSize( bmp.width, bmp.height, maxSize );
+	const cv = new OffscreenCanvas( width, height );
 	const ctx = cv.getContext( '2d', { willReadFrequently: true } );
-	ctx.drawImage( bmp, 0, 0 );
-	const d = ctx.getImageData( 0, 0, bmp.width, bmp.height ).data;
-	return { data: new Uint8Array( d.buffer, d.byteOffset, d.byteLength ), width: bmp.width, height: bmp.height };
+	ctx.imageSmoothingQuality = 'high';
+	if ( width === bmp.width ) ctx.drawImage( bmp, 0, 0 );
+	else ctx.drawImage( bmp, 0, 0, width, height );
+	const d = ctx.getImageData( 0, 0, width, height ).data;
+	return { data: new Uint8Array( d.buffer, d.byteOffset, d.byteLength ), width, height };
 
 }
 
@@ -91,7 +96,7 @@ export class ScannedDebris {
 		const atlases = {};
 		await Promise.all( maps.map( async ( m ) => {
 
-			const tiles = await Promise.all( SCAN_ASSETS.map( ( id ) => loadPixels( BASE + id + '_' + m + '.jpg' ) ) );
+			const tiles = await Promise.all( SCAN_ASSETS.map( ( id ) => loadPixels( BASE + id + '_' + m + '.jpg', GPU.maxImageSize / 2 ) ) );
 			const T = tiles[ 0 ].width;
 			const data = new Uint8Array( T * 2 * T * 2 * 4 );
 			tiles.forEach( ( t, k ) => {

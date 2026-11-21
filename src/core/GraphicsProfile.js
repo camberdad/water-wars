@@ -10,17 +10,19 @@
 //   shadowSize       sun shadow map size per cascade (at start-up)
 //   oceanGrid        the ocean mesh's grid per tile (at start-up; ?G= overrides)
 //   refractionScale  the under-water refraction pass's resolution (at start-up)
+//   maxImageSize     the largest image texture, texels a side (1.24.1: at start-up; a phone's browser gives the
+//                    page far less GPU memory, and the full-size textures made an iPhone fail to load)
 //
 // "Live" settings change at once when the mode switches; the start-up ones on the next load.
 
 export const PROFILES = {
 	desktop: {
 		id: 'desktop', maxDpr: 1, renderScale: 1, ssr: true, shafts: null, motionBlur: null,
-		shadowSize: 2048, oceanGrid: 32, refractionScale: 0.5,
+		shadowSize: 2048, oceanGrid: 32, refractionScale: 0.5, maxImageSize: Infinity,
 	},
 	mobile: {
 		id: 'mobile', maxDpr: 1, renderScale: 0.6, ssr: false, shafts: 0, motionBlur: 0,
-		shadowSize: 1024, oceanGrid: 24, refractionScale: 0.35,
+		shadowSize: 1024, oceanGrid: 24, refractionScale: 0.35, maxImageSize: 512,
 	},
 };
 

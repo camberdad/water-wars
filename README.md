@@ -236,8 +236,8 @@ unchanged.
 |---|---|
 | Left half of the screen | A joystick where your thumb lands: walk, swim, throttle and steer. Push to the rim to run / boost |
 | Right half | Drag to look and aim |
-| **Action** (big, red) | The left mouse button, held: cast and reel, fire the deck gun |
-| **Alt** | The right mouse button, held: reel in, fire the bow cannon |
+| **Cast** / **Fire** (big, red) | The left mouse button, held: cast and reel. Aboard a boat it says **Fire** (the deck gun), with a small *Cast* under it once the rod is out |
+| **Reel** / **Cannon** | The right mouse button, held: reel in. Aboard a boat it says **Cannon** (the bow cannon), with a small *Reel* under it |
 | **Use** | E: board, take the helm, talk, open chests |
 | **▲ / ▼** | Space / C, held: jump or swim up, crouch or dive |
 | **☰** | The menu (resume, settings, audio, the home dock) |
@@ -258,7 +258,9 @@ screens also fit a phone held sideways under the browser's bar. (`src/core/Fulls
 
 The mobile graphics profile (`src/core/GraphicsProfile.js`) renders at 60% internal resolution (the temporal
 upscaler rebuilds the output), with 1024 instead of 2048 shadow maps, a coarser ocean mesh, a half-resolution
-refraction pass, and no water reflections, sun shafts or motion blur. The output is capped at one pixel per CSS
+refraction pass, and no water reflections, sun shafts or motion blur. Image textures load at 512 px at most (the whale's 4096 maps, the scanned debris, the stalls,
+the characters): a phone's browser gives a page far less GPU memory, and at full size the game ran out on an
+iPhone while loading (about 650 MB on a phone instead of 900 MB). The output is capped at one pixel per CSS
 pixel on high-density screens, as on desktop. Switching mode while playing changes the live settings at once;
 the shadow maps and the ocean mesh follow on the next load. If the browser has no WebGPU the loading screen
 says which browsers do, and if the phone takes the GPU back (often after switching apps) the game offers a

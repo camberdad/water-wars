@@ -1,3 +1,4 @@
+import { GPU, shrinkRGBA } from '../../engine/gpu/GPU.js';
 import { Texture } from '../../engine/gpu/Texture.js';
 import { generateMipmaps } from '../../engine/gpu/Mipmaps.js';
 
@@ -71,7 +72,8 @@ export async function decodePNG( buffer ) {
 export async function loadTexture( url, srgb ) {
 
 	const buf = await fetch( url ).then( ( r ) => r.arrayBuffer() );
-	const img = await decodePNG( buf );
+	// (1.24.1: smaller on phones, GPU.maxImageSize: the 4096 x 2048 maps are 43 MB each)
+	const img = shrinkRGBA( await decodePNG( buf ), GPU.maxImageSize );
 	// sampled with the shared anisotropic clamp sampler (was ClampToEdge, trilinear, anisotropy 8)
 	const tex = new Texture( {
 		label: url.split( '/' ).pop(),

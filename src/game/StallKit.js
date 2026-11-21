@@ -1,3 +1,4 @@
+import { GPU } from '../engine/gpu/GPU.js';
 import {
 	BufferGeometry, Float32BufferAttribute, Uint32BufferAttribute, Matrix4, Matrix3, Vector3, Quaternion, Euler,
 	CylinderGeometry, TorusGeometry, SphereGeometry, LatheGeometry, Vector2,
@@ -54,7 +55,8 @@ async function bytes( url ) {
 
 async function pixels( url ) {
 
-	return decodeImage( new Uint8Array( await bytes( url ) ), url.endsWith( '.png' ) ? 'image/png' : 'image/jpeg' );
+	// (1.24.1: smaller on phones, GPU.maxImageSize)
+	return decodeImage( new Uint8Array( await bytes( url ) ), url.endsWith( '.png' ) ? 'image/png' : 'image/jpeg', { maxSize: GPU.maxImageSize } );
 
 }
 

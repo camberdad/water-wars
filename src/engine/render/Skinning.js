@@ -1,3 +1,4 @@
+import { GPU } from '../gpu/GPU.js';
 import { Group } from '../scene/Group.js';
 import { Mesh } from '../scene/Mesh.js';
 import { BufferGeometry } from '../geometry/BufferGeometry.js';
@@ -225,7 +226,7 @@ export class SkinnedModel {
 			if ( ! texCache.has( key ) ) {
 
 				const im = g.images[ src ];
-				const px = await decodeImage( im.bytes, im.mimeType );
+				const px = await decodeImage( im.bytes, im.mimeType, { maxSize: GPU.maxImageSize } );
 				const t = new Texture( { label: 'char' + src, width: px.width, height: px.height, format: srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', data: px.data, mips: true, usage: [ 'sample', 'copyDst' ], sampler: 'anisoRepeat' } );
 				t.getGPU();
 				generateMipmaps( t );

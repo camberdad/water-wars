@@ -17,6 +17,7 @@
 // Asset hooks for headless runs (no fetch of relative URLs / no image decoding in Node):
 //   globalThis.__assetFile( url ) -> ArrayBuffer, globalThis.__assetImage( bytes, mimeType ) -> { data, width, height }
 
+import { cappedSize } from '../gpu/GPU.js';
 import { Matrix4, Quaternion, Vector3 } from '../math/index.js';
 
 const COMPONENTS = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
@@ -196,15 +197,18 @@ function identities( n ) {
 
 }
 
-// Decoded RGBA8 pixels (top row first) of an embedded image.
-export async function decodeImage( bytes, mimeType ) {
+// Decoded RGBA8 pixels (top row first) of an embedded image. maxSize (Water Wars 1.24.1): halve a bigger
+// image until it fits (textures on phones, GPU.maxImageSize); lookup tables leave it out (exact sizes)
+export async function decodeImage( bytes, mimeType, { maxSize = Infinity } = {} ) {
 
 	if ( globalThis.__assetImage ) return globalThis.__assetImage( bytes, mimeType );
 	const bmp = await createImageBitmap( new Blob( [ bytes ], { type: mimeType } ), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' } );
-	const cv = new OffscreenCanvas( bmp.width, bmp.height );
+	const { width, height } = cappedSize( bmp.width, bmp.height, maxSize );
+	const cv = new OffscreenCanvas( width, height );
 	const ctx = cv.getContext( '2d', { willReadFrequently: true } );
-	ctx.drawImage( bmp, 0, 0 );
-	const width = bmp.width, height = bmp.height;
+	ctx.imageSmoothingQuality = 'high';
+	if ( width === bmp.width ) ctx.drawImage( bmp, 0, 0 );
+	else ctx.drawImage( bmp, 0, 0, width, height );
 	const d = ctx.getImageData( 0, 0, width, height ).data;
 	// (read the size first: a closed ImageBitmap reports 0 x 0)
 	bmp.close && bmp.close();
